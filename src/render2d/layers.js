@@ -1,7 +1,7 @@
 import { COURT, VIEW_H, VIEW_W } from '../core/constants.js';
 import { state } from '../core/state.js';
 import { canvas, wrapper } from '../dom.js';
-import { CAMS, P, cam } from './camera.js';
+import { CAMS, P, cam } from '../view/camera.js';
 import { drawBackdrop, drawCrowd, drawLightFixture, drawNetShadows, drawProps, drawWall, renderGround } from './court.js';
 
 // ---------- Capas estáticas en caché (una por cámara: juego y repetición) ----------

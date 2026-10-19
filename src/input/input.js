@@ -2,7 +2,7 @@ import { ensureAudio } from '../audio/audio.js';
 import { MAX_CHARGE_FRAMES, VIEW_H, VIEW_W } from '../core/constants.js';
 import { localInput, rt } from '../core/state.js';
 import { canvas } from '../dom.js';
-import { updateAimFromMouse } from '../render2d/world.js';
+import { renderer } from '../renderer.js';
 
 window.addEventListener('keydown', e => {
   if (document.activeElement.tagName === 'INPUT') return;
@@ -35,7 +35,7 @@ canvas.addEventListener('mousemove', e => {
   mouseView.y = (e.clientY - rect.top) * VIEW_H / rect.height;
   mouseView.inside = true;
   mouseView.moved = true;
-  updateAimFromMouse();
+  renderer.updateAimFromMouse();
 });
 canvas.addEventListener('mouseleave', () => { mouseView.inside = false; });
 

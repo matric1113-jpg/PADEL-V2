@@ -1,7 +1,7 @@
 import { COURT, GLASS_H, GLASS_STEP_H, LIGHTS, NET_H, VIEW_W, WALL_H_LOW, WALL_H_TALL, ZS } from '../core/constants.js';
 import { state } from '../core/state.js';
 import { clamp, pick } from '../core/util.js';
-import { P, cam, pathPts } from './camera.js';
+import { P, cam, pathPts } from '../view/camera.js';
 
 // Estilo por mapa: césped, pasillo, piso exterior y luz ambiente
 const MAP_STYLE = {

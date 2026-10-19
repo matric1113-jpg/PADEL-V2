@@ -6,10 +6,9 @@ import { stepPhysics } from './core/physics.js';
 import { recordFrame } from './core/replay.js';
 import { menuSel, rt, state } from './core/state.js';
 import { sendStateTo } from './net/network.js';
-import { onGameEvent } from './render2d/fx.js';
-import { resizeCanvas } from './render2d/layers.js';
-import { render } from './render2d/world.js';
+import { renderer } from './renderer.js';
 import { syncHud, updateScoreUI } from './ui/hud.js';
+import { onGameEvent } from './view/fx.js';
 import { chooseChar, openMenu, syncOverlay } from './ui/menu.js';
 
 // La lógica avisa por hooks; aquí se conectan al sonido, los efectos y la interfaz
@@ -45,7 +44,7 @@ function runSteps(now) {
 
 function gameLoop(now) {
   runSteps(now);
-  render(now);
+  renderer.render(now);
   syncHud();
   updateScoreUI();
   syncOverlay();
@@ -65,9 +64,16 @@ function gameLoop(now) {
   }
 })();
 
-resizeCanvas();
+renderer.init();
 chooseChar(menuSel.char);
 setupServe(0);
 state.bannerTimer = 0;
 updateScoreUI();
 requestAnimationFrame(gameLoop);
+
+// Solo en `npm run dev`: acceso desde la consola para revisar mapas y efectos (no va en el build)
+if (import.meta.env.DEV) {
+  Promise.all([import('./core/game.js'), import('./view/fx.js')]).then(([game, view]) => {
+    window.__padel = { state, rt, menuSel, game, fx: view.fx };
+  });
+}
