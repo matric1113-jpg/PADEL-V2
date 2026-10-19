@@ -1,15 +1,17 @@
 import './style.css';
 import { playSound, toggleMusic } from './audio/audio.js';
 import { hooks } from './core/events.js';
+import * as game from './core/game.js';
 import { setupServe } from './core/game.js';
 import { stepPhysics } from './core/physics.js';
 import { recordFrame } from './core/replay.js';
-import { menuSel, rt, state } from './core/state.js';
+import { localInput, menuSel, rt, state } from './core/state.js';
 import { sendStateTo } from './net/network.js';
 import { renderer } from './renderer.js';
 import { syncHud, updateScoreUI } from './ui/hud.js';
-import { onGameEvent } from './view/fx.js';
 import { chooseChar, openMenu, syncOverlay } from './ui/menu.js';
+import * as camera from './view/camera.js';
+import { fx, onGameEvent } from './view/fx.js';
 
 // La lógica avisa por hooks; aquí se conectan al sonido, los efectos y la interfaz
 hooks.sound = type => { playSound(type); onGameEvent(type); };
@@ -72,8 +74,4 @@ updateScoreUI();
 requestAnimationFrame(gameLoop);
 
 // Solo en `npm run dev`: acceso desde la consola para revisar mapas y efectos (no va en el build)
-if (import.meta.env.DEV) {
-  Promise.all([import('./core/game.js'), import('./view/fx.js')]).then(([game, view]) => {
-    window.__padel = { state, rt, menuSel, game, fx: view.fx };
-  });
-}
+if (import.meta.env.DEV) window.__padel = { state, rt, menuSel, localInput, game, fx, camera };

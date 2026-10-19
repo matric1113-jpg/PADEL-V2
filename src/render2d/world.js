@@ -1,4 +1,4 @@
-import { BALL_R, COURT, GRAVITY, MAX_CHARGE_FRAMES, NET_H, PAD_F, PAD_S, VIEW_H, VIEW_W, ZS } from '../core/constants.js';
+import { BALL_R, COURT, MAX_CHARGE_FRAMES, NET_H, PAD_F, PAD_S, VIEW_H, VIEW_W, ZS } from '../core/constants.js';
 import { getClampedTarget } from '../core/ballistics.js';
 import { localInput, mapOf, rt, state } from '../core/state.js';
 import { reachOf, reachZOf } from '../core/stats.js';
@@ -9,7 +9,7 @@ import { CAMS, P, cam, groundCircle, pathPts, unprojectGround } from '../view/ca
 import { ctx } from '../view/ctx.js';
 import { fx } from '../view/fx.js';
 import { beginFrame, swapInReplay, swapOutReplay } from '../view/frame.js';
-import { aimTarget, drawAimArc, drawHud } from '../view/hud.js';
+import { aimTarget, drawAimArc, drawHud, predictLanding, setWorldTransform } from '../view/hud.js';
 import { CELEB_KIND, SHADOW_LOOK_COLORS, buildPlayerParts, lookOf } from '../view/skeleton.js';
 import { BP, WALLS } from './court.js';
 import { LAYERS, layerKey, rebuildLayers, renderScale } from './layers.js';
@@ -207,19 +207,6 @@ function drawRivalAims(me) {
   });
 }
 
-function predictLanding() {
-  const b = state.ball;
-  if (state.phase !== 'PLAY') return null;
-  let x = b.x, y = b.y, z = b.z, vx = b.vx, vy = b.vy, vz = b.vz;
-  for (let i = 0; i < 400; i++) {
-    x += vx; y += vy; z += vz; vz -= GRAVITY;
-    if (z > 0 && state.gust.t > 0) vy += state.gust.w;
-    if (x < COURT.x + 10 || x > COURT.x + COURT.w - 10 || y < COURT.y + 10 || y > COURT.y + COURT.h - 10) return null;
-    if (z <= 0) return i < 2 ? null : { x, y };
-  }
-  return null;
-}
-
 function drawLandingMarker() {
   const land = predictLanding();
   if (!land) return;
@@ -390,17 +377,6 @@ function drawMapDynamics(layer) {
       for (const s of fx.streaks) { const a = P(s.x, s.y, s.z), b = P(s.x, s.y - Math.sign(state.gust.w || 1) * 60, s.z); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); }
       ctx.stroke();
     }
-  }
-}
-
-function setWorldTransform(S, sx, sy) {
-  ctx.setTransform(S, 0, 0, S, sx * S, sy * S);
-  const v = fx.view;
-  if (v.rot || v.oy || v.k !== 1) {
-    ctx.translate(VIEW_W / 2, VIEW_H / 2 + v.oy);
-    ctx.rotate(v.rot);
-    ctx.scale(v.k, v.k);
-    ctx.translate(-VIEW_W / 2, -VIEW_H / 2);
   }
 }
 

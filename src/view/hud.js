@@ -63,6 +63,20 @@ function drawContraPreview(me) {
   ctx.fillText('Contrapared', w.x, w.y - 10);
 }
 
+// Dónde va a botar la pelota (marca en el suelo)
+export function predictLanding() {
+  const b = state.ball;
+  if (state.phase !== 'PLAY') return null;
+  let x = b.x, y = b.y, z = b.z, vx = b.vx, vy = b.vy, vz = b.vz;
+  for (let i = 0; i < 400; i++) {
+    x += vx; y += vy; z += vz; vz -= GRAVITY;
+    if (z > 0 && state.gust.t > 0) vy += state.gust.w;
+    if (x < COURT.x + 10 || x > COURT.x + COURT.w - 10 || y < COURT.y + 10 || y > COURT.y + COURT.h - 10) return null;
+    if (z <= 0) return i < 2 ? null : { x, y };
+  }
+  return null;
+}
+
 // Blanco de tiro del jugador local en el suelo (lo dibuja cada render a su manera)
 export function aimTarget(me) {
   const ratio = rt.isHost ? (me.chargeFrames / MAX_CHARGE_FRAMES) : (rt.localChargeFrames / MAX_CHARGE_FRAMES);
@@ -116,6 +130,18 @@ export function drawAimArc(me) {
   const last = pts[pts.length - 1];
   ctx.beginPath(); ctx.arc(last.x, last.y, 3, 0, Math.PI * 2);
   ctx.fillStyle = `rgba(${arcCol}, 0.95)`; ctx.fill();
+}
+
+// Transformación de lo que está en el mundo: escala del canvas, sacudida (sx, sy) y giro de Atlas
+export function setWorldTransform(S, sx, sy) {
+  ctx.setTransform(S, 0, 0, S, sx * S, sy * S);
+  const v = fx.view;
+  if (v.rot || v.oy || v.k !== 1) {
+    ctx.translate(VIEW_W / 2, VIEW_H / 2 + v.oy);
+    ctx.rotate(v.rot);
+    ctx.scale(v.k, v.k);
+    ctx.translate(-VIEW_W / 2, -VIEW_H / 2);
+  }
 }
 
 // ---------- Interfaz en pantalla ----------

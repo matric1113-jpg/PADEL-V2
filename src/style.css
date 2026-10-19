@@ -38,6 +38,9 @@ body {
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(150, 190, 225, 0.12);
 }
 canvas#game { display: block; width: 100%; height: 100%; cursor: none; }
+/* Render 3D: la escena va en #game3d y #game queda encima, transparente, para el HUD */
+canvas#game3d { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+canvas#game.hud { position: relative; }
 
 /* Marcador estilo transmisión */
 .scorebug {
