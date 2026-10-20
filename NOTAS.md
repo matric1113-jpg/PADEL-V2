@@ -102,6 +102,22 @@ scripts/test-camera.mjs  Prueba de la cámara 3D contra la 2D
 - **Rendimiento.** Unas 100 llamadas de dibujo por cuadro (las piezas fijas se fusionan por material y los jugadores y el público son mallas instanciadas); unos 4 ms por cuadro en la máquina de prueba.
 - **Sin cambios en la lógica.** `src/core` y `src/net` no se tocaron en esta etapa (`git diff` vacío). `npm run sim` sigue sin errores.
 
+### Etapa 3 (personajes 3D animados): assets y créditos
+
+Modelos y animaciones de **Quaternius**, licencia **CC0 1.0** (dominio público, sin obligación de atribuir; se deja el crédito igual): https://quaternius.com
+- **Universal Base Characters [Standard]**: cuerpos Superhero (hombre y mujer), cejas, ojos y peinados. La versión gratuita no trae el cuerpo *Regular* (solo la versión de pago `Source`), así que todos los personajes usan Superhero.
+- **Universal Animation Library [Standard]**: 43 clips sobre el rig universal (65 huesos, mismos nombres que los cuerpos); se usan 13. No trae ningún golpe de tenis o pádel.
+
+Los zips originales están en `assets/` pero **no se suben** (`assets/*.zip` está en `.gitignore`). En el repo solo están los `.glb` ya procesados en `assets/models/` (unos 2 MB en total):
+
+| Archivo | Contenido | Cómo se hizo desde el pack |
+|---|---|---|
+| `cuerpo_hombre.glb`, `cuerpo_mujer.glb` | cuerpo + ojos + cejas + esqueleto | `Superhero_*_FullBody.gltf` a un solo `.glb`; textura de piel clara a 1024 px (WebP), mapa de normales a 1024 px; sin mapa de rugosidad ni atributos que no se usan |
+| `pelo.glb` | Buzzed, SimpleParted, Beard, Buns, BuzzedFemale, Long | versión *Rigged to Head Bone* convertida a mallas estáticas (ya alineadas con la cabeza en pose de descanso); texturas a 512 px |
+| `animaciones.glb` | 13 clips, sin la malla del maniquí | `UAL1_Standard.glb` (sin root motion), solo rotaciones de cada hueso y la traslación de la cadera; claves redundantes eliminadas |
+
+Los `Superhero_*_FullBody.gltf` del pack referencian dos texturas que no vienen en esa carpeta (`T_Eye_Normal_png.png`, `T_Hair_1_Normal_png.png`); al convertir se usaron las de `Textures/`.
+
 ## Decisiones
 
 **Cómo se hizo el corte (etapa 1).** Se partió el `<script>` con un script de un solo uso que usa un parser (acorn) y análisis de ámbitos, no a mano ni con regex. Así los imports/exports salen de las referencias reales y no se pierde ninguna. Ese script tampoco está en el repo.
