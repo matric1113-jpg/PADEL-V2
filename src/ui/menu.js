@@ -237,18 +237,23 @@ function viewChampion() {
   </div>`;
 }
 
-function viewSetover() {
-  const r = state.result || { winner: 0, games: [6, 0] };
+// Resultado final del partido (después de la cinemática del podio). El podio queda visible detrás.
+function viewMatchover() {
+  const r = state.result || { winner: 0 };
   const myTeam = (state.players[rt.mySlot] || {}).team || 0;
   const won = r.winner === myTeam;
-  return `<div class="ov-panel">
-    <div class="ov-title">${won ? '¡Ganaron el set!' : 'Perdieron el set'}</div>
-    <div class="ov-sub">Set para el equipo ${r.winner === 0 ? 'azul' : 'rojo'}, ${r.games[0]}-${r.games[1]}${r.tiebreak ? ' con tie-break' : ''}. Sets en la sesión: azul ${state.sets[0]}, rojo ${state.sets[1]}.</div>
-    <div class="row">${hostButtons('again', 'Jugar otro set')}</div>
+  const team = r.winner === 0 ? 'azul' : 'rojo';
+  const chips = state.setHistory.map((h, i) => `<span class="mapchip">Set ${i + 1}: ${h[0]}-${h[1]}</span>`).join('');
+  const names = t => state.players.filter(p => p.team === t && !p.out).map(p => esc(p.name)).join(' y ');
+  return `<div class="ov-panel matchover">
+    <div class="ov-title">${won ? '¡Ganaron el partido!' : 'Perdieron el partido'}</div>
+    <div class="ov-sub">Ganó el equipo ${team} (${names(r.winner)}) por ${Math.max(...state.sets)} sets a ${Math.min(...state.sets)}.</div>
+    <div class="chips">${chips}</div>
+    <div class="row">${hostButtons('again', 'Jugar otra vez')}</div>
   </div>`;
 }
 
-const VIEWS = { connecting: viewConnecting, menu: viewMenu, lobby: viewLobby, route: viewRoute, shop: viewShop, shop2: viewShop2, lost: viewLost, champion: viewChampion, setover: viewSetover };
+const VIEWS = { connecting: viewConnecting, menu: viewMenu, lobby: viewLobby, route: viewRoute, shop: viewShop, shop2: viewShop2, lost: viewLost, champion: viewChampion, matchover: viewMatchover };
 
 export function syncOverlay() {
   const view = rt.uiMenuOpen ? 'menu' : (!rt.isHost && !rt.gotHostState ? 'connecting' : state.screen);
@@ -257,7 +262,7 @@ export function syncOverlay() {
     const myTeam = (state.players[rt.mySlot] || {}).team || 0;
     if (s === 'shop' || s === 'champion') playJingle(true);
     else if (s === 'lost') playJingle(false);
-    else if (s === 'setover' && state.result) playJingle(state.result.winner === myTeam);
+    else if (s === 'podium' && state.result) playJingle(state.result.winner === myTeam);
   }
   lastScreenSeen = state.screen;
 
@@ -278,6 +283,7 @@ export function syncOverlay() {
   const scroll = overlayEl.scrollTop;
   overlayEl.innerHTML = VIEWS[view]();
   overlayEl.classList.add('show');
+  overlayEl.classList.toggle('matchover', view === 'matchover');
   overlayEl.scrollTop = scroll;
   overlayEl.querySelectorAll('canvas[data-look]').forEach(cv => renderer.renderPortrait(cv, cv.dataset.look));
 }

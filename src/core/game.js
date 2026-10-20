@@ -1,5 +1,5 @@
 import { computeServeBox, nextServerSlot, showBanner } from './ballistics.js';
-import { PAD_F, PAD_S, POINTS_LABELS } from './constants.js';
+import { PAD_F, PAD_S, POINTS_LABELS, SETS_TO_WIN } from './constants.js';
 import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, LOOKS, MAPS, MAP_IDS, RUN_REWARD, TALK, TEAMMATE_SKILL, UPG, UPGRADES } from './data.js';
 import { hooks } from './events.js';
 import { mapOf, menuSel, rt, state } from './state.js';
@@ -107,11 +107,18 @@ export function awardPoint(winningTeam, reason, isFault = false) {
     } else {
       const setWon = state.tiebreak || (g[winningTeam] >= 6 && g[winningTeam] - g[other] >= 2);
       if (setWon) {
+        const team = winningTeam === 0 ? 'azul' : 'rojo';
         state.sets[winningTeam]++;
-        state.result = { winner: winningTeam, games: [g[0], g[1]], tiebreak: state.tiebreak };
+        state.setHistory.push([g[0], g[1]]);
+        const matchWon = state.sets[winningTeam] >= SETS_TO_WIN;
+        state.result = { winner: winningTeam, games: [g[0], g[1]], tiebreak: state.tiebreak, match: matchWon };
         state.tiebreak = false;
-        state.afterPause = 'setover';
-        showBanner(`Set para el equipo ${winningTeam === 0 ? 'azul' : 'rojo'}\n${g[0]}-${g[1]}`, 9999);
+        state.pauseTimer += 120;   // un rato más para la celebración
+        // Un set no termina el partido: se juega otro (con tienda y mapa nuevos) hasta que alguien llegue a SETS_TO_WIN
+        state.afterPause = matchWon ? 'podium' : 'nextset';
+        showBanner(matchWon
+          ? `¡Partido para el equipo ${team}!\nSets ${state.sets[0]}-${state.sets[1]}  (${state.setHistory.map(h => h.join('-')).join(', ')})`
+          : `Set para el equipo ${team}: ${g[0]}-${g[1]}\nSets ${state.sets[0]}-${state.sets[1]}. Se juega otro set`, matchWon ? 9999 : 400);
       } else {
         if (g[0] === 6 && g[1] === 6) {
           state.tiebreak = true;
@@ -138,6 +145,8 @@ export function awardPoint(winningTeam, reason, isFault = false) {
 export function goToScreen(s) {
   state.bannerTimer = 0;
   if (s === 'shop2') openShop2(false);
+  else if (s === 'nextset') beginSet();
+  else if (s === 'podium') { rt.podiumT = 0; state.screen = 'podium'; }
   else state.screen = s;
 }
 
@@ -192,6 +201,7 @@ export function prepareRoster(mode) {
     applyBoss(0);
   }
   state.sets = [0, 0];
+  state.setHistory = [];
   state.score = [0, 0];
   state.games = [0, 0];
   state.tiebreak = false;
@@ -238,11 +248,21 @@ function applyBoss(i) {
   }
 }
 
+// Partido amistoso nuevo (a SETS_TO_WIN sets)
 export function startFriendly() {
+  state.sets = [0, 0];
+  state.setHistory = [];
+  beginSet();
+}
+
+// Comienzo de cada set: marcador a cero, y todo vuelve a empezar como al principio (dinero, compras, activas, sombreros)
+// con la tienda de $700 y la votación de mapa.
+export function beginSet() {
   state.score = [0, 0];
   state.games = [0, 0];
   state.tiebreak = false;
   state.result = null;
+  state.afterPause = null;
   state.players.forEach(p => {
     const keep = { lookId: p.lookId, name: p.name, isBot: p.isBot, skill: p.skill, speedStat: p.speedStat };
     resetPlayerExtras(p);

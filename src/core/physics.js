@@ -1,6 +1,6 @@
 import { computeLaunch, computeServeBox, getClampedTarget, launchBall, showBanner } from './ballistics.js';
 import { updateBotLogic } from './bots.js';
-import { BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, GUST_PLAYER_PUSH, TILT_BALL_ACCEL, TILT_PLAYER_PUSH, LIGHTS, MAX_CHARGE_FRAMES, NET_H, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
+import { BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, GUST_PLAYER_PUSH, TILT_BALL_ACCEL, TILT_PLAYER_PUSH, LIGHTS, MAX_CHARGE_FRAMES, NET_H, PODIUM_FRAMES, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
 import { BOSSES } from './data.js';
 import { awardPoint, checkVoteReady, emitSound, goToScreen, setupServe } from './game.js';
 import { activate, updateHazards } from './hazards.js';
@@ -47,6 +47,7 @@ export function stepPhysics() {
 
   remoteInputs[0] = { ...localInput };
   if (state.screen === 'shop2') { checkVoteReady(); return; }
+  if (state.screen === 'podium') { if (++rt.podiumT >= PODIUM_FRAMES) state.screen = 'matchover'; return; }
   if (state.screen !== 'play') return;
 
   if (state.bannerTimer > 0 && state.phase === 'PLAY') state.bannerTimer--;

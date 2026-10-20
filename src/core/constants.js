@@ -61,6 +61,9 @@ export const TILT_CAM_ROT = 0.1;            // giro de cámara (rad) con la incl
 export const TILT_CAM_SHIFT = 34;           // desplazamiento vertical de la cámara (px de pantalla)
 export const TILT_PLAYER_PUSH = 1.5;        // unidades por cuadro que arrastra a los jugadores
 export const TILT_BALL_ACCEL = 0.03;        // aceleración de la pelota en el aire por cuadro
+// Partido amistoso: gana quien llegue primero a SETS_TO_WIN sets. Después viene la cinemática del podio.
+export const SETS_TO_WIN = 2;
+export const PODIUM_FRAMES = 660;           // duración de la cinemática (11 s) antes de la pantalla de resultado
 export const BASE_ROLL = 0.95;               // velocidad horizontal que conserva la pelota al botar (antes 0,90): llega más al fondo
 export const ACTIVE_DURATION = 300;          // 5 s
 export const ACTIVE_COOLDOWN = 2700;         // 45 s

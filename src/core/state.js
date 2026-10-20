@@ -15,7 +15,8 @@ export const rt = {
   lastPlayedSoundSeq: 0,
   netMsg: '',                // mensaje de conexión visible en el menú
   uiMenuOpen: true,
-  overlayKey: ''
+  overlayKey: '',
+  podiumT: 0                 // cuadros transcurridos de la cinemática del podio (lo cuenta el anfitrión)
 };
 
 export const mapOf = () => MAPS[state.map] || MAPS.chile;
@@ -91,9 +92,10 @@ export const state = {
   afterPause: null,
   soundTrigger: { seq: 0, type: '' },
   mode: 'friendly',     // 'friendly' (2v2 a un set con tienda y mapas) | 'run' (torneo de jefes)
-  screen: 'menu',       // 'menu' | 'lobby' | 'route' | 'play' | 'shop' | 'shop2' | 'lost' | 'champion' | 'setover'
+  screen: 'menu',       // 'menu' | 'lobby' | 'route' | 'play' | 'shop' | 'shop2' | 'lost' | 'champion' | 'podium' | 'matchover'
   difficulty: 0.5,
   sets: [0, 0],
+  setHistory: [],                  // juegos de cada set ya terminado: [[6, 4], [3, 6], ...] (modo amistoso)
   tiebreak: false,
   result: null,
   roomCode: '',

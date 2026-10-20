@@ -67,6 +67,7 @@ canvas#game.hud { position: relative; }
 .sb-row:nth-child(2) { border-radius: 0 0 6px 6px; overflow: hidden; }
 .sb-strip { background: var(--blue); }
 .sb-red .sb-strip { background: var(--red); }
+.sb-team::after { content: attr(data-sets); color: #ffd54a; margin-left: 6px; font-size: 12px; letter-spacing: 3px; }
 .sb-serve { display: grid; place-items: center; }
 .sb-serve::after {
   content: '';
@@ -211,6 +212,11 @@ button.on { border-color: var(--ball); color: var(--ball); }
   z-index: 5;
 }
 .overlay.show { display: flex; }
+/* Resultado final: el podio se ve detrás y el panel baja al borde inferior */
+.overlay.matchover { align-items: flex-end; background: linear-gradient(to bottom, rgba(5, 13, 22, 0) 35%, rgba(5, 13, 22, 0.88) 100%); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.overlay.matchover .ov-panel { margin: 0 auto; text-align: center; }
+.overlay.matchover .ov-sub { margin-left: auto; margin-right: auto; }
+.overlay.matchover .row, .overlay.matchover .chips { justify-content: center; }
 .ov-panel { width: min(100%, 1000px); margin: auto; }
 .ov-title { font-family: var(--cond); font-weight: 700; font-size: clamp(26px, 3vw, 38px); line-height: 1.05; }
 .ov-sub { color: var(--ink-dim); margin-top: 6px; font-size: 15px; max-width: 70ch; }
@@ -291,6 +297,7 @@ button:disabled:hover { background: transparent; }
 .stop-faces { display: flex; gap: 4px; }
 .stop-team { font-family: var(--cond); font-weight: 700; font-size: 16px; line-height: 1.1; }
 .stop-meta { font-size: 12px; color: var(--ink-dim); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 10px; }
 .mapchip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink); }
 .mapchip i { width: 16px; height: 16px; border-radius: 4px; display: inline-block; }
 .maps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }

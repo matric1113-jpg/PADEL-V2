@@ -27,6 +27,9 @@ export function updateScoreUI() {
   setText('games-red', state.games[1]);
   setText('name-blue', run ? 'Ustedes' : 'Azul');
   setText('name-red', run ? BOSSES[state.run.boss].team : 'Rojo');
+  // Sets ganados (modo amistoso): un punto dorado por set junto al nombre
+  const pips = t => (run ? '' : '●'.repeat(state.sets[t]));
+  for (const [id, t] of [['name-blue', 0], ['name-red', 1]]) document.getElementById(id).dataset.sets = pips(t);
   const inGame = state.screen !== 'menu';
   setText('sb-sub', !inGame ? '' : run ? `Jefe ${state.run.boss + 1} de ${BOSSES.length}, ${mapOf().name}` : `Set ${state.sets[0] + state.sets[1] + 1}, ${mapOf().name}`);
   setText('sb-cond', hazardLabel());
@@ -36,7 +39,7 @@ export function updateScoreUI() {
   const sb = document.getElementById('scorebug');
   // En el torneo se ven los juegos solo cuando es al mejor de 3
   sb.classList.toggle('run', run && BOSSES[state.run.boss].gamesToWin === 1);
-  const longest = Math.max(document.getElementById('name-blue').textContent.length, document.getElementById('name-red').textContent.length);
+  const longest = Math.max(document.getElementById('name-blue').textContent.length + pips(0).length, document.getElementById('name-red').textContent.length + pips(1).length);
   const nw = Math.max(92, Math.round(longest * 8.6 + 16)) + 'px';
   if (sb.style.getPropertyValue('--namew') !== nw) sb.style.setProperty('--namew', nw);
 }
