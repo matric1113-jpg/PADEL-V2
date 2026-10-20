@@ -181,7 +181,7 @@ export function frameFor(p, b, dtSec, x, y) {
   const sp = Math.hypot(pf.vx, pf.vy);
   const body = b.look.body;
   return {
-    dt: dtSec, lookId: p.lookId,
+    dt: dtSec, lookId: p.lookId, lefty: !!b.look.lefty,
     x, y: jz, z: y, K, Kz, body, armK: body.arm * (1 + 0.08 * upLvl(p, 'fuerza')),
     facing: Math.atan2(Math.cos(R.th), Math.sin(R.th)),
     moveYaw: Math.atan2(pf.vx, pf.vy),

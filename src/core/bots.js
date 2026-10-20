@@ -2,6 +2,17 @@ import { COURT, GRAVITY, JUMP_CHARGE_FRAMES, JUMP_MAX_H, JUMP_MIN_H, MAX_CHARGE_
 import { state } from './state.js';
 import { reachOf, reachZOf } from './stats.js';
 import { clamp } from './util.js';
+import { insideCourt, waypoint } from './walls.js';
+
+// Dónde se puede alcanzar una pelota que va cayendo afuera: el primer punto en que baja de cierta altura
+function catchPoint(b, zMax) {
+  let x = b.x, y = b.y, z = b.z, vz = b.vz;
+  for (let k = 0; k < 300; k++) {
+    x += b.vx; y += b.vy; z += vz; vz -= GRAVITY;
+    if ((vz < 0 && z <= zMax) || z <= 0) return { x, y };
+  }
+  return { x, y };
+}
 
 export function updateBotLogic(p, idx) {
   const b = state.ball;
@@ -84,6 +95,21 @@ export function updateBotLogic(p, idx) {
     targetX += p.botErrX * (0.35 + 0.65 * near);
     targetY += p.botErrY * (0.35 + 0.65 * near);
   }
+  // Pelota afuera (por 3 o por 4) en su lado: el más cercano de la pareja sale por su puerta a rescatarla.
+  // Si quedó afuera, vuelve a entrar por la puerta.
+  if (state.phase === 'PLAY') {
+    if (b.out && b.lastHitTeam !== p.team && sk >= 0.35) {
+      const c = catchPoint(b, reachZOf(p) - 10);
+      const mine = p.team === 0 ? c.x < COURT.netX : c.x > COURT.netX;
+      const closer = !partner || partner.out || Math.hypot(p.x - c.x, p.y - c.y) <= Math.hypot(partner.x - c.x, partner.y - c.y);
+      if (mine && closer) { targetX = c.x - (p.team === 0 ? 1 : -1) * PAD_F; targetY = c.y - PAD_S; }
+    }
+    if (p.outside || !insideCourt(targetX, targetY)) {
+      const w = waypoint(p, targetX, targetY);
+      targetX = w.x; targetY = w.y;
+    }
+  }
+
   // Esquiva el aviso de rayo si lo ve venir
   const bolt = state.bolts.find(bo => bo.slot === idx);
   if (bolt && Math.random() < 0.3 + 0.5 * sk) { targetY = p.y + (p.y < COURT.midY ? 80 : -80); }

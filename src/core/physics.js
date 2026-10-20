@@ -4,6 +4,7 @@ import { BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLAS
 import { BOSSES } from './data.js';
 import { awardPoint, checkVoteReady, emitSound, goToScreen, setupServe } from './game.js';
 import { activate, updateHazards } from './hazards.js';
+import { insideCourt, moveWithWalls, nearOwnDoor } from './walls.js';
 import { gustForce, tiltEase, inputOf, localInput, mapOf, remoteInputs, rt, state } from './state.js';
 import { actOn, chargeRateOf, reachOf, reachZOf, smashMinOf, upLvl } from './stats.js';
 import { clamp } from './util.js';
@@ -44,6 +45,48 @@ function discardPendingSwings() {
     p.lastReleaseSeq = inputOf(p).releaseSeq;
     p.charging = false; p.chargeFrames = 0;
   });
+}
+
+// Globo de rescate desde afuera: hacia (tx, ty) en la cancha rival, lo bastante alto para pasar la pared por la que
+// vuelve a entrar. En una parábola que cae en el objetivo, la altura en la fracción f del recorrido es
+// z0 (1 - f) + g T² f (1 - f) / 2; de ahí sale el tiempo de vuelo T mínimo para pasar la pared con margen.
+function launchRescue(tx, ty, team, charge) {
+  const b = state.ball;
+  const N = 200;
+  let f = 0, wallZ = 0;
+  for (let i = 1; i <= N; i++) {
+    const s0 = (i - 1) / N, s1 = i / N;
+    const x0 = b.x + (tx - b.x) * s0, y0 = b.y + (ty - b.y) * s0, x1 = b.x + (tx - b.x) * s1, y1 = b.y + (ty - b.y) * s1;
+    if (insideCourt(x1, y1) && !insideCourt(x0, y0)) { f = s1; wallZ = wallHeightCrossed(x0, y0, x1) / ZS + 10; break; }
+  }
+  const distX = Math.max(85, Math.abs(tx - b.x));
+  let speed = 4.4 + charge * 1.2;
+  if (f > 0 && f < 1) {
+    const need = 2 * (wallZ - b.z * (1 - f)) / (GRAVITY * f * (1 - f));
+    // como mucho ~2 s de vuelo: pegado al vidrio no hay globo que alcance a pasar (choca con la pared y se pierde)
+    if (need > 0) speed = Math.min(speed, Math.max(distX / Math.sqrt(need), distX / 125));
+  }
+  launchBall(tx, ty, speed, 'GLOBO', team, false, 0);
+}
+function wallHeightCrossed(px, py, x) {
+  let h = 0;
+  if (px <= COURT.x || px >= COURT.x + COURT.w) h = WALL_H_TALL;
+  if (py <= COURT.y || py >= COURT.y + COURT.h) h = Math.max(h, sideWallHeight(x));
+  return h;
+}
+
+// Pelota afuera que llega a una pared desde afuera: si va por arriba vuelve a entrar; si no, rebota hacia afuera
+function outBallWalls(prevX, prevY) {
+  const b = state.ball;
+  const m = 10;
+  const inNow = b.x > COURT.x + m && b.x < COURT.x + COURT.w - m && b.y > COURT.y + m && b.y < COURT.y + COURT.h - m;
+  if (!inNow) return;
+  if (b.z * ZS > wallHeightCrossed(prevX, prevY, b.x)) { b.out = false; b.outTeam = -1; return; }
+  if (prevX <= COURT.x + m) { b.x = COURT.x + m - 1; b.vx = -Math.abs(b.vx) * 0.6; }
+  if (prevX >= COURT.x + COURT.w - m) { b.x = COURT.x + COURT.w - m + 1; b.vx = Math.abs(b.vx) * 0.6; }
+  if (prevY <= COURT.y + m) { b.y = COURT.y + m - 1; b.vy = -Math.abs(b.vy) * 0.6; }
+  if (prevY >= COURT.y + COURT.h - m) { b.y = COURT.y + COURT.h - m + 1; b.vy = Math.abs(b.vy) * 0.6; }
+  emitSound('glass');
 }
 
 export function stepPhysics() {
@@ -193,6 +236,7 @@ export function stepPhysics() {
     } else {
       p.vx = tvx; p.vy = tvy;
     }
+    const fromX = p.x, fromY = p.y;
     p.x += p.vx;
     p.y += p.vy;
     if (state.tilt.t > 0) { const e = tiltEase() * TILT_PLAYER_PUSH; p.x += state.tilt.x * e; p.y += state.tilt.y * e; }
@@ -206,11 +250,18 @@ export function stepPhysics() {
     }
     const minY = COURT.y + BODY_MARGIN, maxY = COURT.y + COURT.h - BODY_MARGIN;
     const rawX = p.x, rawY = p.y;
-    p.x = Math.max(minX, Math.min(maxX, p.x));
-    p.y = Math.max(minY, Math.min(maxY, p.y));
+    // Afuera de la cancha o junto a su puerta (solo con el punto en juego): se mueve chocando con las paredes y
+    // puede salir o entrar por la puerta. Adentro, como siempre.
+    const walled = state.phase === 'PLAY' && (p.outside || nearOwnDoor({ x: fromX, y: fromY, team: p.team }));
+    if (walled) moveWithWalls(p, fromX, fromY);
+    else {
+      p.outside = false;
+      p.x = Math.max(minX, Math.min(maxX, p.x));
+      p.y = Math.max(minY, Math.min(maxY, p.y));
+    }
 
     // Cráter: tocar el cristal quema y empuja hacia adentro
-    if (M.hotGlass && p.burnCd === 0) {
+    if (M.hotGlass && p.burnCd === 0 && !walled) {
       const backWall = p.team === 0 ? rawX < COURT.x + BODY_MARGIN : rawX > COURT.x + COURT.w - BODY_MARGIN;
       const sideWall = rawY < minY || rawY > maxY;
       if (backWall || sideWall) {
@@ -265,6 +316,15 @@ export function stepPhysics() {
         p.swingTimer = 0;
         const chargePct = Math.round(p.swingCharge * 100);
 
+        // Pelota afuera (por 3 o por 4) alcanzada desde afuera: sale un globo de rescate que pasa por arriba de la pared
+        if (b.out) {
+          const { tx, ty } = getClampedTarget(p.team, p.aimX, p.aimY, p.swingCharge, p.powerStat, true, false);
+          launchRescue(tx, ty, p.team, p.swingCharge);
+          emitSound('lob');
+          showBanner('¡Rescate desde afuera!', 60);
+          return;
+        }
+
         if (!p.swingLob && isContraAim(p, p.aimX)) {
           launchContra(p);
           emitSound('hit');
@@ -304,7 +364,7 @@ export function stepPhysics() {
   b.trail.push({ x: b.x, y: b.y, z: b.z });
   if (b.trail.length > 10) b.trail.shift();
 
-  const prevX = b.x;
+  const prevX = b.x, prevY = b.y;
   b.x += b.vx;
   b.y += b.vy;
   b.z += b.vz;
@@ -328,7 +388,8 @@ export function stepPhysics() {
   });
 
   // Cruce de red
-  const crossedNet = (prevX <= COURT.netX && b.x > COURT.netX) || (prevX >= COURT.netX && b.x < COURT.netX);
+  const crossedNet = !b.out && b.y > COURT.y && b.y < COURT.y + COURT.h &&
+    ((prevX <= COURT.netX && b.x > COURT.netX) || (prevX >= COURT.netX && b.x < COURT.netX));
   if (crossedNet) {
     if (b.z < NET_H) {
       if (b.bouncesInOpponentSide >= 1) {
@@ -338,6 +399,14 @@ export function stepPhysics() {
       }
       return;
     }
+  }
+
+  // Pelota afuera (salió por 3 o por 4): el punto termina cuando toca el suelo de afuera. Mientras vuela se puede
+  // rescatar saliendo por la puerta; si vuelve a entrar por arriba de una pared, sigue el punto
+  if (b.out) {
+    if (b.z <= 0) { awardPoint(b.outTeam, b.outReason); return; }
+    outBallWalls(prevX, prevY);
+    return;
   }
 
   // Bote en el suelo
@@ -430,8 +499,12 @@ export function stepPhysics() {
     if (hitLeft || hitRight) wallH = Math.max(wallH, WALL_H_TALL);
     if (hitTop || hitBottom) wallH = Math.max(wallH, sideWallHeight(b.x));
     if (OVER_WALL_RULE && b.z * ZS > wallH) {
+      // Sale por encima: el punto (para quien pegó) se decide cuando toque el suelo de afuera, salvo que la rescaten
       const overBack = (hitLeft || hitRight);
-      awardPoint(b.lastHitTeam, overBack ? 'Por 4: salió por encima del fondo' : 'Por 3: salió por la pared lateral');
+      b.out = true;
+      b.outTeam = b.lastHitTeam;
+      b.outReason = overBack ? 'Por 4: salió por encima del fondo' : 'Por 3: salió por la pared lateral';
+      showBanner(overBack ? '¡Por 4!' : '¡Por 3!', 70);
       return;
     }
 

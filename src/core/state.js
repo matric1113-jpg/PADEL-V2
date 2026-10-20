@@ -68,6 +68,7 @@ export function createPlayer(uid, x, y, team, name, isBot, speedPref = 0.5, look
     ready: false, vote: '',
     speedStat: speedPref,          // 0.15 a 0.85
     powerStat: 1 - speedPref,      // Inversamente proporcional a la velocidad
+    outside: false,                // salió de la cancha por la puerta
     jz: 0, jvz: 0, jumpCharge: 0, jumpK: 0, landStop: 0, landSlow: 0,   // salto: altura, velocidad vertical, carga, fuerza del último salto, clavado y recuperación al caer
     sprintActiveTimer: 0,
     sprintCooldown: 0,
@@ -132,7 +133,8 @@ export const state = {
     hasBouncedInValidBox: false,
     isServeShot: true,
     shotType: 'SAQUE',
-    smashK: 1,          // remate: 0 = pegado justo en la altura mínima, 1 = bien arriba (fuerza y bote completos)
+    smashK: 1,
+    out: false, outTeam: -1, outReason: '',   // salió por 3 o por 4 y sigue volando afuera (punto para outTeam al tocar el suelo)          // remate: 0 = pegado justo en la altura mínima, 1 = bien arriba (fuerza y bote completos)
     hitSeq: 0,
     cut: 0,
     cpTarget: null,

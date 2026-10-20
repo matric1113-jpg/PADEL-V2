@@ -224,7 +224,9 @@ export class Character {
     // Físico desde LOOKS: ancho = escala lateral del modelo; alto = escala vertical; brazos y piernas = grosor de los huesos
     const body = f.body;
     const wK = 1 + (body.w - 1) * 0.9;
-    this.root.scale.set(f.K * MODEL_U * wK, f.Kz * MODEL_U, f.K * MODEL_U);
+    // Zurdo: el modelo se dibuja reflejado en su eje lateral (x del modelo) y los objetivos de las manos se reflejan
+    // igual (toModel), así la pose de diestro que calcula el esqueleto se ve como la de un zurdo. Solo es estético.
+    this.root.scale.set((f.lefty ? -1 : 1) * f.K * MODEL_U * wK, f.Kz * MODEL_U, f.K * MODEL_U);
     const armK = 1 + (f.armK - 1) * 0.75, legK = 1 + (body.leg - 1) * 0.75;
     for (const s of ['l', 'r']) {
       this.bones['upperarm_' + s].scale.set(armK, 1, armK);
@@ -280,7 +282,7 @@ export class Character {
     }
 
     // ----- Brazos -----
-    const toModel = (w, out) => out.copy(w).applyMatrix4(rig.inv);
+    const toModel = (w, out) => { out.copy(w).applyMatrix4(rig.inv); if (f.lefty) out.x = -out.x; return out; };
     let tgtR, poleR, tgtL, poleL, handDir = null;
     if (f.cry) {
       // Cabeza abajo y manos a la cara: cada mano va a un ojo (en el marco de la cabeza ya inclinada)
@@ -305,6 +307,7 @@ export class Character {
     this.wL = lerp(this.wL, wLtarget, clamp(0.2 * dt * 60, 0, 1));
     rig.arm('l', tgtL, poleL, this.wL);
     const paddleDir = f.stun > 0 ? new Vector3(0.1, -0.95, 0.25).normalize() : _v3.copy(f.paddle.dir).transformDirection(rig.inv).clone();
+    if (f.lefty && !(f.stun > 0)) paddleDir.x = -paddleDir.x;
     const reachedR = rig.arm('r', tgtR, poleR, 1, f.paddle.show || f.stun > 0 ? paddleDir : null);
 
     // ----- Manos -----
@@ -353,6 +356,10 @@ export class Character {
     _v.setFromMatrixPosition(hand.matrixWorld);
     const dirW = f.stun > 0 ? _v2.set(0.1, -0.95, 0.25).transformDirection(this.model.matrixWorld) : _v2.copy(pd.dir);
     const normal = f.stun > 0 ? _v3.set(0, 0.25, 1).cross(dirW).normalize() : _v3.copy(pd.normal);
+    if (f.lefty && !(f.stun > 0)) {
+      // Zurdo: la orientación de la pala se refleja en el eje lateral del modelo, igual que las manos
+      for (const v of [dirW, normal]) { v.transformDirection(this.rig.inv); v.x = -v.x; v.transformDirection(this.model.matrixWorld); }
+    }
     const wDir = new Vector3().crossVectors(dirW, normal).normalize();
     _m.makeBasis(dirW, normal, wDir).setPosition(_v);
     _m2.copy(hand.matrixWorld).invert();

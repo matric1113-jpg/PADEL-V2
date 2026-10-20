@@ -1,44 +1,47 @@
 export const CHARACTERS = ['german', 'maxi', 'joaquin', 'alvaro', 'fernando', 'matias', 'marco'];
+// Los 7 personajes elegibles están balanceados: velocidad (y con ella la fuerza, que es 1 - velocidad) entre 0,44 y
+// 0,56. Lo demás es estético: estatura (body.h, poca diferencia), contextura, zurdo o diestro (lefty), paleta, pelo,
+// gorros y lentes. body solo cambia cómo se ve; el alcance de la pala no depende de él.
 export const LOOKS = {
   german: {
-    name: 'Germán', role: 'Pegador', speed: 0.15,
-    desc: 'Guatita de campeón y bigote de los 80. No corre: espera que la pelota llegue.',
+    name: 'Germán', role: 'Diestro', speed: 0.44,
+    desc: 'Guatita de campeón, bigote de los 80, cintillo rojo y pala redonda.',
     skin: '#e3b38f', hair: 'bald', hairColor: '#4a3426',
-    body: { w: 1.32, h: 0.95, belly: 1.55, arm: 1.2, leg: 1.2 },
+    body: { w: 1.28, h: 0.96, belly: 1.5, arm: 1.15, leg: 1.15 },
     shirt: '#f2f2ec', shirtHi: '#ffffff', shirtLo: '#a3a39a', shorts: '#1f2c4a', shoes: '#2a2a2a', band: '#e53935',
     extras: { mustache: '#4a3426', headband: '#e53935' },
     paddle: { face: '#c62828', rim: '#1b1b1b', shape: 'round' }
   },
   maxi: {
-    name: 'Maxi', role: 'Veloz', speed: 0.85,
-    desc: 'Mullet rubio, lentes de sol y cero frenos. Llega a todas, aunque le pega suavecito.',
+    name: 'Maxi', role: 'Zurdo', speed: 0.56, lefty: true,
+    desc: 'Mullet rubio, lentes de sol, calcetas altas y pala de lágrima. Zurdo y sin frenos.',
     skin: '#f2cba8', hair: 'mullet', hairColor: '#f3d36b',
-    body: { w: 0.84, h: 1.07, belly: 0.86, arm: 0.82, leg: 0.84 },
+    body: { w: 0.9, h: 1.04, belly: 0.9, arm: 0.9, leg: 0.92 },
     shirt: '#39e07a', shirtHi: '#9dffc0', shirtLo: '#1b8a46', shorts: '#101820', shoes: '#ffffff', band: '#ff4fa3', socksHigh: true,
     extras: { glasses: '#0d0d0d' },
     paddle: { face: '#00d5ff', rim: '#ffffff', shape: 'tear' }
   },
   joaquin: {
-    name: 'Joaquín', role: 'Ágil', speed: 0.68,
-    desc: 'Manos rápidas y cintillo de la suerte. Lee el juego antes que tú.',
+    name: 'Joaquín', role: 'Diestro', speed: 0.52,
+    desc: 'Manos rápidas, cintillo de la suerte y pala diamante. Lee el juego antes que tú.',
     skin: '#ebc39a', hair: 'side', hairColor: '#121212',
-    body: { w: 0.94, h: 0.97, belly: 0.94, arm: 0.95, leg: 0.95 },
+    body: { w: 0.94, h: 0.98, belly: 0.94, arm: 0.95, leg: 0.95 },
     shirt: '#7b4dff', shirtHi: '#b9a3ff', shirtLo: '#432a9c', shorts: '#20123f', shoes: '#ff8f00', band: '#ffeb3b',
     extras: { headband: '#ffeb3b' },
     paddle: { face: '#ff6d00', rim: '#1b1b1b', shape: 'diamond' }
   },
   alvaro: {
-    name: 'Álvaro', role: 'Potente', speed: 0.32,
-    desc: 'Brazos de gimnasio y afro imponente. Si la agarra de remate, no vuelve.',
+    name: 'Álvaro', role: 'Zurdo', speed: 0.47, lefty: true,
+    desc: 'Brazos de gimnasio, afro imponente con cintillo blanco y musculosa amarilla.',
     skin: '#6a4330', hair: 'afro', hairColor: '#17100c',
-    body: { w: 1.18, h: 1.05, belly: 0.95, arm: 1.55, leg: 1.15 },
+    body: { w: 1.14, h: 1.05, belly: 0.95, arm: 1.4, leg: 1.1 },
     shirt: '#ffb300', shirtHi: '#ffe082', shirtLo: '#a87400', tank: true, shorts: '#1a1a1a', shoes: '#e53935', band: '#ffffff',
-    extras: {},
+    extras: { headband: '#ffffff' },
     paddle: { face: '#212121', rim: '#ffb300', shape: 'round' }
   },
   fernando: {
-    name: 'Fernando', role: 'Equilibrado', speed: 0.5,
-    desc: 'Pelirrojo, barba tupida y jockey al revés. Hace de todo un poco.',
+    name: 'Fernando', role: 'Diestro', speed: 0.5,
+    desc: 'Pelirrojo, barba tupida, jockey blanco al revés y pala de lágrima.',
     skin: '#f4d0b5', hair: 'cap', hairColor: '#c2481a',
     body: { w: 1.02, h: 1.0, belly: 1.06, arm: 1.0, leg: 1.0 },
     shirt: '#1e88e5', shirtHi: '#90caf9', shirtLo: '#0d47a1', shorts: '#e9e9e9', shoes: '#1b1b1b', band: '#1e88e5',
@@ -47,22 +50,22 @@ export const LOOKS = {
   },
 
   matias: {
-    name: 'Matías', role: 'Táctico', speed: 0.58,
-    desc: 'Pelo crespo, polera naranja y paciencia infinita. Cansa al rival a punta de globos.',
+    name: 'Matías', role: 'Diestro', speed: 0.53,
+    desc: 'Pelo crespo, visera blanca, polera naranja y paciencia infinita.',
     skin: '#e8bd98', hair: 'curly', hairColor: '#3b2416',
-    body: { w: 0.98, h: 0.96, belly: 1.0, arm: 1.05, leg: 1.02 },
+    body: { w: 0.98, h: 0.97, belly: 1.0, arm: 1.05, leg: 1.02 },
     shirt: '#ff7a1a', shirtHi: '#ffb27a', shirtLo: '#b04a00', shorts: '#0f2238', shoes: '#ffffff', band: '#ff7a1a', socksHigh: true,
-    extras: {},
+    extras: { visor: '#ffffff' },
     paddle: { face: '#ffe600', rim: '#0f2238', shape: 'tear' }
   },
 
   marco: {
-    name: 'Marco', role: 'Todoterreno', speed: 0.45,
-    desc: 'Cubano, español y chileno a la vez. Pelado, sonrisa grande y un revés con sabor caribeño.',
+    name: 'Marco', role: 'Zurdo', speed: 0.48, lefty: true,
+    desc: 'Cubano, español y chileno a la vez. Pelado, zurdo y con lentes de sol.',
     skin: '#4a2c1d', hair: 'bald', hairColor: '#140d09',
     body: { w: 1.06, h: 1.03, belly: 1.0, arm: 1.12, leg: 1.06 },
     shirt: '#00a884', shirtHi: '#7ee8c9', shirtLo: '#00664f', shorts: '#0d1b2a', shoes: '#ffd600', band: '#ffd600',
-    extras: {},
+    extras: { glasses: '#141414' },
     paddle: { face: '#0050b5', rim: '#ffd600', shape: 'diamond' }
   },
 
@@ -196,7 +199,15 @@ export const BOSSES = [
     { look: 'martinez', name: 'Profe Martínez', speed: 0.5, active: 'all', ups: 4 },
     { look: 'capitana', name: 'La Capitana', speed: 0.7, active: 'all', ups: 4 }] }
 ];
-export const RUN_REWARD = 1000;
+// Premio por jefe ganado (para cada jugador), según qué tan claro fue. Jefes a un juego: por los puntos que les
+// hicieron en ese juego (40-0, 40-15, 40-30, punto de oro). Jefes al mejor de 3: por los juegos que perdieron.
+export const RUN_REWARD_BY_POINTS = [1500, 1100, 900, 700];
+export const RUN_REWARD_BY_GAMES = [1500, 1000];
+export const RUN_REWARD = RUN_REWARD_BY_POINTS[0];   // el máximo (para los textos del menú)
+export function runReward(boss, finalScore, games) {
+  if (boss.gamesToWin > 1) return RUN_REWARD_BY_GAMES[Math.min(games[1], RUN_REWARD_BY_GAMES.length - 1)];
+  return RUN_REWARD_BY_POINTS[Math.min(finalScore[1], RUN_REWARD_BY_POINTS.length - 1)];
+}
 export const TEAMMATE_SKILL = 0.6;
 export const FRIENDLY_START_MONEY = 700;
 export const FRIENDLY_SHOP_MONEY = 1000;

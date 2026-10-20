@@ -5,6 +5,7 @@ import {
 import { COURT, GLASS_H, GLASS_STEP_H, NET_H, WALL_H_LOW, WALL_H_TALL, ZS } from '../core/constants.js';
 import { state } from '../core/state.js';
 import { clamp } from '../core/util.js';
+import { DOORS } from '../core/walls.js';
 import { fx } from '../view/fx.js';
 import { mergeStatic } from './merge.js';
 import { hash2, makeGrid, sampleGrid, vnoise } from './noise.js';
@@ -13,7 +14,8 @@ import { styleOf } from './style.js';
 // ---------- Cancha: césped, alrededores, paredes de cristal y malla, puerta y red ----------
 // Unidades: 1 = 1 px de mundo (40 = 1 m). En Three.js (x, altura, y).
 const X0 = COURT.x, X1 = COURT.x + COURT.w, Y0 = COURT.y, Y1 = COURT.y + COURT.h;
-const DOOR = [438, 482], DOOR_H = 84;   // vano de la puerta al centro de cada lateral (solo estética)
+const DOOR_H = 84;   // alto del vano de las puertas (DOORS en core/walls.js: por ahí salen y entran los jugadores)
+const doorAt = a => DOORS.some(([d0, d1]) => a > d0 && a < d1);
 const APRON = 70;                       // pasillo alrededor de la cancha
 
 let maxAniso = 8;
@@ -296,9 +298,14 @@ export class Court {
         if (pn.top > pn.glass) {
           const z0 = pn.glass, z1 = pn.top;
           // La malla se corta en el vano de la puerta
-          const cuts = side && pn.a0 < DOOR[1] && pn.a1 > DOOR[0]
-            ? [[pn.a0, DOOR[0], z0, z1], [DOOR[1], pn.a1, z0, z1], [Math.max(pn.a0, DOOR[0]), Math.min(pn.a1, DOOR[1]), DOOR_H, z1]]
-            : [[pn.a0, pn.a1, z0, z1]];
+          const cuts = [];
+          let a = pn.a0;
+          for (const [d0, d1] of side ? DOORS : []) {
+            if (d1 <= pn.a0 || d0 >= pn.a1) continue;
+            cuts.push([a, Math.max(a, d0), z0, z1], [Math.max(pn.a0, d0), Math.min(pn.a1, d1), DOOR_H, z1]);
+            a = Math.min(pn.a1, d1);
+          }
+          cuts.push([a, pn.a1, z0, z1]);
           for (const [a0, a1, c0, c1] of cuts) {
             if (a1 - a0 < 0.5) continue;
             const w = wallPlane(key, a0, a1, c0, c1, wireMat, 8);
@@ -314,19 +321,19 @@ export class Court {
       const posts = new Map();
       for (const pn of panels) for (const a of [pn.a0, pn.a1]) posts.set(a, Math.max(posts.get(a) || 0, pn.top));
       for (const [a, h] of posts) {
-        if (side && a > DOOR[0] && a < DOOR[1]) continue;
+        if (side && doorAt(a)) continue;
         const p = wallBox(key, a - 1.7, a + 1.7, 0, h + 1, 3.4, metal, out * 1.6);
         p.castShadow = true;
         walls.add(p);
       }
-      if (side) this.buildDoor(walls, key, out, metal, wireMat);
+      if (side) for (const door of DOORS) this.buildDoor(walls, key, out, metal, wireMat, door);
     }
     walls.traverse(o => { if (o.isMesh) o.receiveShadow = true; });
     this.group.add(mergeStatic(walls));
   }
 
-  // Puerta lateral: marco y una hoja de malla entreabierta hacia afuera (solo estética)
-  buildDoor(walls, key, out, metal, wireMat) {
+  // Puerta lateral: marco y una hoja de malla abierta hacia afuera (los jugadores pasan por el vano)
+  buildDoor(walls, key, out, metal, wireMat, DOOR) {
     for (const a of DOOR) {
       const p = wallBox(key, a - 1.7, a + 1.7, 0, WALL_H_LOW + 1, 3.4, metal, out * 1.6);
       p.castShadow = true;
@@ -345,11 +352,11 @@ export class Court {
     const mesh = new Mesh(new PlaneGeometry(w - 4, DOOR_H - 6), wireMat);
     mesh.position.set(w / 2, DOOR_H / 2 - 1, 0);
     leaf.add(mesh);
-    // Bisagra en DOOR[0], abierta unos 35° hacia afuera
+    // Bisagra en DOOR[0], abierta hacia afuera
     const hinge = new Group();
     hinge.add(leaf);
     leaf.position.x = 0;
-    const ang = 0.6;
+    const ang = 1.35;   // bien abierta: los jugadores salen por aquí
     if (key === 'F') { hinge.position.set(DOOR[0] + 2, 0.5, Y0 - 3); hinge.rotation.y = ang; }
     else { hinge.position.set(DOOR[0] + 2, 0.5, Y1 + 3); hinge.rotation.y = -ang; }
     walls.add(hinge);

@@ -9,7 +9,8 @@
 // En el americano comprueba las parejas de cada set, el set a AMERICANO_GAMES_TO_WIN juegos, la suma de juegos de cada
 // jugador y la tabla final. Además hay pruebas cortas fijas: desempates de la tabla y el clic pendiente al volver al saque.
 import { localInput, rt, state } from '../src/core/state.js';
-import { ACTIVE_COST, BOSSES, FRIENDLY_START_MONEY, MAP_IDS, UPG } from '../src/core/data.js';
+import { ACTIVE_COST, BOSSES, FRIENDLY_START_MONEY, MAP_IDS, UPG, runReward } from '../src/core/data.js';
+import { DOORS, insideCourt } from '../src/core/walls.js';
 import { AMERICANO_GAMES_TO_WIN, JUMP_LAND_FRAMES, JUMP_LAND_STOP, JUMP_MAX_H, JUMP_MIN_H, SETS_TO_WIN } from '../src/core/constants.js';
 import { AMERICANO_PAIRS, americanoRanking, prepareRoster, resolveVoteAndPlay, setMap, startBossMatch, startFriendly, startMatch, startRun, swapSeats } from '../src/core/game.js';
 import { stepPhysics } from '../src/core/physics.js';
@@ -173,10 +174,60 @@ function testJump() {
   me.isBot = true;
   console.log(`salto: toque ${short.top.toFixed(1)} de alto, media carga ${mid.top.toFixed(1)}, carga completa ${long.top.toFixed(1)} (${long.frames} cuadros en el aire); al caer clavado ${long.stop} cuadros y luego corre a ${(slowStep / fullStep * 100).toFixed(0)} %`);
 }
+// Pelota que sale por 4: el punto no se da al cruzar la pared, sino al tocar el suelo de afuera
+function testOutBall() {
+  prepareRoster('friendly'); startFriendly(); resolveVoteAndPlay();
+  state.players.forEach(p => { p.isBot = true; p.skill = 0.1; p.x = p.team === 0 ? 300 : 620; });   // lejos, sin rescatar
+  state.phase = 'PLAY';
+  const b = state.ball;
+  Object.assign(b, { x: 800, y: 260, z: 130, vx: 4, vy: 0, vz: 3, lastHitTeam: 0, bouncesInOpponentSide: 1, shotType: 'DRIVE', isServeShot: false, out: false });
+  const s0 = state.score.slice();
+  let crossed = -1, k = 0;
+  for (; k < 200 && state.phase === 'PLAY'; k++) { stepPhysics(); if (b.out && crossed < 0) crossed = k; }
+  if (crossed < 0) fail('la pelota no salió por encima del fondo');
+  if (k - crossed < 3) fail('el punto terminó al cruzar la pared, no al tocar el suelo de afuera');
+  if (state.score[0] !== s0[0] + 1 || !/^Por 4/.test(state.bannerText)) fail('el por 4 no fue para quien pegó: ' + state.bannerText);
+}
+
+// Puertas: por la propia puerta se sale (y se vuelve a entrar); contra la pared no
+function testDoors() {
+  prepareRoster('friendly'); startFriendly(); resolveVoteAndPlay();
+  const me = state.players[rt.mySlot];
+  me.isBot = false;
+  state.serverSlot = (rt.mySlot + 2) % 4;
+  const step = () => { state.phase = 'PLAY'; Object.assign(state.ball, { x: 700, y: 260, z: 40, vx: 0, vy: 0, vz: 0, out: false }); stepPhysics(); };
+  const dc = (DOORS[0][0] + DOORS[0][1]) / 2;
+  me.x = dc + 6; me.y = 400; me.outside = false;
+  localInput.down = true;
+  for (let k = 0; k < 80; k++) step();
+  localInput.down = false;
+  if (!me.outside || me.y < 480) fail(`no salió por la puerta (${me.x.toFixed(0)}, ${me.y.toFixed(0)})`);
+  localInput.up = true;
+  for (let k = 0; k < 80; k++) step();
+  localInput.up = false;
+  if (me.outside || !insideCourt(me.x, me.y)) fail('no volvió a entrar por la puerta');
+  me.x = 120; me.y = 400;
+  localInput.down = true;
+  for (let k = 0; k < 80; k++) step();
+  localInput.down = false;
+  if (me.outside || me.y > 480) fail('atravesó la pared lejos de la puerta');
+  me.isBot = true;
+}
+
+// Premio del torneo según el marcador
+function testRewards() {
+  const one = BOSSES.find(B => B.gamesToWin === 1), three = BOSSES.find(B => B.gamesToWin > 1);
+  const got = [[4, 0], [4, 1], [4, 2], [4, 3]].map(s => runReward(one, s, [1, 0])).concat([runReward(three, [4, 0], [2, 0]), runReward(three, [4, 2], [2, 1])]);
+  if (got.join() !== '1500,1100,900,700,1500,1000') fail('premios del torneo: ' + got.join());
+}
+
 testRanking();
 testStaleRelease();
 testJump();
-console.log('pruebas fijas: desempates del americano, clic pendiente al sacar y salto, sin errores');
+testOutBall();
+testDoors();
+testRewards();
+console.log('pruebas fijas: desempates del americano, clic pendiente al sacar, salto, pelota afuera, puertas y premios, sin errores');
 
 for (const mode of MODES) {
   setup(mode);

@@ -1,5 +1,5 @@
 import { computeLaunch, getClampedTarget } from '../core/ballistics.js';
-import { ACTIVE_COOLDOWN, ACTIVE_DURATION, BALL_R, COURT, GRAVITY, MAX_CHARGE_FRAMES, NET_H, PAD_F, PAD_S, SPRINT_COOLDOWN, SPRINT_DURATION, TILT_BALL_ACCEL, VIEW_H, VIEW_W, ZS } from '../core/constants.js';
+import { ACTIVE_COOLDOWN, ACTIVE_DURATION, BALL_R, COURT, GRAVITY, JUMP_CHARGE_FRAMES, MAX_CHARGE_FRAMES, NET_H, PAD_F, PAD_S, SPRINT_COOLDOWN, SPRINT_DURATION, TILT_BALL_ACCEL, VIEW_H, VIEW_W, ZS } from '../core/constants.js';
 import { contraTarget, isContraAim } from '../core/physics.js';
 import { gustForce, tiltEase, localInput, rt, state } from '../core/state.js';
 import { smashMinOf, upLvl } from '../core/stats.js';
@@ -186,6 +186,36 @@ function drawNameplate(p, idx, built) {
   if (sprintRatio > 0.01) {
     roundRect(x - bw / 2 + 1, y - 3 * k, (bw - 2) * clamp(sprintRatio, 0, 1), 3 * k, 1.5);
     ctx.fillStyle = fillCol; ctx.fill();
+  }
+
+  // Carga del salto (Espacio): barra vertical celeste con flechas que suben, y un aro en el suelo que se cierra
+  if (p.jumpCharge > 0) {
+    const r = clamp(p.jumpCharge / JUMP_CHARGE_FRAMES, 0, 1);
+    const full = r >= 1;
+    const bx = x + bw / 2 + 7 * k, bh = 30 * k, by = y + 1 * k;
+    roundRect(bx - 3.5 * k, by - bh, 7 * k, bh, 3);
+    ctx.fillStyle = 'rgba(4, 10, 20, 0.85)'; ctx.fill();
+    ctx.strokeStyle = full ? '#e9fdff' : 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1; ctx.stroke();
+    roundRect(bx - 2 * k, by - 1.5 * k - (bh - 3 * k) * r, 4 * k, (bh - 3 * k) * r, 2);
+    ctx.fillStyle = full ? '#e9fdff' : '#4fe6ff'; ctx.fill();
+    // flechas que suben más rápido cuanto más cargado
+    const t = performance.now() / (full ? 140 : 260);
+    ctx.fillStyle = '#4fe6ff';
+    for (let i = 0; i < 2; i++) {
+      const ph = (t + i * 0.5) % 1;
+      const ay = by - bh - 4 * k - ph * 10 * k;
+      ctx.globalAlpha = 1 - ph;
+      ctx.beginPath(); ctx.moveTo(bx - 4 * k, ay + 3 * k); ctx.lineTo(bx, ay - 1.5 * k); ctx.lineTo(bx + 4 * k, ay + 3 * k); ctx.closePath(); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // aro en los pies: se cierra a medida que carga
+    const g = P(p.x, p.y, 0);
+    const rad = (26 - 14 * r) * g.s;
+    ctx.save();
+    ctx.strokeStyle = full ? 'rgba(233, 253, 255, 0.95)' : 'rgba(79, 230, 255, 0.85)';
+    ctx.lineWidth = (full ? 3 : 2) * g.s;
+    ctx.beginPath(); ctx.ellipse(g.x, g.y, rad, rad * 0.5, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
   }
 
   // Barra de carga del golpe

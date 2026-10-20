@@ -1,6 +1,6 @@
 import { computeServeBox, nextServerSlot, showBanner } from './ballistics.js';
 import { AMERICANO_GAMES_TO_WIN, PAD_F, PAD_S, POINTS_LABELS, SETS_TO_WIN } from './constants.js';
-import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, LOOKS, MAPS, MAP_IDS, RUN_REWARD, TALK, TEAMMATE_SKILL, UPG, UPGRADES } from './data.js';
+import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, LOOKS, MAPS, MAP_IDS, TALK, TEAMMATE_SKILL, UPG, UPGRADES, runReward } from './data.js';
 import { hooks } from './events.js';
 import { mapOf, menuSel, rt, slotOfUid, state, syncMySlot } from './state.js';
 import { emptyUpgrades, upLvl } from './stats.js';
@@ -33,6 +33,7 @@ export function setupServe(nextServerSlot) {
     p.activeT = 0; p.activeKind = ''; p.clone = null;
     p.stun = 0; p.slow = 0; p.burn = 0;
     p.jz = 0; p.jvz = 0; p.jumpCharge = 0; p.landStop = 0; p.landSlow = 0;
+    p.outside = false;
   });
   // Zeus saca desde un lado y luego cubre toda su mitad
   if (solo1 && nextServerSlot === 2) state.players[2].y = 155;
@@ -52,6 +53,7 @@ export function setupServe(nextServerSlot) {
   b.bouncesInOpponentSide = 0;
   b.shotType = 'SAQUE';
   b.cpTarget = null;
+  b.out = false; b.outTeam = -1; b.outReason = '';
 
   // El texto lo ven todos en la sala, así que nombra a quien saca
   showBanner(server.isBot ? 'Al saque: ' + server.name : 'Saca ' + server.name + '\nApunta al cuadro iluminado, carga y suelta el clic', 9999);
@@ -495,11 +497,12 @@ export function startBossMatch() {
 
 function endRunMatch(winner, finalScore) {
   const i = state.run.boss;
-  state.result = { winner, score: finalScore, games: [...state.games], boss: i };
+  const reward = winner === 0 ? runReward(BOSSES[i], finalScore, state.games) : 0;
+  state.result = { winner, score: finalScore, games: [...state.games], boss: i, reward };
   if (winner === 0) {
-    state.players.forEach(p => { if (p.team === 0 && !p.isBot) p.money += RUN_REWARD; });
+    state.players.forEach(p => { if (p.team === 0 && !p.isBot) p.money += reward; });
     state.afterPause = i >= BOSSES.length - 1 ? 'champion' : 'shop';
-    showBanner(`¡Le ganaron a ${BOSSES[i].team}!\n+$${RUN_REWARD.toLocaleString('es-CL')} para cada uno`, 9999);
+    showBanner(`¡Le ganaron a ${BOSSES[i].team}!\n+$${reward.toLocaleString('es-CL')} para cada uno`, 9999);
   } else {
     state.afterPause = 'lost';
     showBanner(`Perdieron contra ${BOSSES[i].team}\nEl torneo vuelve a empezar`, 9999);

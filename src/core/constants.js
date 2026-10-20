@@ -89,8 +89,8 @@ export const SMASH_LOW_BOUNCE = 0.79;        // rebote en el suelo de ese remate
 // salta más alto cuanto más rato lo cargó. Sirve sobre todo para alcanzar las pelotas que salen hacia la malla o el
 // fondo (por 3 / por 4). Al caer se queda un instante clavado y le cuesta volver a correr: abusar del salto se paga.
 export const JUMP_G = 0.3;                   // gravedad del salto (unidades de z por cuadro²)
-export const JUMP_MIN_H = 12;                // altura con un toque (12 de z = 36 cm)
-export const JUMP_MAX_H = 34;                // altura con la carga completa (34 de z = 1 m)
+export const JUMP_MIN_H = 16;                // altura con un toque (16 de z = 48 cm)
+export const JUMP_MAX_H = 44;                // altura con la carga completa (44 de z = 1,3 m)
 export const JUMP_CHARGE_FRAMES = 30;        // cuadros de carga para el salto más alto (0,5 s)
 export const JUMP_CHARGE_SLOW = 0.8;         // velocidad al moverse mientras carga el salto
 export const JUMP_LAND_STOP = 4;             // al caer de un salto completo queda clavado 4 cuadros (0,07 s; de uno corto, la mitad)
