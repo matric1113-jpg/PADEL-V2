@@ -73,7 +73,7 @@ export class Players {
       const ch = this.char(this.slots, idx, gender, false);
       ch.root.visible = true;
       const b = built[idx];
-      ch.update(this.frame(p, b, dtSec, p.x, p.y));
+      ch.update(frameFor(p, b, dtSec, p.x, p.y));
       this.trail(this.trails[trail++], p, b);
       if (b.cloud) {
         // Zeus remata parado sobre una nube
@@ -89,7 +89,7 @@ export class Players {
         const bc = buildPlayerParts(fake, idx, dt, now, fx.clones[idx], { look });
         const g = this.char(this.cloneSlots, idx, gender, true);
         g.root.visible = true;
-        g.update(this.frame(fake, bc, dtSec, fake.x, fake.y));
+        g.update(frameFor(fake, bc, dtSec, fake.x, fake.y));
         this.trail(this.trails[trail++], fake, bc);
       } else if (cc) cc.root.visible = false;
     });
@@ -99,45 +99,44 @@ export class Players {
     return built;
   }
 
-  // Esqueleto de palitos (mundo del juego) -> Three.js: (x, y, z del juego) = (x, altura, y)
-  mapper(p, b) {
-    const K = scaleOf(p);
-    const Kz = K * b.look.body.h * (1 + 0.03 * upLvl(p, 'estiron')) * (actOn(p, 'gordo') ? 1.2 : 1);
-    const jz = b.jumpZ || 0;
-    return { K, Kz, jz, T: (v, out) => out.set(p.x + (v.x - p.x) * K, v.z * Kz + jz, p.y + (v.y - p.y) * K) };
-  }
-
   trail(mesh, p, b) {
-    const { T } = this.mapper(p, b);
-    updateTrail(mesh, b.pf.tips, T);
+    updateTrail(mesh, b.pf.tips, mapper(p, b).T);
   }
+}
 
-  // Todo lo que el personaje necesita saber del cuadro (ver char/character.js)
-  frame(p, b, dtSec, x, y) {
-    const { K, Kz, jz, T } = this.mapper(p, b);
-    const R = b.rig, pf = b.pf;
-    const v = (vec) => T(vec, new Vector3());
-    const pd = R.paddle;
-    const hand = v(pd.hand), center = v(pd.center), tip = v(pd.tip), side = v(pd.side);
-    const dir = _a.subVectors(center, hand).normalize().clone();
-    const half = _b.subVectors(side, center);
-    const normal = _c.crossVectors(dir, half).normalize().clone();
-    const sp = Math.hypot(pf.vx, pf.vy);
-    const body = b.look.body;
-    return {
-      dt: dtSec, lookId: p.lookId,
-      x, y: jz, z: y, K, Kz, body, armK: body.arm * (1 + 0.08 * upLvl(p, 'fuerza')),
-      facing: Math.atan2(Math.cos(R.th), Math.sin(R.th)),
-      moveYaw: Math.atan2(pf.vx, pf.vy),
-      speed: sp * 60 / (K * MODEL_U),
-      charging: b.charging, cr: b.cr, kind: pf.pose.kind,
-      swinging: b.swinging, swingKind: pf.swingKind, swingU: R.swingU,
-      celeb: R.celeb ? { kind: R.celeb } : null,
-      stun: p.stun, burn: p.burn, slow: p.slow,
-      twist: R.twist,
-      handR: v(R.handR), poleR: v(R.elbowR), handL: v(R.handL), poleL: v(R.elbowL),
-      paddle: { show: pd.show, dir, normal, halfLen: tip.distanceTo(center), halfWid: half.length(), handleLen: pd.handleLen * K, scale: K },
-      teamColor: TEAM_COLORS[p.team], up: p.up
-    };
-  }
+// Esqueleto de palitos (mundo del juego) -> Three.js: (x, y, z del juego) = (x, altura, y)
+function mapper(p, b) {
+  const K = scaleOf(p);
+  const Kz = K * b.look.body.h * (1 + 0.03 * upLvl(p, 'estiron')) * (actOn(p, 'gordo') ? 1.2 : 1);
+  const jz = b.jumpZ || 0;
+  return { K, Kz, jz, T: (v, out) => out.set(p.x + (v.x - p.x) * K, v.z * Kz + jz, p.y + (v.y - p.y) * K) };
+}
+
+// Todo lo que el personaje necesita saber del cuadro (ver char/character.js)
+export function frameFor(p, b, dtSec, x, y) {
+  const { K, Kz, jz, T } = mapper(p, b);
+  const R = b.rig, pf = b.pf;
+  const v = (vec) => T(vec, new Vector3());
+  const pd = R.paddle;
+  const hand = v(pd.hand), center = v(pd.center), tip = v(pd.tip), side = v(pd.side);
+  const dir = _a.subVectors(center, hand).normalize().clone();
+  const half = _b.subVectors(side, center);
+  const normal = _c.crossVectors(dir, half).normalize().clone();
+  const sp = Math.hypot(pf.vx, pf.vy);
+  const body = b.look.body;
+  return {
+    dt: dtSec, lookId: p.lookId,
+    x, y: jz, z: y, K, Kz, body, armK: body.arm * (1 + 0.08 * upLvl(p, 'fuerza')),
+    facing: Math.atan2(Math.cos(R.th), Math.sin(R.th)),
+    moveYaw: Math.atan2(pf.vx, pf.vy),
+    speed: sp * 60 / (K * MODEL_U),
+    charging: b.charging, cr: b.cr, kind: pf.pose.kind,
+    swinging: b.swinging, swingKind: pf.swingKind, swingU: R.swingU,
+    celeb: R.celeb ? { kind: R.celeb } : null,
+    stun: p.stun, burn: p.burn, slow: p.slow,
+    twist: R.twist,
+    handR: v(R.handR), poleR: v(R.elbowR), handL: v(R.handL), poleL: v(R.elbowL),
+    paddle: { show: pd.show, dir, normal, halfLen: tip.distanceTo(center), halfWid: half.length(), handleLen: pd.handleLen * K, scale: K },
+    teamColor: TEAM_COLORS[p.team], up: p.up
+  };
 }

@@ -4,7 +4,7 @@ import { prepareRoster, setLook, setMap, setReady, setVote, startBossMatch, star
 import { localInput, menuSel, rt, state } from '../core/state.js';
 import { upLvl } from '../core/stats.js';
 import { createRoom, joinRoom, leaveNetwork } from '../net/network.js';
-import { renderPortrait } from '../render2d/players.js';
+import { renderer } from '../renderer.js';
 
 export function setStatus(t) { document.getElementById('status-text').innerText = t; }
 export function setNetMsg(t) { rt.netMsg = t; rt.overlayKey = ''; }
@@ -279,7 +279,7 @@ export function syncOverlay() {
   overlayEl.innerHTML = VIEWS[view]();
   overlayEl.classList.add('show');
   overlayEl.scrollTop = scroll;
-  overlayEl.querySelectorAll('canvas[data-look]').forEach(cv => renderPortrait(cv, cv.dataset.look));
+  overlayEl.querySelectorAll('canvas[data-look]').forEach(cv => renderer.renderPortrait(cv, cv.dataset.look));
 }
 
 overlayEl.addEventListener('click', e => {

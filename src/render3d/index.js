@@ -18,6 +18,7 @@ import { MapScene } from './maps.js';
 import { Markers } from './markers.js';
 import { drawStunStars, drawVignette } from './overlay.js';
 import { Players } from './players.js';
+export { renderPortrait } from './portraits.js';
 
 // ---------- Render 3D (Three.js) ----------
 // La escena se dibuja en #game3d; el HUD sigue en el canvas 2D #game, que queda encima.
