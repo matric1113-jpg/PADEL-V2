@@ -189,7 +189,7 @@ export function frameFor(p, b, dtSec, x, y) {
     charging: b.charging, cr: b.cr, kind: pf.pose.kind,
     swinging: b.swinging, swingKind: pf.swingKind, swingU: R.swingU,
     celeb: R.celeb ? { kind: R.celeb } : null,
-    stun: p.stun, burn: p.burn, slow: p.slow,
+    stun: p.stun, burn: p.burn, slow: p.slow, air: p.jz > 0 ? Math.min(1, p.jz / 6) : 0,
     twist: R.twist,
     handR: v(R.handR), poleR: v(R.elbowR), handL: v(R.handL), poleL: v(R.elbowL),
     paddle: { show: pd.show, dir, normal, halfLen: tip.distanceTo(center), halfWid: half.length(), handleLen: pd.handleLen * K, scale: K },

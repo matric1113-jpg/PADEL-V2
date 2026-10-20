@@ -53,6 +53,7 @@ export function planClips(f) {
   if (f.swinging && f.swingKind === 'smash') jump = Math.sin(clamp(f.swingU, 0, 1) * Math.PI);
   else if (f.charging && f.kind === 'smash') jump = 0.35 * f.cr;
   if (f.celeb && f.celeb.kind === 'jump') jump = 1;
+  if (f.air) jump = Math.max(jump, f.air);   // en el aire (Espacio): piernas recogidas
 
   if (f.celeb) {
     // Celebración: rebote de baile (la pose de los brazos viene del esqueleto)

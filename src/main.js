@@ -1,5 +1,6 @@
 import './style.css';
-import { playSound, toggleMusic } from './audio/audio.js';
+import { getVolume, playSound, setVolume } from './audio/audio.js';
+import { watchTalk } from './audio/voice.js';
 import { hooks } from './core/events.js';
 import * as game from './core/game.js';
 import { setupServe } from './core/game.js';
@@ -18,7 +19,13 @@ import { fx, onGameEvent } from './view/fx.js';
 hooks.sound = type => { playSound(type); onGameEvent(type); };
 hooks.scoreChanged = updateScoreUI;
 document.getElementById('menu-btn').addEventListener('click', openMenu);
-document.getElementById('music-btn').addEventListener('click', toggleMusic);
+// Barras de volumen: al soltarlas pierden el foco, así las flechas y WASD vuelven a mover al jugador
+for (const k of ['music', 'sfx']) {
+  const el = document.getElementById('vol-' + k);
+  el.value = Math.round(getVolume(k) * 100);
+  el.addEventListener('input', () => setVolume(k, el.value / 100));
+  el.addEventListener('change', () => el.blur());
+}
 
 // Loop fijo a 60 FPS para la física; el dibujo va al ritmo de la pantalla
 let lastTime = performance.now();
@@ -49,6 +56,7 @@ function gameLoop(now) {
   runSteps(now);
   timed('render', () => renderer.render(now));
   timed('ui', () => { syncHud(); updateScoreUI(); syncOverlay(); });
+  watchTalk(state, !rt.uiMenuOpen && state.screen === 'play');   // las frases del partido se escuchan
   endFrame(now);
   requestAnimationFrame(gameLoop);
 }

@@ -39,7 +39,8 @@ export function tiltEase(ahead = 0) {
 
 export const localInput = {
   up: false, down: false, left: false, right: false,
-  sprint: false,
+  sprint: false,      // Shift: sprint o activa
+  jump: false,        // Espacio apretado: salto (más alto mientras se mantiene)
   speedPref: 0.50,
   charId: 'fernando',
   charging: false,
@@ -67,6 +68,7 @@ export function createPlayer(uid, x, y, team, name, isBot, speedPref = 0.5, look
     ready: false, vote: '',
     speedStat: speedPref,          // 0.15 a 0.85
     powerStat: 1 - speedPref,      // Inversamente proporcional a la velocidad
+    jz: 0, jvz: 0, jumpHold: 0, jumpPrev: false, landSlow: 0,   // salto: altura, velocidad vertical, Espacio apretado, recuperación al caer
     sprintActiveTimer: 0,
     sprintCooldown: 0,
     sprintDurMax: SPRINT_DURATION,
@@ -81,7 +83,7 @@ export function createPlayer(uid, x, y, team, name, isBot, speedPref = 0.5, look
     aimX: team === 0 ? 600 : 320,
     aimY: 260,
     lastReleaseSeq: 0,
-    botSeq: -1, botDelay: 0, botErrX: 0, botErrY: 0, botWhiff: false, botUseActive: false, botWallPlay: false
+    botSeq: -1, botDelay: 0, botErrX: 0, botErrY: 0, botWhiff: false, botUseActive: false, botWallPlay: false, botJump: false
   };
 }
 
@@ -130,6 +132,7 @@ export const state = {
     hasBouncedInValidBox: false,
     isServeShot: true,
     shotType: 'SAQUE',
+    smashK: 1,          // remate: 0 = pegado justo en la altura mínima, 1 = bien arriba (fuerza y bote completos)
     hitSeq: 0,
     cut: 0,
     cpTarget: null,

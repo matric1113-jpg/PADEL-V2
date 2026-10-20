@@ -1,4 +1,4 @@
-import { COURT, GRAVITY, MAX_CHARGE_FRAMES, PAD_F, PAD_S, WALL_PLAY } from './constants.js';
+import { COURT, GRAVITY, JUMP_MAX_H, MAX_CHARGE_FRAMES, PAD_F, PAD_S, WALL_PLAY } from './constants.js';
 import { state } from './state.js';
 import { reachOf, reachZOf } from './stats.js';
 import { clamp } from './util.js';
@@ -47,6 +47,7 @@ export function updateBotLogic(p, idx) {
     p.botErrY = incoming ? (Math.random() - 0.5) * 2 * lack * 50 : 0;
     p.botWhiff = incoming && Math.random() < lack * 0.32;
     p.botUseActive = incoming && Math.random() < 0.3 + 0.25 * sk;
+    p.botJump = incoming && Math.random() < 0.25 + 0.5 * sk;   // si la pelota le pasa alta, a veces salta
     // Juego de pared: si la pelota va a botar cerca de su fondo, a veces la dejan pasar y la juegan de rebote
     p.botWallPlay = false;
     if (incoming) {
@@ -108,6 +109,14 @@ export function updateBotLogic(p, idx) {
     if ((kind === 'hielo' && distToPaddle < reach + 12) || (kind !== 'hielo' && distToPaddle < 160)) inp.sprint = true;
   }
 
+  // Salto: la pelota ya botó en su campo y se le va por arriba cerca del fondo o de la malla lateral, pero saltando la alcanza
+  const zReach = reachZOf(p);
+  const nearWall = (p.team === 0 ? b.x - COURT.x : COURT.x + COURT.w - b.x) < 160 || b.y < COURT.y + 70 || b.y > COURT.y + COURT.h - 70;
+  if (state.phase === 'PLAY' && p.botJump && nearWall && b.lastHitTeam !== p.team && ballOnMySide && b.bouncesInOpponentSide >= 1 &&
+      distToPaddle < reach + 25 && b.z > zReach - 6 + p.jz && b.z < zReach + JUMP_MAX_H - 4) {
+    inp.jump = true;   // mantenido mientras sube: salta más alto
+  }
+
   if (state.phase === 'PLAY' && b.lastHitTeam !== p.team && ballOnMySide && distToPaddle < 130) {
     if (!p.charging && p.cooldown === 0) {
       inp.charging = true;
@@ -124,7 +133,7 @@ export function updateBotLogic(p, idx) {
         inp.aimY = 260 + (Math.random() - 0.5) * 350 * (0.45 + 0.55 * sk);
       }
     }
-    if (p.charging && !p.botWhiff && !waitWall && distToPaddle < reach - 1 && b.z <= reachZOf(p) - 5) {
+    if (p.charging && !p.botWhiff && !waitWall && distToPaddle < reach - 1 && b.z <= zReach + p.jz - 5) {
       inp.charging = false;
       inp.releaseSeq = p.lastReleaseSeq + 1;
       inp.lastChargeRatio = Math.min(p.chargeFrames / MAX_CHARGE_FRAMES, 0.3 + 0.7 * sk);

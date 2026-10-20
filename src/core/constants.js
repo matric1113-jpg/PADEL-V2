@@ -79,3 +79,20 @@ export const LIGHTS = [
   { x: 460, y: 36, z: 300 },     // lateral del fondo
   { x: 460, y: 484, z: 300 }     // lateral cercano a la cámara
 ];
+
+// Remate: sale con toda su fuerza solo si se le pega a la pelota bien arriba. Entre la altura mínima de remate
+// (smashMinOf) y SMASH_FULL_Z la fuerza y el bote crecen de a poco; abajo de eso es un remate algo más suave.
+export const SMASH_FULL_Z = 72;              // altura de la pelota (2,2 m, cerca del tope del alcance o saltando) desde la que el remate sale como antes
+export const SMASH_LOW_SPEED = 0.9;          // velocidad del remate pegado justo en la altura mínima (×)
+export const SMASH_LOW_BOUNCE = 0.79;        // rebote en el suelo de ese remate (el remate de siempre: 0,84; un golpe normal: 0,74)
+// Salto (Espacio): mantenerlo apretado mientras sube lo hace más alto. Sirve sobre todo para alcanzar las pelotas que
+// salen hacia la malla o el fondo (por 3 / por 4). Al caer, al jugador le cuesta un poco volver a correr.
+export const JUMP_V0 = 2.6;                  // velocidad vertical inicial (unidades de z por cuadro)
+export const JUMP_G = 0.3;                   // gravedad del salto
+export const JUMP_G_HELD = 0.13;             // gravedad mientras sube con el Espacio apretado
+export const JUMP_HOLD_FRAMES = 18;          // cuánto rato cuenta el Espacio apretado (salto corto ~11 de z, largo ~26 = 0,8 m)
+export const JUMP_MAX_H = 26;
+export const JUMP_LAND_FRAMES = 40;          // después de caer, cuadros que tarda en recuperar la velocidad
+export const JUMP_LAND_SLOW = 0.5;           // al caer corre a la mitad y se recupera de a poco
+export const JUMP_REJUMP_FRAMES = 14;        // no puede volver a saltar apenas cae
+export const JUMP_SMASH_BONUS = 0.04;        // remate en el aire: hasta un 4 % más fuerte

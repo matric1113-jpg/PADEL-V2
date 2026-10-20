@@ -146,6 +146,8 @@ canvas#game.hud { position: relative; }
   background: radial-gradient(circle at 35% 30%, #fbffd0 0%, var(--ball) 40%, #8fa61e 100%);
 }
 .group { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.vol { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-dim); padding: 0 6px; }
+.vol input[type=range] { width: 110px; padding: 0; border: 0; background: transparent; accent-color: var(--ball); cursor: pointer; }
 input, select {
   font-family: var(--body);
   background: var(--night);

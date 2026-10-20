@@ -4,6 +4,29 @@ let musicPlaying = false;
 let musicInterval = null;
 let beatStep = 0;
 let noiseBuffer = null;
+let sfxBus = null;
+
+// ---- Volumen: dos barras en la parte de abajo (música, y efectos con las voces). Se recuerdan en este navegador ----
+function loadVol(k) {
+  try { const v = parseFloat(localStorage.getItem('padel-vol-' + k)); return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1; } catch (e) { return 1; }
+}
+const vol = { music: loadVol('music'), sfx: loadVol('sfx') };
+export const getVolume = k => vol[k];
+export function setVolume(k, v) {
+  vol[k] = Math.min(1, Math.max(0, v));
+  try { localStorage.setItem('padel-vol-' + k, String(vol[k])); } catch (e) { /* sin almacenamiento */ }
+  if (k === 'sfx' && sfxBus) sfxBus.gain.value = vol.sfx;
+  if (k === 'music') {
+    if (musicBus) musicBus.gain.value = MUSIC_GAIN * vol.music;
+    const on = vol.music > 0;
+    if (on !== musicPlaying) { musicPlaying = on; if (on) { ensureAudio(); startMusic(); } else stopMusic(); }
+  }
+}
+// Salida de los efectos (pasa por la barra de volumen de efectos)
+function sfxOut() {
+  if (!sfxBus) { sfxBus = audioCtx.createGain(); sfxBus.gain.value = vol.sfx; sfxBus.connect(audioCtx.destination); }
+  return sfxBus;
+}
 
 export function ensureAudio() {
   if (!audioCtx) {
@@ -32,7 +55,7 @@ function noiseHit(t, dur, freq, q, gain, type = 'bandpass') {
   const g = audioCtx.createGain();
   g.gain.setValueAtTime(gain, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  src.connect(f); f.connect(g); g.connect(audioCtx.destination);
+  src.connect(f); f.connect(g); g.connect(sfxOut());
   src.start(t, Math.random() * 0.3);
   src.stop(t + dur + 0.02);
 }
@@ -45,7 +68,7 @@ function toneHit(t, type, f0, f1, dur, gain) {
   osc.frequency.exponentialRampToValueAtTime(f1, t + dur);
   g.gain.setValueAtTime(gain, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  osc.connect(g); g.connect(audioCtx.destination);
+  osc.connect(g); g.connect(sfxOut());
   osc.start(t); osc.stop(t + dur + 0.01);
 }
 
@@ -88,6 +111,10 @@ export function playSound(type) {
     noiseHit(now, 0.045, 1900, 1.3, 0.55);
     toneHit(now, 'sine', 340, 120, 0.07, 0.3);
     noiseHit(now + 0.02, 0.05, 6000, 2, 0.35, 'highpass');
+  } else if (type === 'jump') {
+    // Impulso del salto: roce de zapatilla
+    noiseHit(now, 0.06, 1200, 0.8, 0.12);
+    toneHit(now, 'sine', 180, 320, 0.08, 0.06);
   } else if (type === 'fault') {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -96,7 +123,7 @@ export function playSound(type) {
     osc.frequency.setValueAtTime(135, now + 0.12);
     gain.gain.setValueAtTime(0.2, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
-    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.connect(gain); gain.connect(sfxOut());
     osc.start(now); osc.stop(now + 0.34);
   }
 }
@@ -109,7 +136,8 @@ export function playJingle(win) {
 }
 
 // ---- Música: groove latino suave (La menor: Am - F - C - G), con secuenciador preciso ----
-musicPlaying = true;   // por defecto suena; el botón la apaga
+musicPlaying = vol.music > 0;   // con la barra de música en 0 no suena
+const MUSIC_GAIN = 0.55;
 let musicBus = null, musicTimer = null, musicNextTime = 0, musicStep = 0;
 const MUSIC_BPM = 104;
 const NOTE = n => 440 * Math.pow(2, n / 12);           // n = semitonos desde La4
@@ -191,7 +219,7 @@ function startMusic() {
   if (!audioCtx || musicTimer) return;
   if (!musicBus) {
     musicBus = audioCtx.createGain();
-    musicBus.gain.value = 0.55;
+    musicBus.gain.value = MUSIC_GAIN * vol.music;
     const lp = audioCtx.createBiquadFilter();
     lp.type = 'lowpass'; lp.frequency.value = 7000;
     musicBus.connect(lp); lp.connect(audioCtx.destination);
@@ -203,15 +231,4 @@ function stopMusic() {
   clearInterval(musicTimer);
   musicTimer = null;
 }
-function updateMusicButton() {
-  const btn = document.getElementById('music-btn');
-  btn.innerText = musicPlaying ? 'Música: sí' : 'Música: no';
-  btn.classList.toggle('on', musicPlaying);
-}
-export function toggleMusic() {
-  ensureAudio();
-  musicPlaying = !musicPlaying;
-  updateMusicButton();
-  document.getElementById('music-btn').blur();
-  if (musicPlaying) startMusic(); else stopMusic();
-}
+

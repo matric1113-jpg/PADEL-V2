@@ -5,14 +5,17 @@ import { canvas } from '../dom.js';
 import { renderer } from '../renderer.js';
 
 window.addEventListener('keydown', e => {
-  if (document.activeElement.tagName === 'INPUT') return;
+  const ae = document.activeElement;
+  if (ae.tagName === 'INPUT' && ae.type !== 'range') return;   // escribiendo el código de sala
+  if (ae.type === 'range') ae.blur();                           // una barra de volumen no se queda con las teclas
   ensureAudio();
   const k = e.key.toLowerCase();
   if (k === 'w' || e.key === 'ArrowUp') { localInput.up = true; e.preventDefault(); }
   if (k === 's' || e.key === 'ArrowDown') { localInput.down = true; e.preventDefault(); }
   if (k === 'a' || e.key === 'ArrowLeft') { localInput.left = true; e.preventDefault(); }
   if (k === 'd' || e.key === 'ArrowRight') { localInput.right = true; e.preventDefault(); }
-  if (e.code === 'Space') { localInput.sprint = true; e.preventDefault(); }
+  if (e.key === 'Shift') { localInput.sprint = true; e.preventDefault(); }   // sprint o activa
+  if (e.code === 'Space') { localInput.jump = true; e.preventDefault(); }    // salto
 });
 
 window.addEventListener('keyup', e => {
@@ -21,8 +24,11 @@ window.addEventListener('keyup', e => {
   if (k === 's' || e.key === 'ArrowDown') localInput.down = false;
   if (k === 'a' || e.key === 'ArrowLeft') localInput.left = false;
   if (k === 'd' || e.key === 'ArrowRight') localInput.right = false;
-  if (e.code === 'Space') localInput.sprint = false;
+  if (e.key === 'Shift') localInput.sprint = false;
+  if (e.code === 'Space') localInput.jump = false;
 });
+// Si la ventana pierde el foco con una tecla apretada, no queda pegada
+window.addEventListener('blur', () => { localInput.sprint = false; localInput.jump = false; });
 
 // El mouse se proyecta desde la pantalla al suelo 3D (rayo cámara → plano z=0)
 export const mouseView = { x: VIEW_W * 0.72, y: VIEW_H * 0.45, inside: false, moved: false };
@@ -44,7 +50,7 @@ canvas.addEventListener('mousedown', e => {
   if (document.activeElement.tagName === 'INPUT') document.activeElement.blur();
   if (e.button === 0) {
     localInput.charging = true;
-    localInput.lobMode = e.shiftKey;
+    localInput.lobMode = false;    // el globo es con el clic derecho (Shift ahora es el sprint)
   } else if (e.button === 2) {
     localInput.charging = true;
     localInput.lobMode = true;

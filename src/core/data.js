@@ -176,22 +176,23 @@ export const MAPS = {
             swatch: 'linear-gradient(180deg, #2a0a06 0%, #8a1f0a 55%, #ff6a1a 100%)' }
 };
 export const MAP_IDS = Object.keys(MAPS);
+// Nivel de cada jefe (skill). Del 2.º en adelante se bajó 0,04 (antes 0,62 / 0,8 / 0,95 / 1,0 / 1,06).
 export const BOSSES = [
   { team: 'Las tías del club', map: 'chile', skill: 0.45, gamesToWin: 1, players: [
     { look: 'gladys', name: 'Tía Gladys', speed: 0.35, active: 'random' },
     { look: 'nena', name: 'Tía Nena', speed: 0.6 }] },
-  { team: 'Los de la pega', map: 'brasil', skill: 0.62, gamesToWin: 1, players: [
+  { team: 'Los de la pega', map: 'brasil', skill: 0.58, gamesToWin: 1, players: [
     { look: 'patricio', name: 'Don Patricio', speed: 0.25, active: 'random' },
     { look: 'rodrigo', name: 'Rodrigo', speed: 0.6, active: 'random' }] },
-  { team: 'Zeus', map: 'atlas', skill: 0.8, gamesToWin: 2, solo: true, players: [
+  { team: 'Zeus', map: 'atlas', skill: 0.76, gamesToWin: 2, solo: true, players: [
     { look: 'zeus', name: 'Zeus', speed: 0.7, bodyScale: 1.3, speedMult: 1.32, powerMult: 1.15 }] },
-  { team: 'Los influencers', map: 'china', skill: 0.95, gamesToWin: 2, flash: true, players: [
+  { team: 'Los influencers', map: 'china', skill: 0.91, gamesToWin: 2, flash: true, players: [
     { look: 'brayan', name: 'Brayan', speed: 0.8, active: 'clone' },
     { look: 'kevin', name: 'Kevin', speed: 0.45, active: 'random' }] },
-  { team: 'Los colosos del cráter', map: 'crater', skill: 1.0, gamesToWin: 2, players: [
+  { team: 'Los colosos del cráter', map: 'crater', skill: 0.96, gamesToWin: 2, players: [
     { look: 'coloso', name: 'El Coloso', speed: 0.2, bodyScale: 1.5, speedMult: 0.88, powerMult: 1.3, active: 'random', ups: 3 },
     { look: 'chispa', name: 'Chispita', speed: 0.85, bodyScale: 0.74, speedMult: 1.3, backPref: true, active: 'random', ups: 3 }] },
-  { team: 'Los campeones del club', map: 'altura', skill: 1.06, gamesToWin: 2, players: [
+  { team: 'Los campeones del club', map: 'altura', skill: 1.02, gamesToWin: 2, players: [
     { look: 'martinez', name: 'Profe Martínez', speed: 0.5, active: 'all', ups: 4 },
     { look: 'capitana', name: 'La Capitana', speed: 0.7, active: 'all', ups: 4 }] }
 ];
@@ -261,13 +262,13 @@ export const TALK = {
 };
 
 // Lo que dice cada personaje al pasar el cursor por su tarjeta en el menú (text: lo que se lee en pantalla;
-// say: cómo lo pronuncia la voz del navegador, si cambia; pitch y rate: tono y velocidad de esa voz)
+// say: cómo lo pronuncia la voz del navegador, si cambia. La voz de cada uno se elige en audio/voice.js)
 export const HELLO = {
-  joaquin: { text: '¡Hola, cabros! Hola, Germancito, la paz del Señor.', pitch: 1.05, rate: 1.05 },
-  matias: { text: '¡Mati Neira! ¡Illaoi número 1 de LAS!', say: '¡Mati Neira! ¡Ilaói número uno de las!', pitch: 1.1, rate: 1.1 },
-  alvaro: { text: '¡Álvaro! Los esmeraldas son horribles, no como yo: diamante 4.', pitch: 0.85, rate: 1 },
-  maxi: { text: '¡El Maxi, siiii! Katarina, Katarina, Kastarina, Kastina, Kast.', say: '¡El Maxi, siiiii! Katarina, Katarina, Kastarina, Kastina, Kast.', pitch: 1.35, rate: 1.25 },
-  marco: { text: 'Soy el Marco: cubano, español y chileno.', pitch: 0.9, rate: 0.95 },
-  german: { text: '¡Soy el Germancito! ¡Viva Jeannette Jara! ¡Suban el sueldo mínimo!', say: '¡Soy el Germancito! ¡Viva Yanet Jara! ¡Suban el sueldo mínimo!', pitch: 0.7, rate: 0.95 },
-  fernando: { text: '¡Soy el Xerny! ¡Haré que respeten la ley!', say: '¡Soy el Cherny! ¡Haré que respeten la ley!', pitch: 0.95, rate: 1 }
+  joaquin: { text: '¡Hola, cabros! Hola, Germancito, la paz del Señor.' },
+  matias: { text: '¡Mati Neira! ¡Illaoi número 1 de LAS!', say: '¡Mati Neira! ¡Ilaói número uno de las!' },
+  alvaro: { text: '¡Álvaro! Los esmeraldas son horribles, no como yo: diamante 4.' },
+  maxi: { text: '¡El Maxi, siiii! Katarina, Katarina, Kastarina, Kastina, Kast.', say: '¡El Maxi, siiiii! Katarina, Katarina, Kastarina, Kastina, Kast.' },
+  marco: { text: 'Soy el Marco: cubano, español y chileno.' },
+  german: { text: '¡Soy el Germancito! ¡Viva Jeannette Jara! ¡Suban el sueldo mínimo!', say: '¡Soy el Germancito! ¡Viva Yanet Jara! ¡Suban el sueldo mínimo!' },
+  fernando: { text: '¡Soy el Xerny! ¡Haré que respeten la ley!', say: '¡Soy el Cherny! ¡Haré que respeten la ley!' }
 };

@@ -1,4 +1,5 @@
 import { ensureAudio, playJingle } from '../audio/audio.js';
+import { sayHello } from '../audio/voice.js';
 import { AMERICANO_GAMES_TO_WIN } from '../core/constants.js';
 import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, HELLO, LOOKS, MAPS, MAP_IDS, RUN_REWARD, UPGRADES } from '../core/data.js';
 import { AMERICANO_PAIRS, prepareRoster, setLook, setMap, setReady, setVote, startBossMatch, startMatch, startRun, swapSeats, tryBuy } from '../core/game.js';
@@ -39,26 +40,6 @@ function playSolo() {
   prepareRoster(menuSel.mode);
   rt.uiMenuOpen = false;
   startMatch();
-}
-
-// Al pasar el cursor por un personaje del menú, se presenta con la voz del navegador (Web Speech API).
-// Chrome solo deja hablar después de que el usuario tocó la página alguna vez; antes de eso queda solo el globo de texto.
-let spanishVoice;
-function pickVoice() {
-  const vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
-  spanishVoice = vs.find(v => /^es[-_](CL|419|US|MX)/i.test(v.lang)) || vs.find(v => /^es/i.test(v.lang)) || null;
-}
-if (window.speechSynthesis) { pickVoice(); speechSynthesis.addEventListener('voiceschanged', pickVoice); }
-function sayHello(id) {
-  const h = HELLO[id];
-  if (!h || !window.speechSynthesis) return;
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(h.say || h.text);
-  u.lang = spanishVoice ? spanishVoice.lang : 'es-CL';
-  if (spanishVoice) u.voice = spanishVoice;
-  u.pitch = h.pitch || 1;
-  u.rate = h.rate || 1;
-  speechSynthesis.speak(u);
 }
 
 // Sala del amistoso: puesto elegido para intercambiar (uid), solo en la pantalla del anfitrión
@@ -199,7 +180,7 @@ function shopItemsHtml() {
       <button data-act="buy" data-v="${id}" ${(!canBuy || mine || !afford) ? 'disabled' : ''}>${mine ? 'Equipada' : (me && me.active ? 'Cambiar por $' : 'Comprar $') + fmt(ACTIVE_COST)}</button></div>`;
   }).join('');
   return `<div class="ov-h">Mejoras</div><div class="shop">${passives}</div>
-    <div class="ov-h">Activas <span class="lbl">(reemplazan al sprint en Espacio; solo puedes tener una)</span></div><div class="shop">${actives}</div>`;
+    <div class="ov-h">Activas <span class="lbl">(reemplazan al sprint en Shift; solo puedes tener una)</span></div><div class="shop">${actives}</div>`;
 }
 
 function viewShop() {

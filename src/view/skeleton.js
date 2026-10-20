@@ -1,4 +1,4 @@
-import { COURT, MAX_CHARGE_FRAMES, SMASH_MIN_Z, ENTITY_K } from '../core/constants.js';
+import { COURT, MAX_CHARGE_FRAMES, SMASH_MIN_Z, ENTITY_K, ZS } from '../core/constants.js';
 import { LOOKS } from '../core/data.js';
 import { localInput, rt, state } from '../core/state.js';
 import { actOn, sizeOf, upLvl } from '../core/stats.js';
@@ -305,7 +305,8 @@ export function buildPlayerParts(p, idx, dt, now, pf, opts = {}) {
 
   // Zeus salta sobre una nube cuando remata
   const cloud = p.lookId === 'zeus' && (pose.kind === 'smash' || (swinging && pf.swingKind === 'smash'));
-  const jumpZ = (cel ? cel.jump : 0) + (cloud ? 14 : 0);
+  // + el salto del jugador (Espacio): su altura física jz se dibuja a jz * ZS, igual que la pelota
+  const jumpZ = (cel ? cel.jump : 0) + (cloud ? 14 : 0) + (opts.portrait ? 0 : (p.jz || 0) * ZS);
   // Datos para el modelo animado (render3d/players.js): hacia dónde mira, giro del tronco, objetivos de las manos y medidas de la pala
   const rig = {
     th, twist, speed: sp, elbowR: elbow, elbowL: lel, handR: hand, handL: lh,

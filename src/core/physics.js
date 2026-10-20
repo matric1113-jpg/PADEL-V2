@@ -1,6 +1,6 @@
 import { computeLaunch, computeServeBox, getClampedTarget, launchBall, showBanner } from './ballistics.js';
 import { updateBotLogic } from './bots.js';
-import { BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, GUST_PLAYER_PUSH, TILT_BALL_ACCEL, TILT_PLAYER_PUSH, LIGHTS, MAX_CHARGE_FRAMES, NET_H, PODIUM_FRAMES, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
+import { BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, GUST_PLAYER_PUSH, JUMP_G, JUMP_G_HELD, JUMP_HOLD_FRAMES, JUMP_LAND_FRAMES, JUMP_LAND_SLOW, JUMP_MAX_H, JUMP_REJUMP_FRAMES, JUMP_SMASH_BONUS, JUMP_V0, SMASH_FULL_Z, SMASH_LOW_BOUNCE, SMASH_LOW_SPEED, TILT_BALL_ACCEL, TILT_PLAYER_PUSH, LIGHTS, MAX_CHARGE_FRAMES, NET_H, PODIUM_FRAMES, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
 import { BOSSES } from './data.js';
 import { awardPoint, checkVoteReady, emitSound, goToScreen, setupServe } from './game.js';
 import { activate, updateHazards } from './hazards.js';
@@ -87,8 +87,20 @@ export function stepPhysics() {
     if (p.slow > 0) p.slow--;
     if (p.burn > 0) p.burn--;
     if (p.burnCd > 0) p.burnCd--;
+    if (p.landSlow > 0) p.landSlow--;
 
     const inp = p.isBot ? updateBotLogic(p, idx) : inputOf(p);
+
+    // Salto en el aire (sigue aunque lo paralice un rayo): con el Espacio apretado mientras sube, la gravedad pesa menos
+    if (p.jz > 0 || p.jvz > 0) {
+      const holding = inp.jump && p.jumpHold > 0 && p.jvz > 0;
+      p.jvz -= holding ? JUMP_G_HELD : JUMP_G;
+      if (holding) p.jumpHold--;
+      p.jz += p.jvz;
+      if (p.jz <= 0) { p.jz = 0; p.jvz = 0; p.landSlow = JUMP_LAND_FRAMES; }
+    }
+    const jumpPressed = inp.jump && !p.jumpPrev;
+    p.jumpPrev = !!inp.jump;
 
     if (typeof inp.speedPref === 'number' && !p.isBot) {
       p.speedStat = Math.max(0.15, Math.min(0.85, inp.speedPref));
@@ -107,7 +119,15 @@ export function stepPhysics() {
       return;
     }
 
-    // Espacio: activa si tiene una equipada; si no, sprint
+    // Espacio: salto (no al sacar ni apenas cae de otro salto)
+    if (jumpPressed && p.jz === 0 && p.jvz === 0 && p.landSlow <= JUMP_LAND_FRAMES - JUMP_REJUMP_FRAMES &&
+        !(state.phase === 'SERVE' && idx === state.serverSlot)) {
+      p.jvz = JUMP_V0;
+      p.jumpHold = JUMP_HOLD_FRAMES;
+      emitSound('jump');
+    }
+
+    // Shift: activa si tiene una equipada; si no, sprint
     if (inp.sprint) {
       if (p.active) {
         if (p.activeCd === 0 && p.activeT === 0) activate(p, idx);
@@ -152,6 +172,7 @@ export function stepPhysics() {
     if (actOn(p, 'gordo')) moveSpeed *= 0.45;
     if (p.slow > 0) moveSpeed *= 0.5;
     if (p.burn > 0) moveSpeed *= 0.6;
+    if (p.landSlow > 0) moveSpeed *= 1 - JUMP_LAND_SLOW * (p.landSlow / JUMP_LAND_FRAMES);   // recién caído de un salto
 
     const tvx = (inp.right ? moveSpeed : 0) - (inp.left ? moveSpeed : 0);
     const tvy = (inp.down ? moveSpeed : 0) - (inp.up ? moveSpeed : 0);
@@ -230,7 +251,7 @@ export function stepPhysics() {
 
       let distToPaddle = Math.hypot(b.x - paddleX, b.y - paddleY);
       if (p.clone) distToPaddle = Math.min(distToPaddle, Math.hypot(b.x - (p.clone.x + dir * PAD_F), b.y - (p.clone.y + PAD_S)));
-      if (distToPaddle <= reachOf(p) && b.z <= reachZOf(p)) {
+      if (distToPaddle <= reachOf(p) && b.z <= reachZOf(p) + p.jz) {
         p.swingTimer = 0;
         const chargePct = Math.round(p.swingCharge * 100);
 
@@ -251,8 +272,12 @@ export function stepPhysics() {
           emitSound('lob');
           showBanner(`Globo ${chargePct}%`, 35);
         } else if (b.z > smashMinOf(p) && p.swingCharge >= (rl ? 0.4 : 0.5) && Math.abs(p.x - COURT.netX) < 220) {
-          const smashSpeed = (7.8 + p.swingCharge * 3.8) * powerMultiplier * (1 + 0.1 * rl);
+          // Pegarle arriba se premia: bajo SMASH_FULL_Z sale algo más lento y bota menos (cuesta más sacarla por 3 o por 4)
+          const k = clamp((b.z - smashMinOf(p)) / Math.max(1, SMASH_FULL_Z - smashMinOf(p)), 0, 1);
+          const air = 1 + JUMP_SMASH_BONUS * Math.min(1, p.jz / JUMP_MAX_H);
+          const smashSpeed = (7.8 + p.swingCharge * 3.8) * powerMultiplier * (1 + 0.1 * rl) * (SMASH_LOW_SPEED + (1 - SMASH_LOW_SPEED) * k) * air;
           launchBall(tx, ty, smashSpeed, '¡REMATE!', p.team, false, 0);
+          b.smashK = k;
           emitSound(isFlashShot(p) ? 'flash' : 'smash');
           showBanner(`Remate ${chargePct}%`, 45);
         } else {
@@ -310,7 +335,8 @@ export function stepPhysics() {
     b.z = 0;
     const currentSide = b.x < COURT.netX ? 0 : 1;
     const iced = state.ice && state.ice.side === currentSide;
-    const bounceRestitution = (b.shotType === '¡REMATE!' ? 0.84 : 0.74 - 0.07 * (b.cut || 0)) * M.bounceZ * (iced ? 0.8 : 1);
+    const smashBounce = SMASH_LOW_BOUNCE + (0.84 - SMASH_LOW_BOUNCE) * (b.smashK == null ? 1 : b.smashK);
+    const bounceRestitution = (b.shotType === '¡REMATE!' ? smashBounce : 0.74 - 0.07 * (b.cut || 0)) * M.bounceZ * (iced ? 0.8 : 1);
     b.vz = Math.abs(b.vz) * bounceRestitution;
     const roll = BASE_ROLL * M.roll * (iced ? 1.08 : 1);
     b.vx *= roll;

@@ -291,7 +291,7 @@ function drawSprintAbility(me) {
   ctx.font = `600 12px ${FONT_COND}`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = '#a9bdd0';
-  ctx.fillText('Espacio', cx, cy + r + 17);
+  ctx.fillText('Shift', cx, cy + r + 17);
 }
 
 function drawCursor(me) {
