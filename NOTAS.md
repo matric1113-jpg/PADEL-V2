@@ -62,7 +62,10 @@ src/render3d/         RENDER 3D (Three.js), el que se usa por defecto
   maps.js             Cielo, telón de fondo, público y utilería de cada mapa
   backdrop.js         Telón de fondo pintado (mismo dibujo que el 2D)
   crowd.js            Público 3D
-  players.js          Jugadores: figuras simples sobre el esqueleto de view/skeleton.js
+  players.js          Jugadores: traduce el esqueleto de view/skeleton.js a órdenes para los personajes 3D (frameFor)
+  players-simple.js   Figuras simples de respaldo (mientras cargan los modelos) y estela del golpe
+  portraits.js        Retratos del menú: el mismo modelo, dibujado fuera de pantalla
+  char/               Personajes animados (Quaternius): assets, regions, materials, pieces, clips, rig, character
   ball.js             Pelota, estela y guía de altura
   ground.js           Marcas en el suelo (aros, cuadro de saque, alcance, blanco de tiro, hielo, brasas, rayos)
   markers.js          Shader de esas marcas
@@ -74,9 +77,11 @@ src/render3d/         RENDER 3D (Three.js), el que se usa por defecto
 src/render2d/         RENDER 2D ANTERIOR (Canvas). Solo para comparar con ?render=2d; se borra al terminar la migración
   court.js            Suelo, paredes, focos, fondo, público, utilería
   layers.js           Capas estáticas en caché y tamaño del canvas
-  players.js          Palitos proyectados, sombras, retratos del menú (renderPortrait, lo usa el menú también en 3D)
+  players.js          Palitos proyectados, sombras, retratos del menú (renderPortrait: respaldo del menú mientras cargan los modelos 3D)
   world.js            Pelota, red, marcas, frame completo, puntería con el mouse (2D)
 
+assets/models/         Modelos y animaciones .glb (ver "Etapa 3")
+visor.html, src/dev/    Visor de personajes y clips (solo en npm run dev)
 scripts/simulate.mjs     Simulación de bots con solo `src/core`
 scripts/test-camera.mjs  Prueba de la cámara 3D contra la 2D
 ```
@@ -118,6 +123,43 @@ Los zips originales están en `assets/` pero **no se suben** (`assets/*.zip` est
 
 Los `Superhero_*_FullBody.gltf` del pack referencian dos texturas que no vienen en esa carpeta (`T_Eye_Normal_png.png`, `T_Hair_1_Normal_png.png`); al convertir se usaron las de `Textures/`.
 
+### Etapa 3 (personajes 3D animados): cómo funciona
+
+- **Todos comparten un esqueleto** (65 huesos del rig universal). Cuerpo Superhero hombre para todos y Superhero mujer para Tía Gladys, Tía Nena y La Capitana (`FEMALE` en `char/character.js`). Sirven las mismas animaciones porque los huesos se llaman igual. El cuerpo *Regular* no viene en el pack gratuito (ver arriba), así que "fuertes vs. el resto" se resuelve solo con el físico de LOOKS.
+- **Quién hace qué.** `view/skeleton.js` sigue decidiendo cada cuadro la pose (hacia dónde mira, carga, golpe, celebración, saltos) y ahora devuelve también `rig` (hacia dónde mira, giro del tronco, objetivos de las manos, medidas de la pala). `render3d/players.js` (`frameFor`) lo traduce al mundo de Three.js y lo entrega a `char/character.js`, que mezcla clips y ejecuta las órdenes de brazos con IK. Las animaciones son **solo visuales**: el golpe ocurre cuando lo decide la física (`src/core` no se tocó).
+- **Archivos.** `char/assets.js` (carga), `char/regions.js` (zonas de la ropa), `char/materials.js` (shader del cuerpo), `char/pieces.js` (pelo propio, lentes, pala...), `char/clips.js` (mapeo de clips), `char/rig.js` (IK, giro del tronco, dedos), `char/character.js` (el personaje), `render3d/portraits.js` (retratos), `render3d/players-simple.js` (figuras simples de respaldo mientras cargan los modelos). `visor.html` (solo en `npm run dev`) muestra un personaje con el módulo real: `/visor.html?look=german&speed=5&celeb=flex&stun=1&burn=1&swing=1&hats=2`; sin `look` es el visor de clips (`?sheet=Idle_Loop,Jog_Fwd_Loop&t=0.3&view=side`).
+- **Cámara de cerca (solo dev).** En la consola: `__padel.r3d.closeup = { slot: 0, dist: 120, height: 45, angle: 0.6, ty: 38, fov: 30 }`; `__padel.r3d.closeup = null` la quita.
+
+**Mapeo de estados del juego a animaciones** (`char/clips.js`; las mezclas son pesos que se suavizan cada cuadro)
+
+| Estado del juego | Piernas y tronco | Brazos |
+|---|---|---|
+| Guardia (parado, esperando) | `Idle_Loop` 68 % + `Crouch_Idle_Loop` 32 % (55 % cargando) | pala al frente, IK hacia la mano del esqueleto |
+| Correr | `Walk_Loop` → `Jog_Fwd_Loop` → `Sprint_Loop` según la velocidad (m/s del modelo: 1 / 5,4 / 8,3, medidos en la versión con root motion); la velocidad de reproducción sigue a la del jugador; el cuerpo gira hacia donde corre (al cargar o golpear mira donde apunta) | brazo libre: mezcla clip/IK |
+| Cargar mientras corre | + `Crouch_Fwd_Loop` 30 % | IK |
+| Drive, globo, saque | piernas según lo anterior; el tronco gira (`rig.twist`) y se inclina | **procedural (falta en el pack):** IK de dos huesos hacia la mano que calcula el esqueleto en cada cuadro (mismo gesto y tiempos que en el 2D) y la mano agarra la pala |
+| Remate | `Jump_Start` (piernas recogidas) hasta 70 % en el golpe + saltito de 16 cm + inclinación hacia atrás | IK |
+| Celebración "guata" (Germán) | `Dance_Loop` 75 % + `Idle_Loop` | manos a la guata (IK) |
+| "mullet" (Maxi) | idem | una mano a la nuca, otra a la cintura |
+| "bíceps" (Álvaro) | idem | brazos en alto doblados (IK) |
+| "jockey" (Fernando) | idem | una mano en el jockey |
+| "salto" (Matías) | `Jump_Loop` 70 % + `Dance_Loop` 25 % + saltos del esqueleto | un brazo arriba |
+| "paz" (Joaquín) | idem | mano arriba con los dedos en V (se cierran anular, meñique y pulgar) |
+| "rayo" (Zeus) | idem | ambos brazos arriba |
+| Paralizado por rayo | `Hit_Head` una vez al empezar + `Idle_Loop` 45 % / `Crouch_Idle_Loop` 55 % | **procedural:** brazos caídos con la pala colgando, cabeza y tronco caídos, balanceo; las estrellitas siguen siendo la capa 2D |
+| Quemadura (pies) | `Hit_Chest` una vez al empezar + `Dance_Loop` al doble de velocidad 75 % + saltitos | IK |
+| Clon de sombra | el mismo personaje con un material morado translúcido propio | igual |
+
+Clips del pack sin usar (quedaron fuera de `animaciones.glb`): sentado, nado, armas, hechizos, empujar, rodar, muerte, interactuar, etc.
+
+**Físico desde LOOKS** (`Character.update`): alto = escala vertical de la raíz (`Kz`, igual que el esqueleto); ancho = escala lateral de toda la figura (`1 + (w − 1) · 0,9`); brazos y piernas = grosor de los huesos (`upperarm`, `thigh`; mano y pie compensan para no deformarse); guata = esfera del color de la camiseta delante del abdomen (visible desde `belly` > 1,1). El "gordo", la pala enorme, "estirón" y "fuerza" usan los mismos números del esqueleto.
+
+**Ropa:** el cuerpo trae la ropa interior pintada en la textura, así que el shader (`materials.js`) recolorea por zonas: piel (color del LOOK sobre el detalle de la textura), camiseta con mangas cortas o musculosa (`tank`), short (zonas grises de la textura + muslo), calcetines (altos o bajos, claros u oscuros), zapatillas (doradas con la mejora) y muñequeras (la derecha con el color del LOOK o naranja con "remate", la izquierda con el color del equipo). Las zonas salen de los pesos de huesos (`regions.js`, una vez por cuerpo).
+
+**Piezas sobre los huesos** (se pegan a `Head`, `spine_01` o `hand_r` en pose de descanso): pelo `short`/`side`/`slick`/`cap`/`bun`/barba del pack; afro, rulos, puntas, cola de caballo y cola de mullet propios; bigote, lentes, cintillo, visera, jockey (también al revés), sombreros apilados de la tienda; la pala con sus 3 formas (redonda, lágrima, diamante), que sigue la orientación y medidas del esqueleto pero va pegada a la mano real del modelo.
+
+**Rendimiento (medición en el panel de vista previa de Claude Code, sin GPU dedicada, así que sirve para comparar, no como valor absoluto):** 4 jugadores suman unas 160 llamadas de dibujo (de 88 a 250 en total) y unos 5,5 ms de GPU por cuadro, sobre todo las sombras de los 2 focos; `Players.update` cuesta ~0,9 ms de CPU por cuadro. Ojos y cejas son piezas rígidas (ahorran dos esqueletos por personaje) y los detalles chicos no proyectan sombra. Si hiciera falta más: fusionar las piezas de la pala, bajar el mapa de sombras o quitar la sombra de los clones.
+
 ## Decisiones
 
 **Cómo se hizo el corte (etapa 1).** Se partió el `<script>` con un script de un solo uso que usa un parser (acorn) y análisis de ámbitos, no a mano ni con regex. Así los imports/exports salen de las referencias reales y no se pierde ninguna. Ese script tampoco está en el repo.
@@ -150,18 +192,11 @@ Los `Superhero_*_FullBody.gltf` del pack referencian dos texturas que no vienen 
 - `vite.config.js` usa `base: './'` para que el build funcione en una subcarpeta de GitHub Pages.
 - `.claude/launch.json` es solo para el panel de vista previa de Claude Code.
 
-## Para tener presente en la etapa 3 (personajes 3D animados)
+## Para tener presente en la etapa 4
 
-1. **Dónde va.** Reemplazar `render3d/players.js` (`Players.figure`). Lo demás no debería cambiar. `Players.update` devuelve los esqueletos del cuadro (`built`), que usa el HUD; hay que seguir devolviéndolos.
-2. **De dónde salen las animaciones.** `view/skeleton.js` ya decide la pose de cada cuadro y se puede usar para elegir y mezclar clips: velocidad de carrera (`pf.vx`, `pf.vy`), carga (`built.charging`, `built.cr`, `built.lob`), tipo de golpe y su avance (`pf.swingKind` = drive/lob/smash/serve, `pf.swingT` de 0 a 13 cuadros), postura (`pf.pose.kind` = ready/drive/lob/smash/serve), celebración (`CELEB_KIND`, `fx.celeb`), salto (`built.jumpZ`) y la nube de Zeus (`built.cloud`). Clips necesarios: correr, guardia, golpe de drive, globo, remate, saque y una celebración por personaje (`CELEB_KIND`).
-3. **Tamaños.** Escala horizontal `scaleOf(p)` y vertical `scaleOf(p) * look.body.h * (1 + 0.03 * estirón) * (gordo ? 1,2 : 1)`; el "gordo" además ensancha (`buildPlayerParts` cambia `look.body`). Un jugador mide unos 75-80 unidades de alto.
-4. **HUD.** El nombre y las barras se anclan a `max(98, built.pf.pose.z + 58)` (subiendo con los sombreros) y el globo de texto un poco más arriba (`view/hud.js`). Si los modelos tienen otra altura, ajustar ahí.
-5. **Clon de sombra.** Hoy es la misma figura con colores `SHADOW_LOOK_COLORS` en un material morado translúcido (`Players.ghost`). Con modelos, usar un material aparte para el clon (no compartir el del jugador).
-6. **Sombras y luces.** Los jugadores deben tener `castShadow` para las sombras de los 2 focos. La sombra de contacto (disco oscuro bajo los pies) está en `render3d/ground.js`.
-7. **Retratos del menú.** `renderPortrait` (en `render2d/players.js`) sigue dibujando los personajes del menú con los palitos 2D, también en el modo 3D. Con los modelos se pueden dibujar con Three.js en esos `<canvas>`; cuando ya no se use, se puede borrar `render2d/` entero.
-8. **Assets.** No existe la carpeta `assets/`. Hay que traer los modelos (o buscar modelos libres con las animaciones del punto 2). Con modelos glTF conviene un `GLTFLoader` y cargarlos antes de empezar el partido.
-9. **Presupuesto.** Hoy son ~100 llamadas de dibujo y 2 mapas de sombra de 2048. Los personajes animados (skinning) no se pueden fusionar ni instanciar como ahora; 4 jugadores + 4 clones es poco, pero conviene vigilar `renderer.info.render.calls` (`__padel.r3d.renderer.info` en la consola).
-10. **Cuando termine la migración** se borra `render2d/`, `R2D` en `src/renderer.js` y la opción `?render=2d`. `view/ctx.js` debe quedar: es el canvas del HUD.
+1. **Borrar `render2d/`.** Todavía se usa en dos lugares: `?render=2d` (para comparar) y el retrato 2D de respaldo en `render3d/portraits.js` mientras cargan los modelos. Al borrarlo hay que quitar `R2D` de `src/renderer.js`, la opción `?render=2d` y ese respaldo (por ejemplo esperando `loadCharacterAssets()` antes de mostrar el menú). `view/ctx.js` debe quedar: es el canvas del HUD. `render3d/players-simple.js` (figuras de respaldo) se puede borrar igual si se espera a los modelos antes de empezar.
+2. **HUD.** El nombre y las barras siguen anclados a `max(98, built.pf.pose.z + 58)` (`view/hud.js`): el modelo mide lo mismo que el esqueleto de palitos (~76 unidades), así que no hizo falta cambiarlo.
+3. **Pendientes de pulido de los personajes.** Los dedos se cierran con un giro fijo por eje (probado a ojo); el agarre de la pala puede verse algo rígido. Los peinados `afro`, `curly` y `spiky` son geometría propia, más simples que los del pack. Se puede añadir un cuerpo *Regular* si se compra el pack completo (misma carpeta `assets/models/`, mismos huesos).
 
 ## Rendimiento
 
