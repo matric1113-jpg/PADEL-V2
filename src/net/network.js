@@ -8,6 +8,10 @@ import { recordFrame } from '../core/replay.js';
 import { localInput, menuSel, remoteInputs, rt, state } from '../core/state.js';
 import { openMenu, setNetMsg, setStatus } from '../ui/menu.js';
 
+// Prefijo de las salas de PeerJS. La versión 3D (beta) usa uno distinto al de la versión de main ('padel2v2-pro-'):
+// el estado que viaja por la red es distinto y así nadie de la versión vieja puede entrar por error a una sala nueva.
+export const ROOM_PREFIX = 'padel2v2-beta-';
+
 function randomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let out = '';
@@ -66,7 +70,7 @@ export function createRoom() {
   if (!peerAvailable()) return;
   leaveNetwork();
   const code = randomCode();
-  const peerId = 'padel2v2-pro-' + code;
+  const peerId = ROOM_PREFIX + code;
 
   rt.isHost = true;
   rt.mySlot = 0;
@@ -173,7 +177,7 @@ export function joinRoom() {
   }, 15000);
 
   myPeer.on('open', () => {
-    const conn = myPeer.connect('padel2v2-pro-' + code, { reliable: true });
+    const conn = myPeer.connect(ROOM_PREFIX + code, { reliable: true });
     rt.hostConn = conn;
     conn.on('open', () => {
       setStatus('Conectado a ' + code);

@@ -1,0 +1,61 @@
+# Publica en GitHub Pages:
+#   /        el index.html de la rama main, tal cual (el link de siempre no cambia)
+#   /beta/   el build de esta rama (versión 3D, Vite + Three.js)
+# Se ejecuta con cada push a threejs y también a mano (Actions -> "Publicar en Pages" -> Run workflow).
+# Requiere Settings -> Pages -> Source: GitHub Actions.
+name: Publicar en Pages
+
+on:
+  push:
+    branches: [threejs]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Código de esta rama (versión 3D)
+        uses: actions/checkout@v4
+        with:
+          ref: threejs
+
+      - name: Node (la misma versión que se usa en local)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.0
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build de la beta
+        run: npm run build -- --base=/PADEL-V2/beta/
+
+      - name: Armar el sitio
+        run: |
+          mkdir -p _site
+          cp -r dist _site/beta
+          git fetch --depth=1 origin main
+          git show origin/main:index.html > _site/index.html
+          touch _site/.nojekyll
+          find _site -maxdepth 2 | sort
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

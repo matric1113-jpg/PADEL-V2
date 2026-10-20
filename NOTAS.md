@@ -205,7 +205,7 @@ Cada uno en su commit y con constantes con nombre en `src/core/constants.js`.
 
 **Otras.**
 - El 2v2 y el torneo comparten la misma lógica; solo cambia `state.mode`.
-- PeerJS viene de npm (misma versión 1.5.2, mismo prefijo de sala `padel2v2-pro-`, mismos servidores STUN/TURN). Las fuentes siguen cargando desde Google Fonts.
+- PeerJS viene de npm (misma versión 1.5.2, prefijo de sala `padel2v2-beta-` (`ROOM_PREFIX` en `src/net/network.js`; la versión de main usa `padel2v2-pro-`, así que no pueden entrar a salas de la otra), mismos servidores STUN/TURN). Las fuentes siguen cargando desde Google Fonts.
 - `vite.config.js` usa `base: './'` para que el build funcione en una subcarpeta de GitHub Pages.
 - `.claude/launch.json` es solo para el panel de vista previa de Claude Code.
 
@@ -228,5 +228,5 @@ Cada uno en su commit y con constantes con nombre en `src/core/constants.js`.
 - Cambiar de mapa genera las texturas del suelo en el momento (~0,5 s). Pasa al empezar un partido o al votar mapa, no durante un punto. Si molesta, se puede hacer en un Worker con `OffscreenCanvas` o guardar las de los mapas ya vistos.
 - El build avisa que el JavaScript pesa más de 500 kB (Three.js). No es un error; si se quiere, se puede separar Three.js en su propio archivo para que el navegador lo guarde en caché aparte.
 - El brillo de los focos y la luz de cada mapa (`render3d/style.js`, `render3d/lights.js`) se pueden afinar a gusto.
-- Etapa 4: GitHub Pages solo publica un sitio por repositorio; hay que decidir cómo publicar el build sin reemplazar el link actual.
+- **Publicación (etapa 4).** `.github/workflows/pages.yml` arma un solo sitio de Pages: en la raíz el `index.html` de `main` tal cual (el link de siempre no cambia) y en `/beta/` el build de `threejs` (`npm run build -- --base=/PADEL-V2/beta/`, Node 24.22.0). Se ejecuta con cada push a `threejs` y a mano (Actions → "Publicar en Pages" → Run workflow). Requiere Settings → Pages → Source: **GitHub Actions** y, si el entorno `github-pages` restringe ramas, agregar `threejs` en Settings → Environments → github-pages → Deployment branches. Mientras el workflow viva solo en `threejs`, un cambio en `main` no republica la raíz hasta el próximo push a `threejs`. Al fusionar `threejs` en `main`, cambiar `on.push.branches` a `[main]`, quitar el `ref: threejs` del checkout y decidir si `/beta/` sigue existiendo. En Git Bash de Windows, para probar el build con base absoluta hay que anteponer `MSYS_NO_PATHCONV=1` (si no, Git Bash convierte `/PADEL-V2/beta/` en una ruta de Windows).
 - Para validar un cambio en la lógica: `npm run sim` detecta excepciones y valores inválidos, comprueba el flujo de sets y da la tabla de motivos de punto (sirve para comparar un ajuste antes y después sobre varias semillas). No compara contra el original (ese chequeo se hizo una vez; los ajustes de jugabilidad posteriores cambiaron la lógica a propósito).
