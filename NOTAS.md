@@ -8,8 +8,9 @@ Rama de trabajo: `threejs`. `main` (y el link de GitHub Pages) sigue mostrando l
 npm install
 npm run dev           # servidor local en http://localhost:5173 (render 3D)
 npm run build         # genera dist/ (base relativa: sirve en la raíz o en una subcarpeta)
-npm run sim           # simulación sin pantalla (ver abajo)
+npm run sim           # simulación sin pantalla con azar sembrado: npm run sim -- <cuadros> <semilla> <friendly|run>
 npm run test:camera   # prueba que la cámara 3D es igual a la 2D (ver etapa 2)
+npm run test:hazards  # la guía de tiro predice el viento y la inclinación como la física (ver ajustes)
 ```
 
 - `http://localhost:5173/` muestra el render 3D (Three.js). `http://localhost:5173/?render=2d` muestra el render Canvas 2D anterior, para comparar mientras dure la migración.
@@ -160,6 +161,22 @@ Clips del pack sin usar (quedaron fuera de `animaciones.glb`): sentado, nado, ar
 
 **Rendimiento (medición en el panel de vista previa de Claude Code, sin GPU dedicada, así que sirve para comparar, no como valor absoluto):** 4 jugadores suman unas 160 llamadas de dibujo (de 88 a 250 en total) y unos 5,5 ms de GPU por cuadro, sobre todo las sombras de los 2 focos; `Players.update` cuesta ~0,9 ms de CPU por cuadro. Ojos y cejas son piezas rígidas (ahorran dos esqueletos por personaje) y los detalles chicos no proyectan sombra. Si hiciera falta más: fusionar las piezas de la pala, bajar el mapa de sombras o quitar la sombra de los clones.
 
+### Ajustes de jugabilidad (después de la etapa 3)
+
+Cada uno en su commit y con constantes con nombre en `src/core/constants.js`.
+
+- **Rebote en el cristal (`GLASS_VZ_K` = 0,87).** La velocidad vertical mínima forzada tras tocar el cristal baja un 13 %: 2,4 → 2,09 (umbral 2,0 → 1,74) y, en remates contra el fondo, 3,6 → 3,13. Simulación de bots, modo amistoso, 12 semillas × 300.000 cuadros, antes → después: puntos 4131 → 3972; doble bote 1393 (33,7 %) → 1378 (34,7 %); por 3: 280 (6,8 %) → 260 (6,5 %); por 4: 402 (9,7 %) → 447 (11,3 %). Los puntos por 3 y por 4 siguen apareciendo y el doble bote queda dentro del ruido (la simulación diverge mucho entre ejecuciones; por eso se compararon porcentajes sobre muchas semillas).
+- **Mapa En altura: viento (`GUST_*`).** Ráfagas de 0,035-0,055 por cuadro (antes 0,014-0,020), de 4 s (antes 3 s), con subida y bajada suaves, más seguidas, y que además arrastran a los jugadores (`GUST_PLAYER_PUSH`). A la vista: la lluvia se tumba con el viento y se vuelve más densa y rápida (`RAIN_WIND` en `view/fx.js`) y aparecen rachas largas y brillantes en la capa 2D (`drawWindStreaks`, `render3d/overlay.js`). `gustForce(ahead)` (en `core/state.js`) es la fuerza del viento dentro de `ahead` cuadros: la usan la física y las dos guías de tiro (`view/hud.js`: arco y bote previsto), así que la guía sigue prediciendo el desvío.
+- **Mapa Hombros de Atlas: inclinación (`TILT_*`).** Giro de cámara 0,03 → 0,1 rad y desplazamiento 10 → 34 px; jugadores arrastrados 0,5 → 1,5 por cuadro y pelota con aceleración 0,011 → 0,03; pausa entre inclinaciones 360-660 cuadros. `tiltEase(ahead)` (`core/state.js`) la hace subir y bajar suave y la comparten la cámara (`view/frame.js`), la física y las guías de tiro (que ahora también predicen la inclinación). Se comprobó que el apuntado con el mouse sigue correcto con la inclinación al máximo: `npm run test:camera` (69.728 comprobaciones, error 1e-12, con el giro máximo en los dos sentidos y a medias) y a mano en el navegador (el cursor coincide con el mouse).
+- `npm run test:hazards` integra la trayectoria igual que las guías y la compara con `stepPhysics` con viento y con inclinación: error 0 en 84 trayectorias.
+
+### Partido amistoso a 2 sets y podio
+
+- **Sets.** Ganar un set (6 juegos, tie-break en 6-6) ya no termina el partido: se suma a `state.sets` (puntos dorados junto al nombre en el marcador), se guarda en `state.setHistory`, hay un banner y la celebración, y `goToScreen('nextset')` llama a `beginSet()`: marcador a cero, dinero, compras, activas y sombreros reiniciados, tienda de $700 y votación de mapa como al inicio (`state.vote.first`). Gana quien llegue primero a `SETS_TO_WIN` (2). El torneo de jefes no cambia.
+- **Estado.** Lo único nuevo en `state` es `setHistory` (juegos de cada set terminado) y las pantallas `'podium'` y `'matchover'` (reemplazan a `'setover'`); `state.result` lleva `match: true` cuando el partido está decidido. El anfitrión cuenta la cinemática con `rt.podiumT` (no viaja por la red) hasta `PODIUM_FRAMES` (660 = 11 s) y pasa a `'matchover'`. Los invitados lo ven igual porque todo sale de `state` (probado con dos pestañas: set nuevo con tienda de $700, podio y resultado; el invitado mide el tiempo del podio con su propio reloj de dibujo).
+- **Podio** (`render3d/podium.js`, `render3d/index.js` → `renderStage`). Cámara en perspectiva propia que parte en diagonal desde arriba y se acerca; ganadores en el escalón alto con medalla de oro (`makeMedal` en `char/pieces.js`) y la celebración de cada personaje (`CELEB_KIND`); perdedores en los escalones bajos llorando. Quaternius no trae una animación de tristeza, así que el llanto es procedural en `Character.update` (`f.cry`): cabeza y tronco caídos, manos a los ojos con IK, sollozos y lágrimas como partículas (`Players.emitTears`). Confeti, un foco sobre el podio y fundido desde negro. En `'matchover'` el podio sube en el cuadro para dejar sitio al panel (`.overlay.matchover`) con el resultado y "Jugar otra vez" (solo el anfitrión) o "Volver al menú". Solo en desarrollo: `__padel.r3d.stageT = 420` fija el instante de la cinemática.
+- **Simulación** (`npm run sim -- 800000 1 friendly`). Con azar sembrado (misma semilla, mismo resultado). Recorre los 6 mapas y, en el modo amistoso, comprueba el flujo: cada set nuevo parte con marcador en cero, $700 en total (dinero + mejoras + activa) y sin activas ni sombreros; los sets no se pierden al abrir el set nuevo; el partido termina solo con un ganador a 2 sets, con historial coherente; el podio solo aparece con 2 sets de un equipo. 3 semillas × 800.000 cuadros: 21 partidos, 32 sets nuevos, sin errores.
+
 ## Decisiones
 
 **Cómo se hizo el corte (etapa 1).** Se partió el `<script>` con un script de un solo uso que usa un parser (acorn) y análisis de ámbitos, no a mano ni con regex. Así los imports/exports salen de las referencias reales y no se pierde ninguna. Ese script tampoco está en el repo.
@@ -212,4 +229,4 @@ Clips del pack sin usar (quedaron fuera de `animaciones.glb`): sentado, nado, ar
 - El build avisa que el JavaScript pesa más de 500 kB (Three.js). No es un error; si se quiere, se puede separar Three.js en su propio archivo para que el navegador lo guarde en caché aparte.
 - El brillo de los focos y la luz de cada mapa (`render3d/style.js`, `render3d/lights.js`) se pueden afinar a gusto.
 - Etapa 4: GitHub Pages solo publica un sitio por repositorio; hay que decidir cómo publicar el build sin reemplazar el link actual.
-- Para validar un cambio en la lógica: `npm run sim` detecta excepciones y valores inválidos. No compara contra el original (ese chequeo se hizo una vez y la lógica no debería cambiar).
+- Para validar un cambio en la lógica: `npm run sim` detecta excepciones y valores inválidos, comprueba el flujo de sets y da la tabla de motivos de punto (sirve para comparar un ajuste antes y después sobre varias semillas). No compara contra el original (ese chequeo se hizo una vez; los ajustes de jugabilidad posteriores cambiaron la lógica a propósito).
