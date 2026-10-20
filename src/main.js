@@ -7,6 +7,7 @@ import { stepPhysics } from './core/physics.js';
 import { recordFrame } from './core/replay.js';
 import { localInput, menuSel, rt, state } from './core/state.js';
 import { sendStateTo } from './net/network.js';
+import { countStep, endFrame, timed } from './perf.js';
 import { renderer } from './renderer.js';
 import { syncHud, updateScoreUI } from './ui/hud.js';
 import { chooseChar, openMenu, syncOverlay } from './ui/menu.js';
@@ -35,8 +36,8 @@ function runSteps(now) {
   accumulator += delta;
   let n = 0;
   while (accumulator >= STEP && n < 15) {
-    stepPhysics();
-    if (rt.isHost) recordFrame();
+    timed('physics', () => { stepPhysics(); if (rt.isHost) recordFrame(); });
+    countStep();
     accumulator -= STEP;
     n++;
   }
@@ -46,10 +47,9 @@ function runSteps(now) {
 
 function gameLoop(now) {
   runSteps(now);
-  renderer.render(now);
-  syncHud();
-  updateScoreUI();
-  syncOverlay();
+  timed('render', () => renderer.render(now));
+  timed('ui', () => { syncHud(); updateScoreUI(); syncOverlay(); });
+  endFrame(now);
   requestAnimationFrame(gameLoop);
 }
 
@@ -74,4 +74,4 @@ updateScoreUI();
 requestAnimationFrame(gameLoop);
 
 // Solo en `npm run dev`: acceso desde la consola para revisar mapas y efectos (no va en el build)
-if (import.meta.env.DEV) window.__padel = { state, rt, menuSel, localInput, game, fx, camera, r3d: renderer.debug };
+if (import.meta.env.DEV) window.__padel = { state, rt, menuSel, localInput, game, fx, camera, renderer, stepPhysics, r3d: renderer.debug };

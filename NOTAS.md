@@ -147,6 +147,14 @@ scripts/test-camera.mjs  Prueba de la cámara 3D contra la 2D
 9. **Presupuesto.** Hoy son ~100 llamadas de dibujo y 2 mapas de sombra de 2048. Los personajes animados (skinning) no se pueden fusionar ni instanciar como ahora; 4 jugadores + 4 clones es poco, pero conviene vigilar `renderer.info.render.calls` (`__padel.r3d.renderer.info` en la consola).
 10. **Cuando termine la migración** se borra `render2d/`, `R2D` en `src/renderer.js` y la opción `?render=2d`. `view/ctx.js` debe quedar: es el canvas del HUD.
 
+## Rendimiento
+
+- **Contador.** `?perf` en la URL (o la tecla F2) muestra FPS, ms por cuadro (media, p95, peor) y el tiempo de CPU de física, render e interfaz. Lo que tarda la GPU se ve en los ms por cuadro, no en "render".
+- **Comparar con el original.** `npm run perf:original` genera `perf-original/index.html` (ignorado por git): el `index.html` del commit 0ac502c con el mismo contador. Con `npm run dev` se abre en `http://localhost:5173/perf-original/`.
+- **Medición del 2026-10-19 (Radeon RX 6600 XT, pantalla de 180 Hz, Brasil, 4 bots).** Original y versión nueva en 2D: 180 FPS, 5,6 ms por cuadro, física ~0,005 ms por paso y render 2D ~0,8-1,7 ms de CPU, sin diferencias: la reorganización no introdujo una regresión. El suelo píxel a píxel del 2D no es el cuello de botella (solo se dibuja al cambiar de mapa, de foco o de cámara). Render 3D: ~1,7 ms de CPU por cuadro (0,7 ms los cuesta la transmisión del cristal y 0,3 ms las sombras).
+- **Tirones con FPS altos.** La física avanza a 60 Hz fijos y se dibuja al ritmo de la pantalla sin interpolar (igual que en el original). A 144 o 165 Hz la física avanza alternando cada 2 y 3 cuadros, y el movimiento se ve a saltos aunque el contador marque FPS altos. Se arreglaría interpolando en el dibujo las posiciones entre los dos últimos pasos (no cambia la lógica, pero agrega hasta 1/60 s de retraso visual). Pendiente de decidir.
+- Ojo al medir: si la ventana del navegador queda detrás de otra, el sistema baja los FPS (en una prueba bajó a 2 FPS incluso una página vacía). Medir con la ventana al frente.
+
 ## Pendientes y detalles conocidos
 
 - Cambiar de mapa genera las texturas del suelo en el momento (~0,5 s). Pasa al empezar un partido o al votar mapa, no durante un punto. Si molesta, se puede hacer en un Worker con `OffscreenCanvas` o guardar las de los mapas ya vistos.
