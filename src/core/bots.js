@@ -1,4 +1,4 @@
-import { COURT, GRAVITY, JUMP_MAX_H, MAX_CHARGE_FRAMES, PAD_F, PAD_S, WALL_PLAY } from './constants.js';
+import { COURT, GRAVITY, JUMP_CHARGE_FRAMES, JUMP_MAX_H, JUMP_MIN_H, MAX_CHARGE_FRAMES, PAD_F, PAD_S, WALL_PLAY } from './constants.js';
 import { state } from './state.js';
 import { reachOf, reachZOf } from './stats.js';
 import { clamp } from './util.js';
@@ -113,8 +113,13 @@ export function updateBotLogic(p, idx) {
   const zReach = reachZOf(p);
   const nearWall = (p.team === 0 ? b.x - COURT.x : COURT.x + COURT.w - b.x) < 160 || b.y < COURT.y + 70 || b.y > COURT.y + COURT.h - 70;
   if (state.phase === 'PLAY' && p.botJump && nearWall && b.lastHitTeam !== p.team && ballOnMySide && b.bouncesInOpponentSide >= 1 &&
-      distToPaddle < reach + 25 && b.z > zReach - 6 + p.jz && b.z < zReach + JUMP_MAX_H - 4) {
-    inp.jump = true;   // mantenido mientras sube: salta más alto
+      p.jz === 0 && p.jumpCharge === 0 && distToPaddle < reach + 25 && b.z > zReach - 6 && b.z < zReach + JUMP_MAX_H - 4) {
+    // carga lo justo para la altura que le falta
+    const k = clamp((b.z - zReach + 10 - JUMP_MIN_H) / (JUMP_MAX_H - JUMP_MIN_H), 0, 1);
+    p.botJumpTarget = 1 + Math.round(k * (JUMP_CHARGE_FRAMES - 1));
+    inp.jump = true;
+  } else if (p.jumpCharge > 0) {
+    inp.jump = p.jumpCharge < p.botJumpTarget;   // suelta al llegar a la carga que quería
   }
 
   if (state.phase === 'PLAY' && b.lastHitTeam !== p.team && ballOnMySide && distToPaddle < 130) {

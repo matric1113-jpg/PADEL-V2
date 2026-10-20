@@ -32,7 +32,7 @@ export function setupServe(nextServerSlot) {
     p.swingTimer = 0; p.cooldown = 0;
     p.activeT = 0; p.activeKind = ''; p.clone = null;
     p.stun = 0; p.slow = 0; p.burn = 0;
-    p.jz = 0; p.jvz = 0; p.jumpHold = 0; p.landSlow = 0;
+    p.jz = 0; p.jvz = 0; p.jumpCharge = 0; p.landStop = 0; p.landSlow = 0;
   });
   // Zeus saca desde un lado y luego cubre toda su mitad
   if (solo1 && nextServerSlot === 2) state.players[2].y = 155;

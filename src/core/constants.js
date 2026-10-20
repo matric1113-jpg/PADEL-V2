@@ -85,14 +85,16 @@ export const LIGHTS = [
 export const SMASH_FULL_Z = 72;              // altura de la pelota (2,2 m, cerca del tope del alcance o saltando) desde la que el remate sale como antes
 export const SMASH_LOW_SPEED = 0.9;          // velocidad del remate pegado justo en la altura mínima (×)
 export const SMASH_LOW_BOUNCE = 0.79;        // rebote en el suelo de ese remate (el remate de siempre: 0,84; un golpe normal: 0,74)
-// Salto (Espacio): mantenerlo apretado mientras sube lo hace más alto. Sirve sobre todo para alcanzar las pelotas que
-// salen hacia la malla o el fondo (por 3 / por 4). Al caer, al jugador le cuesta un poco volver a correr.
-export const JUMP_V0 = 2.6;                  // velocidad vertical inicial (unidades de z por cuadro)
-export const JUMP_G = 0.3;                   // gravedad del salto
-export const JUMP_G_HELD = 0.13;             // gravedad mientras sube con el Espacio apretado
-export const JUMP_HOLD_FRAMES = 18;          // cuánto rato cuenta el Espacio apretado (salto corto ~11 de z, largo ~26 = 0,8 m)
-export const JUMP_MAX_H = 26;
-export const JUMP_LAND_FRAMES = 40;          // después de caer, cuadros que tarda en recuperar la velocidad
-export const JUMP_LAND_SLOW = 0.5;           // al caer corre a la mitad y se recupera de a poco
+// Salto (Espacio) que se carga: se mantiene apretado en el suelo (el jugador se agacha y camina más lento) y al soltarlo
+// salta más alto cuanto más rato lo cargó. Sirve sobre todo para alcanzar las pelotas que salen hacia la malla o el
+// fondo (por 3 / por 4). Al caer se queda un instante clavado y le cuesta volver a correr: abusar del salto se paga.
+export const JUMP_G = 0.3;                   // gravedad del salto (unidades de z por cuadro²)
+export const JUMP_MIN_H = 8;                 // altura con un toque (8 de z = 24 cm)
+export const JUMP_MAX_H = 26;                // altura con la carga completa (26 de z = 78 cm)
+export const JUMP_CHARGE_FRAMES = 30;        // cuadros de carga para el salto más alto (0,5 s)
+export const JUMP_CHARGE_SLOW = 0.6;         // velocidad al moverse mientras carga el salto
+export const JUMP_LAND_STOP = 12;            // al caer de un salto completo queda clavado 12 cuadros (0,2 s; de uno corto, la mitad)
+export const JUMP_LAND_FRAMES = 40;          // después, cuadros que tarda en recuperar la velocidad
+export const JUMP_LAND_SLOW = 0.5;           // vuelve a correr desde la mitad de su velocidad
 export const JUMP_REJUMP_FRAMES = 14;        // no puede volver a saltar apenas cae
 export const JUMP_SMASH_BONUS = 0.04;        // remate en el aire: hasta un 4 % más fuerte

@@ -10,7 +10,7 @@
 // jugador y la tabla final. Además hay pruebas cortas fijas: desempates de la tabla y el clic pendiente al volver al saque.
 import { localInput, rt, state } from '../src/core/state.js';
 import { ACTIVE_COST, BOSSES, FRIENDLY_START_MONEY, MAP_IDS, UPG } from '../src/core/data.js';
-import { AMERICANO_GAMES_TO_WIN, JUMP_LAND_FRAMES, JUMP_MAX_H, SETS_TO_WIN } from '../src/core/constants.js';
+import { AMERICANO_GAMES_TO_WIN, JUMP_LAND_FRAMES, JUMP_LAND_STOP, JUMP_MAX_H, JUMP_MIN_H, SETS_TO_WIN } from '../src/core/constants.js';
 import { AMERICANO_PAIRS, americanoRanking, prepareRoster, resolveVoteAndPlay, setMap, startBossMatch, startFriendly, startMatch, startRun, swapSeats } from '../src/core/game.js';
 import { stepPhysics } from '../src/core/physics.js';
 
@@ -127,7 +127,8 @@ function testStaleRelease() {
   if (state.phase !== 'PLAY') fail('un clic en el juego no sacó');
   me.isBot = true;
 }
-// Salto: tocar el Espacio salta poco, mantenerlo salta más (hasta JUMP_MAX_H); al caer corre más lento un rato
+// Salto: se carga con el Espacio y salta al soltarlo; un toque salta poco y la carga completa, JUMP_MAX_H.
+// Al caer queda clavado un instante y después corre más lento un rato
 function testJump() {
   prepareRoster('friendly');
   startFriendly();
@@ -136,35 +137,41 @@ function testJump() {
   me.isBot = false;
   state.serverSlot = (rt.mySlot + 2) % 4;     // saca un rival (bot), así el jugador puede saltar
   state.phase = 'PLAY'; state.ball.x = 700; state.ball.z = 40; state.ball.vx = 0; state.ball.vz = 0;
-  const jumpFor = held => {
-    me.jz = 0; me.jvz = 0; me.landSlow = 0;
-    let top = 0, frames = 0, k = 0;
-    localInput.jump = true;
-    for (; k < 120; k++) {
-      if (k === held) localInput.jump = false;
-      state.phase = 'PLAY'; Object.assign(state.ball, { x: 700, z: 40, vx: 0, vy: 0, vz: 0 });
-      stepPhysics();
-      top = Math.max(top, me.jz);
-      if (k > 0 && me.jz === 0 && me.jvz === 0) break;
-      frames++;
-    }
-    localInput.jump = false;
-    return { top, frames };
-  };
-  const short = jumpFor(1), long = jumpFor(40);
-  if (!(short.top > 8 && short.top < 14)) fail('salto corto de altura rara: ' + short.top.toFixed(1));
-  if (!(long.top > 22 && long.top <= JUMP_MAX_H + 1)) fail('salto largo de altura rara: ' + long.top.toFixed(1));
-  if (me.landSlow < JUMP_LAND_FRAMES - 2) fail('al caer no quedó la recuperación');
   // (la pelota se deja quieta en el aire del otro lado para que no termine el punto)
   const step = () => { state.phase = 'PLAY'; Object.assign(state.ball, { x: 700, z: 40, vx: 0, vy: 0, vz: 0 }); stepPhysics(); };
-  me.x = 300; me.y = 260;
-  const x0 = me.x; localInput.left = true; step(); const slowStep = Math.abs(me.x - x0);
+  const reset = () => { me.jz = 0; me.jvz = 0; me.jumpCharge = 0; me.landStop = 0; me.landSlow = 0; me.x = 300; me.y = 260; };
+  // Carga "held" cuadros, suelta y mide hasta caer. Mientras carga no salta.
+  const jumpFor = held => {
+    reset();
+    localInput.jump = true;
+    for (let k = 0; k < held; k++) { step(); if (me.jz > 0) fail('saltó antes de soltar el Espacio'); }
+    localInput.jump = false;
+    let top = 0, frames = 0;
+    for (let k = 0; k < 120; k++) {
+      step();
+      top = Math.max(top, me.jz);
+      if (me.jz === 0 && me.jvz === 0) break;
+      frames++;
+    }
+    return { top, frames, stop: me.landStop };
+  };
+  const short = jumpFor(1), mid = jumpFor(15), long = jumpFor(60);
+  if (!(short.top >= JUMP_MIN_H - 1 && short.top < JUMP_MIN_H + 2)) fail('salto corto de altura rara: ' + short.top.toFixed(1));
+  if (!(mid.top > short.top + 4 && mid.top < long.top - 4)) fail('la carga a medias no da un salto intermedio: ' + mid.top.toFixed(1));
+  if (!(long.top > JUMP_MAX_H - 2 && long.top <= JUMP_MAX_H + 1)) fail('salto largo de altura rara: ' + long.top.toFixed(1));
+  if (long.stop < JUMP_LAND_STOP - 2 || short.stop > long.stop) fail('al caer no queda clavado (más rato tras un salto alto)');
+  // Recién caído: clavado; después del clavado, más lento; al final, normal
+  localInput.left = true;
+  const x0 = me.x; step(); const stuck = Math.abs(me.x - x0);
+  while (me.landStop > 0) step();
+  const x1 = me.x; step(); const slowStep = Math.abs(me.x - x1);
   for (let k = 0; k < JUMP_LAND_FRAMES; k++) { localInput.left = k % 2 === 0; localInput.right = !localInput.left; step(); }
   localInput.right = false; localInput.left = true;
-  const x1 = me.x; step(); const fullStep = Math.abs(me.x - x1); localInput.left = false;
-  if (!(slowStep < fullStep * 0.6)) fail(`recién caído no corre más lento (${slowStep.toFixed(2)} vs ${fullStep.toFixed(2)})`);
+  const x2 = me.x; step(); const fullStep = Math.abs(me.x - x2); localInput.left = false;
+  if (stuck !== 0) fail('recién caído se movió');
+  if (!(slowStep < fullStep * 0.6)) fail(`después del clavado no corre más lento (${slowStep.toFixed(2)} vs ${fullStep.toFixed(2)})`);
   me.isBot = true;
-  console.log(`salto: corto ${short.top.toFixed(1)} de alto (${short.frames} cuadros), largo ${long.top.toFixed(1)} (${long.frames} cuadros); recién caído corre a ${(slowStep / fullStep * 100).toFixed(0)} %`);
+  console.log(`salto: toque ${short.top.toFixed(1)} de alto, media carga ${mid.top.toFixed(1)}, carga completa ${long.top.toFixed(1)} (${long.frames} cuadros en el aire); al caer clavado ${long.stop} cuadros y luego corre a ${(slowStep / fullStep * 100).toFixed(0)} %`);
 }
 testRanking();
 testStaleRelease();

@@ -1,6 +1,6 @@
 import { computeLaunch, computeServeBox, getClampedTarget, launchBall, showBanner } from './ballistics.js';
 import { updateBotLogic } from './bots.js';
-import { BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, GUST_PLAYER_PUSH, JUMP_G, JUMP_G_HELD, JUMP_HOLD_FRAMES, JUMP_LAND_FRAMES, JUMP_LAND_SLOW, JUMP_MAX_H, JUMP_REJUMP_FRAMES, JUMP_SMASH_BONUS, JUMP_V0, SMASH_FULL_Z, SMASH_LOW_BOUNCE, SMASH_LOW_SPEED, TILT_BALL_ACCEL, TILT_PLAYER_PUSH, LIGHTS, MAX_CHARGE_FRAMES, NET_H, PODIUM_FRAMES, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
+import { BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, GUST_PLAYER_PUSH, JUMP_CHARGE_FRAMES, JUMP_CHARGE_SLOW, JUMP_G, JUMP_LAND_FRAMES, JUMP_LAND_SLOW, JUMP_LAND_STOP, JUMP_MAX_H, JUMP_MIN_H, JUMP_REJUMP_FRAMES, JUMP_SMASH_BONUS, SMASH_FULL_Z, SMASH_LOW_BOUNCE, SMASH_LOW_SPEED, TILT_BALL_ACCEL, TILT_PLAYER_PUSH, LIGHTS, MAX_CHARGE_FRAMES, NET_H, PODIUM_FRAMES, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
 import { BOSSES } from './data.js';
 import { awardPoint, checkVoteReady, emitSound, goToScreen, setupServe } from './game.js';
 import { activate, updateHazards } from './hazards.js';
@@ -87,20 +87,22 @@ export function stepPhysics() {
     if (p.slow > 0) p.slow--;
     if (p.burn > 0) p.burn--;
     if (p.burnCd > 0) p.burnCd--;
-    if (p.landSlow > 0) p.landSlow--;
+    if (p.landStop > 0) p.landStop--;
+    else if (p.landSlow > 0) p.landSlow--;
 
     const inp = p.isBot ? updateBotLogic(p, idx) : inputOf(p);
 
-    // Salto en el aire (sigue aunque lo paralice un rayo): con el Espacio apretado mientras sube, la gravedad pesa menos
+    // Salto en el aire (sigue aunque lo paralice un rayo). Al caer: un instante clavado (más largo si saltó más alto)
+    // y después recupera la velocidad de a poco
     if (p.jz > 0 || p.jvz > 0) {
-      const holding = inp.jump && p.jumpHold > 0 && p.jvz > 0;
-      p.jvz -= holding ? JUMP_G_HELD : JUMP_G;
-      if (holding) p.jumpHold--;
+      p.jvz -= JUMP_G;
       p.jz += p.jvz;
-      if (p.jz <= 0) { p.jz = 0; p.jvz = 0; p.landSlow = JUMP_LAND_FRAMES; }
+      if (p.jz <= 0) {
+        p.jz = 0; p.jvz = 0;
+        p.landStop = Math.round(JUMP_LAND_STOP * (0.5 + 0.5 * p.jumpK));
+        p.landSlow = JUMP_LAND_FRAMES;
+      }
     }
-    const jumpPressed = inp.jump && !p.jumpPrev;
-    p.jumpPrev = !!inp.jump;
 
     if (typeof inp.speedPref === 'number' && !p.isBot) {
       p.speedStat = Math.max(0.15, Math.min(0.85, inp.speedPref));
@@ -116,14 +118,20 @@ export function stepPhysics() {
       p.charging = false; p.chargeFrames = 0;
       p.lastReleaseSeq = inp.releaseSeq;
       p.vx = 0; p.vy = 0;
+      p.jumpCharge = 0;
       return;
     }
 
-    // Espacio: salto (no al sacar ni apenas cae de otro salto)
-    if (jumpPressed && p.jz === 0 && p.jvz === 0 && p.landSlow <= JUMP_LAND_FRAMES - JUMP_REJUMP_FRAMES &&
-        !(state.phase === 'SERVE' && idx === state.serverSlot)) {
-      p.jvz = JUMP_V0;
-      p.jumpHold = JUMP_HOLD_FRAMES;
+    // Espacio: se carga en el suelo y salta al soltarlo (no al sacar ni apenas cae de otro salto)
+    const canJump = p.jz === 0 && p.jvz === 0 && p.landStop === 0 && p.landSlow <= JUMP_LAND_FRAMES - JUMP_REJUMP_FRAMES &&
+      !(state.phase === 'SERVE' && idx === state.serverSlot);
+    if (!canJump) p.jumpCharge = 0;
+    else if (inp.jump) p.jumpCharge = Math.min(JUMP_CHARGE_FRAMES, p.jumpCharge + 1);
+    else if (p.jumpCharge > 0) {
+      p.jumpK = (p.jumpCharge - 1) / (JUMP_CHARGE_FRAMES - 1);
+      const h = JUMP_MIN_H + (JUMP_MAX_H - JUMP_MIN_H) * p.jumpK;
+      p.jvz = (JUMP_G + Math.sqrt(JUMP_G * JUMP_G + 8 * JUMP_G * h)) / 2;   // así la altura máxima, cuadro a cuadro, es h
+      p.jumpCharge = 0;
       emitSound('jump');
     }
 
@@ -172,7 +180,9 @@ export function stepPhysics() {
     if (actOn(p, 'gordo')) moveSpeed *= 0.45;
     if (p.slow > 0) moveSpeed *= 0.5;
     if (p.burn > 0) moveSpeed *= 0.6;
-    if (p.landSlow > 0) moveSpeed *= 1 - JUMP_LAND_SLOW * (p.landSlow / JUMP_LAND_FRAMES);   // recién caído de un salto
+    if (p.jumpCharge > 0) moveSpeed *= JUMP_CHARGE_SLOW;                                         // agachado cargando el salto
+    if (p.landStop > 0) moveSpeed = 0;                                                          // recién caído: clavado
+    else if (p.landSlow > 0) moveSpeed *= 1 - JUMP_LAND_SLOW * (p.landSlow / JUMP_LAND_FRAMES);  // y luego, de a poco
 
     const tvx = (inp.right ? moveSpeed : 0) - (inp.left ? moveSpeed : 0);
     const tvy = (inp.down ? moveSpeed : 0) - (inp.up ? moveSpeed : 0);

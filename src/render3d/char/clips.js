@@ -54,6 +54,18 @@ export function planClips(f) {
   else if (f.charging && f.kind === 'smash') jump = 0.35 * f.cr;
   if (f.celeb && f.celeb.kind === 'jump') jump = 1;
   if (f.air) jump = Math.max(jump, f.air);   // en el aire (Espacio): piernas recogidas
+  if (f.crouch) {
+    // Cargando el salto (o recién caído): agachado
+    const k = 0.35 + 0.65 * f.crouch;
+    for (const n of LOOP_NAMES) w[n] *= 1 - k;
+    w.ready += k;
+  }
+  if (f.crouch) {
+    // Cargando el salto (o recién caído): agachado
+    const k = 0.35 + 0.65 * f.crouch;
+    for (const n of LOOP_NAMES) w[n] *= 1 - k;
+    w.ready += k;
+  }
 
   if (f.celeb) {
     // Celebración: rebote de baile (la pose de los brazos viene del esqueleto)
