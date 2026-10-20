@@ -209,7 +209,13 @@ export function buildPlayerParts(p, idx, dt, now, pf, opts = {}) {
       { x: Pc.x + crx * wBot, y: Pc.y + cry * wBot, z: Pc.z + 1 },
       { x: Pc.x - crx * wBot, y: Pc.y - cry * wBot, z: Pc.z + 1 }
     ],
-    center: { x: (Sc.x + Pc.x) / 2, y: (Sc.y + Pc.y) / 2, z: (Sc.z + Pc.z) / 2 }
+    center: { x: (Sc.x + Pc.x) / 2, y: (Sc.y + Pc.y) / 2, z: (Sc.z + Pc.z) / 2 },
+    // Para el render 3D: tronco como cilindro elíptico (semiejes ancho y fondo, arriba y abajo)
+    frame: {
+      top: { x: Sc.x, y: Sc.y, z: shZ - 1 }, bot: { x: Pc.x, y: Pc.y, z: Pc.z - 6 },
+      topSide: { x: SRx, y: SRy }, botSide: { x: Rx, y: Ry },
+      topR: [8.6 * wf, 5 * wf], botR: [6.6 * wf * belly, 4.6 * belly * belly]
+    }
   });
 
   const sleeveCol = look.tank ? skin : look.shirt;
