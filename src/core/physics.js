@@ -1,6 +1,6 @@
 import { computeLaunch, computeServeBox, getClampedTarget, launchBall, showBanner } from './ballistics.js';
 import { updateBotLogic } from './bots.js';
-import { BASE_ROLL, BODY_MARGIN, COURT, GRAVITY, LIGHTS, MAX_CHARGE_FRAMES, NET_H, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
+import { BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, LIGHTS, MAX_CHARGE_FRAMES, NET_H, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
 import { BOSSES } from './data.js';
 import { awardPoint, checkVoteReady, emitSound, goToScreen, setupServe } from './game.js';
 import { activate, updateHazards } from './hazards.js';
@@ -397,9 +397,9 @@ export function stepPhysics() {
 
     if (hitLeft || hitRight) b.wallBounced = true;
     if (b.shotType === '¡REMATE!' && (hitLeft || hitRight)) {
-      b.vz = Math.max(b.vz, 3.6);
-    } else if (b.vz < 2.0) {
-      b.vz = 2.4;
+      b.vz = Math.max(b.vz, GLASS_SMASH_MIN_VZ);
+    } else if (b.vz < GLASS_MIN_VZ_TRIGGER) {
+      b.vz = GLASS_MIN_VZ;
     }
     b.isServeShot = false;
   }

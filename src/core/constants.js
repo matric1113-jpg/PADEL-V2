@@ -39,6 +39,11 @@ export const PAD_F = 17 * ENTITY_K;          // dónde está la pala respecto al
 export const PAD_S = 6 * ENTITY_K;
 export const BODY_MARGIN = 18 * ENTITY_K;    // distancia mínima del cuerpo a las paredes
 export const NET_MARGIN = 28 * ENTITY_K;
+// Rebote en el cristal: la pelota sale con un 13% menos de elevación que antes (2,4 y 3,6 originales)
+export const GLASS_VZ_K = 0.87;
+export const GLASS_MIN_VZ_TRIGGER = 2.0 * GLASS_VZ_K;   // si sube menos que esto, se la fuerza a GLASS_MIN_VZ
+export const GLASS_MIN_VZ = 2.4 * GLASS_VZ_K;           // velocidad vertical mínima tras el rebote
+export const GLASS_SMASH_MIN_VZ = 3.6 * GLASS_VZ_K;     // ídem para un remate contra el fondo
 export const BASE_ROLL = 0.95;               // velocidad horizontal que conserva la pelota al botar (antes 0,90): llega más al fondo
 export const ACTIVE_DURATION = 300;          // 5 s
 export const ACTIVE_COOLDOWN = 2700;         // 45 s
