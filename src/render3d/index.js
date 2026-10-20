@@ -16,7 +16,7 @@ import { drawGroundMarks } from './ground.js';
 import { CourtLights } from './lights.js';
 import { MapScene } from './maps.js';
 import { Markers } from './markers.js';
-import { drawStunStars, drawVignette } from './overlay.js';
+import { drawStunStars, drawVignette, drawWindStreaks } from './overlay.js';
 import { Players } from './players.js';
 export { renderPortrait } from './portraits.js';
 
@@ -122,6 +122,7 @@ export function render(now) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   setWorldTransform(S, sx, sy);
   drawVignette();
+  drawWindStreaks();
   if (!fx.replay) { drawAimArc(me); drawStunStars(built, now); }
   drawHud(me, built, S, () => setWorldTransform(S, sx, sy));
 }

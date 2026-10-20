@@ -1,4 +1,4 @@
-import { SPRINT_COOLDOWN, SPRINT_DURATION } from './constants.js';
+import { GUST_FRAMES, GUST_RAMP, SPRINT_COOLDOWN, SPRINT_DURATION } from './constants.js';
 import { MAPS } from './data.js';
 import { emptyUpgrades } from './stats.js';
 
@@ -19,6 +19,14 @@ export const rt = {
 };
 
 export const mapOf = () => MAPS[state.map] || MAPS.chile;
+// Fuerza del viento (aceleración lateral por cuadro) dentro de `ahead` cuadros: sube y baja suave dentro de la ráfaga.
+// La usan la física y las guías de tiro (así predicen el mismo desvío que sufre la pelota).
+export function gustForce(ahead = 0) {
+  const t = state.gust.t - ahead;
+  if (t <= 0 || ahead < 0) return 0;
+  return state.gust.w * Math.min(1, t / GUST_RAMP, (GUST_FRAMES - t) / GUST_RAMP + 0.001);
+}
+
 export const localInput = {
   up: false, down: false, left: false, right: false,
   sprint: false,

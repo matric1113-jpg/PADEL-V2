@@ -44,6 +44,14 @@ export const GLASS_VZ_K = 0.87;
 export const GLASS_MIN_VZ_TRIGGER = 2.0 * GLASS_VZ_K;   // si sube menos que esto, se la fuerza a GLASS_MIN_VZ
 export const GLASS_MIN_VZ = 2.4 * GLASS_VZ_K;           // velocidad vertical mínima tras el rebote
 export const GLASS_SMASH_MIN_VZ = 3.6 * GLASS_VZ_K;     // ídem para un remate contra el fondo
+// Mapa En altura: ráfagas de viento (aceleración lateral de la pelota por cuadro, antes 0,014-0,020 durante 180 cuadros)
+export const GUST_STRENGTH_MIN = 0.035;
+export const GUST_STRENGTH_RANGE = 0.02;
+export const GUST_FRAMES = 240;             // duración de una ráfaga (4 s)
+export const GUST_RAMP = 30;                // cuadros que tarda en subir y en bajar
+export const GUST_GAP_MIN = 420;            // pausa entre ráfagas
+export const GUST_GAP_RANGE = 360;
+export const GUST_PLAYER_PUSH = 8;          // cuánto arrastra a los jugadores (unidades por cuadro por unidad de fuerza)
 export const BASE_ROLL = 0.95;               // velocidad horizontal que conserva la pelota al botar (antes 0,90): llega más al fondo
 export const ACTIVE_DURATION = 300;          // 5 s
 export const ACTIVE_COOLDOWN = 2700;         // 45 s

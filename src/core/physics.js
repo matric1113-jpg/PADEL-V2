@@ -1,10 +1,10 @@
 import { computeLaunch, computeServeBox, getClampedTarget, launchBall, showBanner } from './ballistics.js';
 import { updateBotLogic } from './bots.js';
-import { BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, LIGHTS, MAX_CHARGE_FRAMES, NET_H, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
+import { BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, GUST_PLAYER_PUSH, LIGHTS, MAX_CHARGE_FRAMES, NET_H, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
 import { BOSSES } from './data.js';
 import { awardPoint, checkVoteReady, emitSound, goToScreen, setupServe } from './game.js';
 import { activate, updateHazards } from './hazards.js';
-import { localInput, mapOf, remoteInputs, rt, state } from './state.js';
+import { gustForce, localInput, mapOf, remoteInputs, rt, state } from './state.js';
 import { actOn, chargeRateOf, reachOf, reachZOf, smashMinOf, upLvl } from './stats.js';
 import { clamp } from './util.js';
 
@@ -153,6 +153,7 @@ export function stepPhysics() {
     p.x += p.vx;
     p.y += p.vy;
     if (state.tilt.t > 0) { p.x += state.tilt.x * 0.5; p.y += state.tilt.y * 0.5; }
+    if (state.gust.t > 0) p.y += gustForce() * GUST_PLAYER_PUSH;
 
     let minX = p.team === 0 ? COURT.x + BODY_MARGIN : COURT.netX + NET_MARGIN;
     let maxX = p.team === 0 ? COURT.netX - NET_MARGIN : COURT.x + COURT.w - BODY_MARGIN;
@@ -262,7 +263,7 @@ export function stepPhysics() {
   b.z += b.vz;
   b.vz -= GRAVITY;
   if (b.z > 0) {
-    if (state.gust.t > 0) b.vy += state.gust.w;
+    if (state.gust.t > 0) b.vy += gustForce();
     if (state.tilt.t > 0) { b.vx += state.tilt.x * 0.011; b.vy += state.tilt.y * 0.011; }
   }
 

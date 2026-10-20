@@ -1,4 +1,4 @@
-import { ACTIVE_COOLDOWN, ACTIVE_DURATION, BODY_MARGIN, COURT } from './constants.js';
+import { ACTIVE_COOLDOWN, ACTIVE_DURATION, BODY_MARGIN, COURT, GUST_FRAMES, GUST_GAP_MIN, GUST_GAP_RANGE, GUST_STRENGTH_MIN, GUST_STRENGTH_RANGE } from './constants.js';
 import { ACTIVES, ACTIVE_IDS, BOSSES, TALK } from './data.js';
 import { emitSound, say, talkLine } from './game.js';
 import { mapOf, state } from './state.js';
@@ -32,8 +32,8 @@ export function updateHazards() {
   if (M.gusts) {
     if (state.gust.t > 0) state.gust.t--;
     else if (--state.hz.gust <= 0) {
-      state.gust = { w: (Math.random() < 0.5 ? -1 : 1) * (0.014 + Math.random() * 0.006), t: 180 };
-      state.hz.gust = 540 + Math.random() * 420;
+      state.gust = { w: (Math.random() < 0.5 ? -1 : 1) * (GUST_STRENGTH_MIN + Math.random() * GUST_STRENGTH_RANGE), t: GUST_FRAMES };
+      state.hz.gust = GUST_GAP_MIN + Math.random() * GUST_GAP_RANGE;
     }
   }
   if (M.tilt) {

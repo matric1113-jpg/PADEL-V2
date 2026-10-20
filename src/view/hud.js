@@ -1,7 +1,7 @@
 import { computeLaunch, getClampedTarget } from '../core/ballistics.js';
 import { ACTIVE_COOLDOWN, ACTIVE_DURATION, BALL_R, COURT, GRAVITY, MAX_CHARGE_FRAMES, NET_H, PAD_F, PAD_S, SPRINT_COOLDOWN, SPRINT_DURATION, VIEW_H, VIEW_W, ZS } from '../core/constants.js';
 import { contraTarget, isContraAim } from '../core/physics.js';
-import { localInput, rt, state } from '../core/state.js';
+import { gustForce, localInput, rt, state } from '../core/state.js';
 import { smashMinOf, upLvl } from '../core/stats.js';
 import { clamp } from '../core/util.js';
 import { mouseView } from '../input/input.js';
@@ -70,7 +70,7 @@ export function predictLanding() {
   let x = b.x, y = b.y, z = b.z, vx = b.vx, vy = b.vy, vz = b.vz;
   for (let i = 0; i < 400; i++) {
     x += vx; y += vy; z += vz; vz -= GRAVITY;
-    if (z > 0 && state.gust.t > 0) vy += state.gust.w;
+    if (z > 0) vy += gustForce(i + 1);
     if (x < COURT.x + 10 || x > COURT.x + COURT.w - 10 || y < COURT.y + 10 || y > COURT.y + COURT.h - 10) return null;
     if (z <= 0) return i < 2 ? null : { x, y };
   }
@@ -103,14 +103,13 @@ export function drawAimArc(me) {
   const { from, label, speed } = shotPreviewParams(me, ratio, isLob, isMyServe);
   const v = computeLaunch(from.x, from.y, from.z, tx, ty, speed, label, me.team);
   let x = from.x, y = from.y, z = from.z, vx = v.vx, vy = v.vy, vz = v.vz;
-  const wind = state.gust.t > 0 ? state.gust.w : 0;
   const pts = [P(x, y, z * ZS + BALL_R)];
   const shadow = [P(x, y, 0)];
   let netFail = false;
   for (let i = 0; i < 300; i++) {
     const px = x;
     x += vx; y += vy; z += vz; vz -= GRAVITY;
-    if (z > 0) vy += wind;
+    if (z > 0) vy += gustForce(i + 1);
     if ((px - COURT.netX) * (x - COURT.netX) < 0 && z < NET_H) netFail = true;
     if (z <= 0) { pts.push(P(x, y, BALL_R)); shadow.push(P(x, y, 0)); break; }
     if (i % 2 === 0) { pts.push(P(x, y, z * ZS + BALL_R)); shadow.push(P(x, y, 0)); }

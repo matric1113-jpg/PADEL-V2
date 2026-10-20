@@ -190,10 +190,9 @@ export class Effects {
       else this.sparks.add(s.x, s.y, s.z, 2.6, 1, 0.94, 0.7, a);
     }
     // Lluvia (En altura): gotas inclinadas por el viento
-    for (const d of fx.rain) this.lines.add(d.x, d.y, d.z, d.x, d.y + 2, d.z + 14, 0.78, 0.86, 0.94, 0.3);
-    // Rachas visibles de la ráfaga
-    const gs = Math.sign(state.gust.w || 1);
-    for (const s of fx.streaks) this.lines.add(s.x, s.y, s.z, s.x, s.y - gs * 60, s.z, 0.92, 0.95, 0.98, 0.4 * (1 - s.t / 60));
+    // la cola de cada gota sale contra el viento: con una ráfaga la lluvia se ve tumbada
+    const slant = -(fx.rainWind || 0) * (14 / (11 + 9 * (fx.windK || 0)));
+    for (const d of fx.rain) this.lines.add(d.x, d.y, d.z, d.x, d.y + 2 + slant, d.z + 14, 0.78, 0.86, 0.94, 0.3 + 0.25 * (fx.windK || 0));
     // Aves cruzando la cordillera (Chile), sobre el telón de fondo
     for (const bd of fx.birds) {
       const z = bd.z * BACK_ZK, s = 9, f = Math.sin(bd.ph) * 0.6;

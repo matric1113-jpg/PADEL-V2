@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "sim": "node scripts/simulate.mjs",
     "test:camera": "node scripts/test-camera.mjs",
+    "test:wind": "node scripts/test-wind.mjs",
     "perf:original": "node scripts/perf-original.mjs"
   },
   "dependencies": {

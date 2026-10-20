@@ -2,6 +2,7 @@ import { VIEW_H, VIEW_W } from '../core/constants.js';
 import { state } from '../core/state.js';
 import { actOn, upLvl } from '../core/stats.js';
 import { P } from '../view/camera.js';
+import { fx } from '../view/fx.js';
 import { ctx } from '../view/ctx.js';
 import { lookOf, scaleOf } from '../view/skeleton.js';
 
@@ -35,4 +36,24 @@ export function drawStunStars(built, now) {
       ctx.fill();
     }
   });
+}
+
+// Rachas del viento (mapa En altura): trazos largos y brillantes que cruzan la pantalla en la dirección del viento.
+// Van en la capa 2D (con la misma P() que el HUD) para que se vean aunque la cancha esté en sombra.
+export function drawWindStreaks() {
+  if (!fx.streaks.length) return;
+  const gs = Math.sign(state.gust.w || 1);
+  ctx.save();
+  ctx.lineCap = 'round';
+  for (const s of fx.streaks) {
+    const a = Math.sin(Math.PI * s.t / 60) * (0.35 + 0.5 * (fx.windK || 0));
+    const p0 = P(s.x, s.y, s.z), p1 = P(s.x, s.y - gs * 150, s.z + 6);
+    const g = ctx.createLinearGradient(p0.x, p0.y, p1.x, p1.y);
+    g.addColorStop(0, `rgba(235, 244, 255, ${a})`);
+    g.addColorStop(1, 'rgba(235, 244, 255, 0)');
+    ctx.strokeStyle = g;
+    ctx.lineWidth = 2.6 * p0.s;
+    ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
+  }
+  ctx.restore();
 }

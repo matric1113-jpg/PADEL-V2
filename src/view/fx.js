@@ -1,6 +1,8 @@
-import { ACTIVE_DURATION, BALL_R, COURT, LIGHTS, ZS } from '../core/constants.js';
+import { ACTIVE_DURATION, BALL_R, COURT, GUST_STRENGTH_MIN, GUST_STRENGTH_RANGE, LIGHTS, ZS } from '../core/constants.js';
+
+export const RAIN_WIND = 160;   // velocidad lateral de la lluvia (unidades por cuadro) por unidad de fuerza del viento; antes 900 * 0,06 = 54
 import { replayBuf } from '../core/replay.js';
-import { mapOf, state } from '../core/state.js';
+import { gustForce, mapOf, state } from '../core/state.js';
 
 // ---------- Efectos (solo visuales, viven en cada cliente) ----------
 export function newPf() {
@@ -141,18 +143,25 @@ export function updateFx(dt) {
     if (fx.replay.t >= fx.replay.frames.length - 1) fx.replay = null;
   }
   const M = mapOf();
-  // Lluvia suave
+  // Lluvia: cae casi recta y, con una ráfaga, se tumba con el viento y se vuelve más densa y rápida
+  const wf = Math.abs(gustForce()) / Math.max(0.001, GUST_STRENGTH_MIN + GUST_STRENGTH_RANGE);   // 0..1 según la fuerza del viento
+  fx.windK = wf;
   if (M.rain && state.screen === 'play') {
-    while (fx.rain.length < 140) fx.rain.push({ x: -150 + Math.random() * 1250, y: -80 + Math.random() * 680, z: Math.random() * 420 });
-    const wind = state.gust.t > 0 ? state.gust.w * 900 : 0;
+    const want = Math.round(140 + 220 * Math.min(1, wf));
+    while (fx.rain.length < want) fx.rain.push({ x: -150 + Math.random() * 1250, y: -80 + Math.random() * 680, z: Math.random() * 420 });
+    const wind = gustForce() * RAIN_WIND;   // unidades de y por cuadro
+    fx.rainWind = wind;
     for (const d of fx.rain) {
-      d.z -= 11 * dt; d.y += wind * 0.06 * dt;
+      d.z -= (11 + 9 * wf) * dt; d.y += wind * dt;
       if (d.z < 0) { d.z = 380 + Math.random() * 60; d.x = -150 + Math.random() * 1250; d.y = -80 + Math.random() * 680; }
     }
-  } else fx.rain.length = 0;
-  // Rachas visibles de la ráfaga
-  if (state.gust.t > 0 && Math.random() < 0.5 * dt) fx.streaks.push({ x: 60 + Math.random() * 800, y: state.gust.w > 0 ? 10 : 510, z: 30 + Math.random() * 200, t: 0 });
-  for (const s of fx.streaks) { s.t += dt; s.y += Math.sign(state.gust.w || 1) * 9 * dt; }
+  } else { fx.rain.length = 0; fx.rainWind = 0; }
+  // Rachas visibles de la ráfaga: líneas largas que cruzan la cancha en la dirección del viento
+  if (state.gust.t > 0) {
+    const n = 2.2 * wf * dt;
+    for (let k = 0; k < n; k += 1) if (Math.random() < Math.min(1, n - k)) fx.streaks.push({ x: -20 + Math.random() * 960, y: state.gust.w > 0 ? -60 : 580, z: 20 + Math.random() * 230, t: 0 });
+  }
+  for (const s of fx.streaks) { s.t += dt; s.y += Math.sign(state.gust.w || 1) * 16 * dt; }
   fx.streaks = fx.streaks.filter(s => s.t < 60);
   // Aves cruzando la cordillera
   if (state.map === 'chile' && fx.birds.length === 0 && Math.random() < 0.004 * dt) {
