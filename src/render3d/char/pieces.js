@@ -10,6 +10,7 @@ import { plainMaterial } from './materials.js';
 // Medidas de la cabeza del pack: radio ~0,085 a los lados, ~0,095 de adelante hacia atrás, coronilla a +0,085.
 
 const sh = mesh => { mesh.castShadow = true; mesh.receiveShadow = false; return mesh; };
+const small = mesh => { mesh.castShadow = false; return mesh; };   // detalles chicos: no aportan sombra y cuestan un dibujo por foco
 const place = (mesh, x, y, z) => { mesh.position.set(x, y, z); return mesh; };
 
 // ---- Peinados que el pack no trae ----
@@ -83,7 +84,7 @@ export function tail(color, long, down) {
 export function mustache(color, eyeY) {
   const g = new Group();
   for (const s of [-1, 1]) {
-    const m = sh(new Mesh(new CapsuleGeometry(0.0085, 0.032, 4, 8), plainMaterial(color, { roughness: 0.9 })));
+    const m = small(new Mesh(new CapsuleGeometry(0.0085, 0.032, 4, 8), plainMaterial(color, { roughness: 0.9 })));
     m.rotation.z = Math.PI / 2 + s * 0.28;
     m.position.set(s * 0.021, 0, 0);
     g.add(m);
@@ -97,16 +98,16 @@ export function glasses(color, eyeY) {
   const mat = plainMaterial(color, { roughness: 0.3, metalness: 0.2 });
   const lens = plainMaterial(color, { roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.78 });
   for (const s of [-1, 1]) {
-    const ring = sh(new Mesh(new TorusGeometry(0.0215, 0.0045, 6, 18), mat));
+    const ring = small(new Mesh(new TorusGeometry(0.0215, 0.0045, 6, 18), mat));
     ring.position.set(s * 0.036, 0, 0);
     const disc = new Mesh(new CircleGeometry(0.0205, 16), lens);
     disc.position.set(s * 0.036, 0, 0.001);
-    const arm = sh(new Mesh(new CylinderGeometry(0.0028, 0.0028, 0.11, 5), mat));
+    const arm = small(new Mesh(new CylinderGeometry(0.0028, 0.0028, 0.11, 5), mat));
     arm.rotation.x = Math.PI / 2;
     arm.position.set(s * 0.0575, 0, -0.054);
     g.add(ring, disc, arm);
   }
-  const bridge = sh(new Mesh(new CylinderGeometry(0.003, 0.003, 0.026, 5), mat));
+  const bridge = small(new Mesh(new CylinderGeometry(0.003, 0.003, 0.026, 5), mat));
   bridge.rotation.z = Math.PI / 2;
   g.add(bridge);
   g.position.set(0, eyeY + 0.002, 0.1);
@@ -116,7 +117,7 @@ export function glasses(color, eyeY) {
 // ---- Cabeza: cintillo, visera, jockey, sombreros ----
 // Aro alrededor de la frente (el cráneo es una elipse: 0,082 de ancho, 0,098 de fondo)
 function band(color, h, y) {
-  const m = sh(new Mesh(new CylinderGeometry(1, 1, h, 24, 1, true), new MeshStandardMaterial({ color, roughness: 0.7, side: DoubleSide })));
+  const m = small(new Mesh(new CylinderGeometry(1, 1, h, 24, 1, true), new MeshStandardMaterial({ color, roughness: 0.7, side: DoubleSide })));
   m.scale.set(0.084, 1, 0.1);
   m.position.y = y;
   return m;

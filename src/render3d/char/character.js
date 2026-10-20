@@ -52,6 +52,7 @@ export class Character {
         if (/^super/i.test(o.name)) this.bodyMesh = o;
         else if (o.name === 'Eyes') this.eyes = o;
         else if (o.name === 'Eyebrows') this.brows = o;
+        if (o !== this.bodyMesh) o.castShadow = false;
       }
     });
     this.bodyMat = makeBodyMaterial(this.bodyMesh.material, gender);
@@ -68,6 +69,16 @@ export class Character {
     for (const n of ['Head', 'spine_01', 'hand_r']) this.rest[n] = this.bones[n].matrixWorld.clone().invert();
     const maleScene = assets.body.hombre;
     this.pelvisShift = this.bones.pelvis.position.z - maleScene.getObjectByName('pelvis').position.z;
+
+    // Ojos y cejas siguen solo a la cabeza: como piezas rígidas ahorran dos esqueletos por personaje
+    this.faceHolder = this.holder('Head');
+    for (const key of ['eyes', 'brows']) {
+      const sk = this[key];
+      const m = new Mesh(sk.geometry, sk.material);
+      sk.parent.remove(sk);
+      this.faceHolder.add(m);
+      this[key] = m;
+    }
 
     this.rig = new Rig(this.model, this.bones);
     this.headHolder = this.holder('Head');
