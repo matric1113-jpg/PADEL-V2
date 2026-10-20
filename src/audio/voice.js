@@ -1,11 +1,19 @@
-// ================= VOCES (Web Speech API) =================
+// ================= VOCES =================
 // Dicen la frase de cada personaje en el menú y las frases del partido (state.talk).
-// Las voces dependen del navegador y del sistema: las "Online (Natural)" de Microsoft Edge (por ejemplo Lorenzo y
+// Primero se buscan los audios grabados con edge-tts (assets/voices/<personaje>/<id>.mp3, se generan con
+// "npm run voices"): suenan igual de naturales en cualquier navegador. Si falta el de una frase, se usa la voz del
+// navegador (Web Speech API), que depende del navegador y del sistema: las "Online (Natural)" de Microsoft Edge (por ejemplo Lorenzo y
 // Catalina de Chile, Manuel de Cuba) son las más humanas, las "Google" de Chrome vienen después, y las locales
 // de Windows (Raúl, Sabina) son las más robóticas. Se elige la mejor que haya. A las voces naturales casi no se les
 // cambia el tono: subirlo o bajarlo mucho es lo que las hace sonar a robot.
 import { getVolume } from './audio.js';
 import { HELLO } from '../core/data.js';
+import { phraseId } from './voice-id.js';
+
+// Audios grabados: Vite los incluye en el build con su URL (si no hay ninguno, queda vacío)
+const RECORDED = import.meta.glob('../../assets/voices/*/*.mp3', { eager: true, query: '?url', import: 'default' });
+const recordedUrl = (lookId, text) => RECORDED[`../../assets/voices/${lookId}/${phraseId(text)}.mp3`];
+let playing = null;
 
 const FEMALE_LOOKS = new Set(['gladys', 'nena', 'capitana']);
 // Acento preferido por personaje (el resto, chileno)
@@ -43,10 +51,22 @@ function voiceFor(lookId) {
 }
 
 export function speak(text, lookId, interrupt = true) {
-  if (!text || !window.speechSynthesis) return;
+  if (!text) return;
   const vol = getVolume('sfx');
   if (vol <= 0) return;
-  if (interrupt) speechSynthesis.cancel();
+  if (interrupt) {
+    if (playing) { playing.pause(); playing = null; }
+    if (window.speechSynthesis) speechSynthesis.cancel();
+  }
+  const url = recordedUrl(lookId, text);
+  if (url) {
+    const a = new Audio(url);
+    a.volume = vol;
+    a.play().catch(() => { /* el navegador aún no deja sonar (falta un clic) */ });
+    playing = a;
+    return;
+  }
+  if (!window.speechSynthesis) return;
   const u = new SpeechSynthesisUtterance(text);
   const v = voiceFor(lookId);
   u.lang = v ? v.lang : 'es-CL';

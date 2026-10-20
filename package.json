@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "sim": "node scripts/simulate.mjs",
+    "voices": "node scripts/gen-voices.mjs",
     "test:camera": "node scripts/test-camera.mjs",
     "test:hazards": "node scripts/test-hazards.mjs",
     "perf:original": "node scripts/perf-original.mjs"
