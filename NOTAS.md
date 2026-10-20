@@ -8,7 +8,7 @@ Rama de trabajo: `threejs`. `main` (y el link de GitHub Pages) sigue mostrando l
 npm install
 npm run dev           # servidor local en http://localhost:5173 (render 3D)
 npm run build         # genera dist/ (base relativa: sirve en la raíz o en una subcarpeta)
-npm run sim           # simulación sin pantalla con azar sembrado: npm run sim -- <cuadros> <semilla> <friendly|run>
+npm run sim           # simulación sin pantalla con azar sembrado: npm run sim -- <cuadros> <semilla> <friendly|americano|run>
 npm run test:camera   # prueba que la cámara 3D es igual a la 2D (ver etapa 2)
 npm run test:hazards  # la guía de tiro predice el viento y la inclinación como la física (ver ajustes)
 ```
@@ -35,7 +35,7 @@ src/core/             LÓGICA PURA. No toca DOM, audio, red ni render
   state.js            `state` (compartido por red), `rt` (estado de ejecución), localInput, menuSel
   events.js           `hooks`: único canal de la lógica hacia afuera
   ballistics.js       Apuntado, lanzamiento, saque reglamentario, banners
-  game.js             Puntos y juegos, set, tienda 2v2, votación de mapa, torneo, compras
+  game.js             Puntos y juegos, set, tienda 2v2, votación de mapa, torneo, compras, puestos/equipos, americano
   hazards.js          Activas (clon, gordo, pala enorme, hielo) y peligros de mapa (rayos, inclinación, ráfagas)
   bots.js             IA de los bots
   physics.js          stepPhysics: movimiento, golpes, red, botes, cristales, reglas
@@ -83,7 +83,7 @@ src/render2d/         RENDER 2D ANTERIOR (Canvas). Solo para comparar con ?rende
 
 assets/models/         Modelos y animaciones .glb (ver "Etapa 3")
 visor.html, src/dev/    Visor de personajes y clips (solo en npm run dev)
-scripts/simulate.mjs     Simulación de bots con solo `src/core`
+scripts/simulate.mjs     Simulación de bots con solo `src/core` (amistoso, americano y torneo)
 scripts/test-camera.mjs  Prueba de la cámara 3D contra la 2D
 ```
 
@@ -176,6 +176,16 @@ Cada uno en su commit y con constantes con nombre en `src/core/constants.js`.
 - **Estado.** Lo único nuevo en `state` es `setHistory` (juegos de cada set terminado) y las pantallas `'podium'` y `'matchover'` (reemplazan a `'setover'`); `state.result` lleva `match: true` cuando el partido está decidido. El anfitrión cuenta la cinemática con `rt.podiumT` (no viaja por la red) hasta `PODIUM_FRAMES` (660 = 11 s) y pasa a `'matchover'`. Los invitados lo ven igual porque todo sale de `state` (probado con dos pestañas: set nuevo con tienda de $700, podio y resultado; el invitado mide el tiempo del podio con su propio reloj de dibujo).
 - **Podio** (`render3d/podium.js`, `render3d/index.js` → `renderStage`). Cámara en perspectiva propia que parte en diagonal desde arriba y se acerca; ganadores en el escalón alto con medalla de oro (`makeMedal` en `char/pieces.js`) y la celebración de cada personaje (`CELEB_KIND`); perdedores en los escalones bajos llorando. Quaternius no trae una animación de tristeza, así que el llanto es procedural en `Character.update` (`f.cry`): cabeza y tronco caídos, manos a los ojos con IK, sollozos y lágrimas como partículas (`Players.emitTears`). Confeti, un foco sobre el podio y fundido desde negro. En `'matchover'` el podio sube en el cuadro para dejar sitio al panel (`.overlay.matchover`) con el resultado y "Jugar otra vez" (solo el anfitrión) o "Volver al menú". Solo en desarrollo: `__padel.r3d.stageT = 420` fija el instante de la cinemática.
 - **Simulación** (`npm run sim -- 800000 1 friendly`). Con azar sembrado (misma semilla, mismo resultado). Recorre los 6 mapas y, en el modo amistoso, comprueba el flujo: cada set nuevo parte con marcador en cero, $700 en total (dinero + mejoras + activa) y sin activas ni sombreros; los sets no se pierden al abrir el set nuevo; el partido termina solo con un ganador a 2 sets, con historial coherente; el podio solo aparece con 2 sets de un equipo. 3 semillas × 800.000 cuadros: 21 partidos, 32 sets nuevos, sin errores.
+
+### Equipos en la sala, modo Americano, saque automático, Marco y voces del menú
+
+- **Puestos y equipos.** Cada jugador tiene un id fijo (`uid`: `u0` es el anfitrión, `u1`-`u3` los otros puestos) y el equipo sale del puesto: `state.players[0..1]` es el azul y `[2..3]` el rojo, como siempre. Cambiar a alguien de equipo es reordenar `state.players` (`seatPlayers(uids)` en `core/game.js`), así la física, los bots, la cámara y el render no cambiaron. La red y los inputs ya no usan el puesto sino el `uid`: `rt.connections[uid]`, `remoteInputs[uid]` (`inputOf(p)`), `rt.myUid`; el invitado recibe su `uid` en `welcome` y `syncMySlot()` recalcula `rt.mySlot` cada vez que llega el estado. `resetSeats()` vuelve al orden `u0..u3` al preparar una partida y al salir de una sala.
+- **Equipos en la sala (amistoso).** El anfitrión toca "Cambiar de equipo" en un jugador y luego "Intercambiar" en uno del otro equipo (`swapSeats`, solo en `'lobby'` y modo `'friendly'`): siempre quedan 2 por lado. Los invitados lo ven al instante porque viene en `state.players`, y la cámara de cada uno sigue a su equipo (`beginFrame` compara `me.team`). El bot que juega al lado del anfitrión sigue con `TEAMMATE_SKILL`. En el torneo no hay botones ni cambia nada. Si un invitado elige el personaje de un bot, el bot toma otro libre (`fixBotLooks`; los jefes no se tocan).
+- **Americano** (`state.mode = 'americano'`, botón en el menú). 4 jugadores (bots en los puestos vacíos) y 3 sets con parejas A+B vs C+D, A+C vs B+D, A+D vs B+C (`AMERICANO_PAIRS`; A-D es el orden de la sala). Cada set es al primero en llegar a `AMERICANO_GAMES_TO_WIN` (4) juegos, sin tie-break, y empieza como un set del amistoso (`beginSet`: tienda de $700, compras y activas a cero, votación de mapa; tienda también después del juego 2 y luego cada 3). `state.amer = { set, order, pts, against, history }`: cada juego ganado suma 1 a `pts` de los dos de la pareja y 1 a `against` de los otros dos. `americanoRanking()` ordena por juegos ganados y luego por menos en contra; si sigue igual, comparten el puesto (1, 1, 3, 4). El marcador muestra las parejas del set y la tabla (`#sb-amer`, `ui/hud.js`). Al terminar el set 3, `state.result = { americano: true, ranking }` y podio: escalones 1 (oro), 2 (plata) y 3 (bronce) con medalla del color (`setMedalKind`), los empatados comparten escalón, el 4.º en el suelo; celebra solo el 1.º lugar, el resto llora. La cámara del podio termina un poco más lejos (`wide`). La pantalla de resultado muestra la tabla con medallas y los 3 sets. "Jugar otra vez" conserva quién es A, B, C y D.
+- **Saque que salía solo.** La física guarda el último `releaseSeq` (soltar el clic) de cada jugador, pero no lo leía durante la pausa entre puntos ni fuera de `'play'`. Un clic soltado en ese rato (por ejemplo, al terminar el punto o al pasar por la tienda) quedaba pendiente, y al volver al saque contaba como golpe: quien sacaba lanzaba la pelota al tocar "Listo". Ahora `discardPendingSwings()` (`core/physics.js`) descarta esos clics y la carga mientras no se está jugando un punto. `npm run sim` lo prueba (`testStaleRelease`): sin el arreglo falla.
+- **Marco.** Personaje nuevo elegible (`LOOKS.marco`): piel oscura, pelado, polera verde agua, pala diamante, "Todoterreno" (velocidad 0,45). Frases propias en `TALK.byLook`.
+- **Voces del menú.** Al entrar el cursor a la tarjeta de un personaje aparece un globo con su frase y la dice la voz del navegador (Web Speech API, voz en español si hay; `HELLO` en `core/data.js` con el texto, la pronunciación `say` cuando cambia y el tono/velocidad de cada uno). Chrome solo deja hablar después de que el usuario tocó la página una vez; antes, solo se ve el globo.
+- **Pruebas.** `npm run sim` ahora corre amistoso (con el anfitrión cambiado al equipo rojo desde la sala), americano y torneo. En el americano comprueba las parejas de cada set, que cada set termina en 4, que cada jugador juega todos los juegos (`pts + against`), que sus juegos ganados coinciden con el historial y la tabla final; además prueba fija de los desempates. 2 semillas × 600.000 cuadros de americano: 21 americanos completos sin errores. Con dos pestañas: sala de amistoso con el anfitrión pasado al rojo (el invitado vio el cambio al instante, sacó y se movió con su input desde el puesto 1, cada cámara del lado de su equipo) y sala de americano (el invitado cambió de puesto y de equipo en cada set, vio el podio con su medalla de bronce compartida y la tabla final).
 
 ### Etapa 4: publicación en /beta/ de GitHub Pages
 
