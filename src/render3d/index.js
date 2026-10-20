@@ -1,4 +1,4 @@
-import { ACESFilmicToneMapping, Color, PCFSoftShadowMap, Scene, SRGBColorSpace, WebGLRenderer } from 'three';
+import { ACESFilmicToneMapping, PCFSoftShadowMap, Scene, SRGBColorSpace, WebGLRenderer } from 'three';
 import { VIEW_H, VIEW_W } from '../core/constants.js';
 import { localInput } from '../core/state.js';
 import { canvas, wrapper } from '../dom.js';
@@ -13,6 +13,7 @@ import { applyCam, newCamera, screenToGround } from './camera.js';
 import { Court } from './court.js';
 import { drawGroundMarks } from './ground.js';
 import { CourtLights } from './lights.js';
+import { MapScene } from './maps.js';
 import { Markers } from './markers.js';
 import { Players } from './players.js';
 
@@ -20,7 +21,7 @@ import { Players } from './players.js';
 // La escena se dibuja en #game3d; el HUD sigue en el canvas 2D #game, que queda encima.
 const camera = newCamera();
 const aimCamera = newCamera();   // cámara de juego sin sacudida: la que usa la puntería
-let renderer = null, scene = null, markers = null, ball = null, court = null, lights = null, players = null;
+let renderer = null, scene = null, markers = null, ball = null, court = null, lights = null, players = null, maps = null;
 export const debug = {};   // solo para revisar desde la consola en desarrollo
 
 export function init() {
@@ -35,17 +36,17 @@ export function init() {
   renderer.shadowMap.type = PCFSoftShadowMap;
 
   scene = new Scene();
-  scene.background = new Color('#0b1522');
   court = new Court(renderer);
   lights = new CourtLights();
-  scene.add(court.group, lights.group);
+  maps = new MapScene();
+  scene.add(court.group, lights.group, maps.group);
   markers = new Markers();
   scene.add(markers.group);
   players = new Players();
   ball = new Ball();
   scene.add(players.group, ball.group);
 
-  Object.assign(debug, { renderer, scene, court, lights, players, ball, camera });
+  Object.assign(debug, { renderer, scene, court, lights, players, ball, maps, camera });
   resize();
   new ResizeObserver(resize).observe(wrapper);
 }
@@ -74,6 +75,7 @@ export function updateAimFromMouse() {
 function updateWorld(dt, now, inReplay, me) {
   court.update();
   lights.update(renderer, scene);
+  maps.update(now, scene);
   const built = players.update(dt, now, inReplay);
   ball.update(camera, inReplay);
   drawGroundMarks(markers, me, built, inReplay, now);

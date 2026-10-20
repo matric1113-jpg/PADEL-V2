@@ -6,6 +6,7 @@ import { COURT, GLASS_H, GLASS_STEP_H, NET_H, WALL_H_LOW, WALL_H_TALL, ZS } from
 import { state } from '../core/state.js';
 import { clamp } from '../core/util.js';
 import { fx } from '../view/fx.js';
+import { mergeStatic } from './merge.js';
 import { hash2, makeGrid, sampleGrid, vnoise } from './noise.js';
 import { styleOf } from './style.js';
 
@@ -321,7 +322,7 @@ export class Court {
       if (side) this.buildDoor(walls, key, out, metal, wireMat);
     }
     walls.traverse(o => { if (o.isMesh) o.receiveShadow = true; });
-    this.group.add(walls);
+    this.group.add(mergeStatic(walls));
   }
 
   // Puerta lateral: marco y una hoja de malla entreabierta hacia afuera (solo estética)
