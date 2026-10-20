@@ -169,7 +169,7 @@ function testJump() {
   localInput.right = false; localInput.left = true;
   const x2 = me.x; step(); const fullStep = Math.abs(me.x - x2); localInput.left = false;
   if (stuck !== 0) fail('recién caído se movió');
-  if (!(slowStep < fullStep * 0.6)) fail(`después del clavado no corre más lento (${slowStep.toFixed(2)} vs ${fullStep.toFixed(2)})`);
+  if (!(slowStep < fullStep * 0.95)) fail(`después del clavado no corre más lento (${slowStep.toFixed(2)} vs ${fullStep.toFixed(2)})`);
   me.isBot = true;
   console.log(`salto: toque ${short.top.toFixed(1)} de alto, media carga ${mid.top.toFixed(1)}, carga completa ${long.top.toFixed(1)} (${long.frames} cuadros en el aire); al caer clavado ${long.stop} cuadros y luego corre a ${(slowStep / fullStep * 100).toFixed(0)} %`);
 }

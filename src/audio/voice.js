@@ -75,7 +75,7 @@ export function speak(text, lookId, interrupt = true) {
   const natural = v && quality(v) >= 150;
   // Las voces naturales aguantan poco cambio de tono antes de sonar artificiales
   u.pitch = natural ? 1 + ((t.pitch || 1) - 1) * 0.6 : (t.pitch || 1);
-  u.rate = t.rate || 1;
+  u.rate = (t.rate || 1) * 1.15;   // un poco más rápido, como las voces grabadas
   u.volume = vol;
   speechSynthesis.speak(u);
 }
