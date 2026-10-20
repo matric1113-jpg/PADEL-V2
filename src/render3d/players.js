@@ -1,7 +1,7 @@
 import { Group, InstancedMesh, Matrix4, MeshStandardMaterial, SphereGeometry, Vector3 } from 'three';
 import { state } from '../core/state.js';
 import { actOn, upLvl } from '../core/stats.js';
-import { fx } from '../view/fx.js';
+import { fx, newPf } from '../view/fx.js';
 import { CELEB_KIND, SHADOW_LOOK_COLORS, TEAM_COLORS, buildPlayerParts, lookOf, scaleOf } from '../view/skeleton.js';
 import { assets, loadCharacterAssets } from './char/assets.js';
 import { Character, MODEL_U, genderOf } from './char/character.js';
@@ -34,6 +34,60 @@ export class Players {
     this.cloud.frustumCulled = false;
     this.live.add(this.cloud);
     loadCharacterAssets().catch(() => {});
+    // Cinemática del podio: la fija render3d/index.js cada cuadro (null = partido normal)
+    this.podium = null;                       // { T: cuadros desde el comienzo, spots, winner }
+    this.podiumPf = [0, 1, 2, 3].map(() => newPf());
+    this.tears = new InstancedMesh(new SphereGeometry(1.1, 8, 6), new MeshStandardMaterial({ color: '#9fd8ff', emissive: '#4aa8ff', emissiveIntensity: 0.6, roughness: 0.2, transparent: true, opacity: 0.85 }), 80);
+    this.tears.frustumCulled = false;
+    this.tears.count = 0;
+    this.live.add(this.tears);
+    this.tearList = [];
+  }
+
+  // Los jugadores se acomodan en el podio: ganadores arriba con medalla y su celebración, perdedores abajo llorando
+  updatePodium(dt, now) {
+    const { T, spots, winner } = this.podium;
+    const dtSec = dt / 60;
+    state.players.forEach((p, idx) => {
+      const c = this.slots[idx], cc = this.cloneSlots[idx];
+      if (cc) cc.root.visible = false;
+      const spot = spots[idx];
+      if (!spot || !assets.ready) { if (c) c.root.visible = false; return; }
+      const ch = this.char(this.slots, idx, genderOf(p.lookId), false);
+      ch.root.visible = true;
+      const fake = { ...p, x: spot.x, y: spot.y, clone: null, stun: 0, burn: 0, slow: 0, charging: false, activeT: 0, activeKind: '' };
+      const celeb = spot.win ? { celeb: { kind: CELEB_KIND[p.lookId] || 'fist', t: T + idx * 17 }, facing: spot.th } : { facing: spot.th };
+      const b = buildPlayerParts(fake, idx, dt, now, this.podiumPf[idx], celeb);
+      const f = frameFor(fake, b, dtSec, spot.x, spot.y);
+      f.y += spot.lift; f.speed = 0; f.cry = !spot.win; f.medal = spot.win; f.charging = false;
+      if (!spot.win) f.paddle.show = false;
+      ch.update(f);
+      if (f.cry) this.emitTears(ch, dt);
+    });
+    this.stepTears(dt);
+    for (const m of this.trails) m.visible = false;
+    this.cloud.count = 0;
+  }
+
+  emitTears(ch, dt) {
+    for (const side of [0, 1]) {
+      if (Math.random() > 0.35 * dt || this.tearList.length >= 80) continue;
+      const pos = ch.eyeWorld(side, new Vector3());
+      this.tearList.push({ x: pos.x, y: pos.y - 1.2, z: pos.z + 0.8, vx: (side ? 1 : -1) * 0.04 + (Math.random() - 0.5) * 0.06, vy: 0.05, vz: 0.12 + Math.random() * 0.06, life: 0 });
+    }
+  }
+
+  stepTears(dt) {
+    const m = new Matrix4();
+    this.tearList = this.tearList.filter(t => {
+      t.life += dt;
+      t.vy -= 0.045 * dt;
+      t.x += t.vx * dt; t.y += t.vy * dt; t.z += t.vz * dt;
+      return t.y > 8 && t.life < 120;
+    });
+    this.tearList.forEach((t, i) => { m.makeScale(1, 1.4, 1).setPosition(t.x, t.y, t.z); this.tears.setMatrixAt(i, m); });
+    this.tears.count = this.tearList.length;
+    this.tears.instanceMatrix.needsUpdate = true;
   }
 
   // Devuelve el personaje de un lugar, creándolo (o rehaciéndolo si cambia de género) cuando hace falta
@@ -50,6 +104,8 @@ export class Players {
 
   // Arma los esqueletos del cuadro y los dibuja. Devuelve los esqueletos (los usa el HUD).
   update(dt, now, inReplay) {
+    if (this.podium) { this.simple.group.visible = false; this.live.visible = true; this.updatePodium(dt, now); return state.players.map(() => null); }
+    this.tears.count = 0;
     const players = state.players;
     const celebKind = p => CELEB_KIND[p.lookId] || 'fist';
     const built = players.map((p, idx) => p.out ? null : buildPlayerParts(p, idx, dt * (inReplay ? 0.45 : 1), now, fx.players[idx],

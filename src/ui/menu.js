@@ -99,7 +99,7 @@ function viewMenu() {
       <button class="mode${run ? ' sel' : ''}" data-act="mode" data-v="run"><h3>Torneo de jefes</h3>
         <p>${BOSSES.length} jefes, cada uno en su cancha: los 2 primeros a un juego y del 3 en adelante al mejor de 3. Cada victoria da $${fmt(RUN_REWARD)} por jugador para mejoras o activas. Si pierden, vuelven al inicio.</p></button>
       <button class="mode${run ? '' : ' sel'}" data-act="mode" data-v="friendly"><h3>Partido amistoso</h3>
-        <p>Un set a 6 juegos, contra bots o con hasta 4 personas online. Tienda y votación de mapa al inicio, después del juego 2 y luego cada 3 juegos.</p></button>
+        <p>Gana quien llegue primero a 2 sets (cada set, a 6 juegos), contra bots o con hasta 4 personas online. Tienda y votación de mapa al inicio de cada set, después del juego 2 y luego cada 3 juegos. Al final, podio.</p></button>
     </div>
     ${run ? '' : `<div class="row"><span class="lbl">Nivel de los bots</span><div class="seg">${diffs}</div></div>`}
     <div class="row">

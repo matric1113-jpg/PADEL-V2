@@ -1,4 +1,4 @@
-import { AnimationMixer, Color, Group, LoopOnce, Matrix4, Mesh, MeshStandardMaterial, SphereGeometry, Vector3 } from 'three';
+import { AnimationMixer, Color, Group, LoopOnce, Matrix4, Mesh, MeshStandardMaterial, Quaternion, SphereGeometry, Vector3 } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { LOOKS } from '../../core/data.js';
 import { angleDiff, clamp, lerp } from '../../core/util.js';
@@ -66,7 +66,7 @@ export class Character {
     this.eyeY = (this.eyes.geometry.boundingBox.min.y + this.eyes.geometry.boundingBox.max.y) / 2;
     this.headC = new Vector3(0, this.eyeY + 0.033, -0.012);
     this.rest = {};
-    for (const n of ['Head', 'spine_01', 'hand_r']) this.rest[n] = this.bones[n].matrixWorld.clone().invert();
+    for (const n of ['Head', 'spine_01', 'spine_03', 'hand_r']) this.rest[n] = this.bones[n].matrixWorld.clone().invert();
     const maleScene = assets.body.hombre;
     this.pelvisShift = this.bones.pelvis.position.z - maleScene.getObjectByName('pelvis').position.z;
 
@@ -84,6 +84,9 @@ export class Character {
     this.headHolder = this.holder('Head');
     this.headPieces = this.holder('Head', _m.makeTranslation(this.headC.x, this.headC.y, this.headC.z));
     this.beltHolder = this.holder('spine_01');
+    this.medal = P.makeMedal();
+    this.medal.visible = false;
+    this.holder('spine_03').add(this.medal);
     this.paddle = P.makePaddle();
     this.bones.hand_r.add(this.paddle.group);
     this.paddle.group.matrixAutoUpdate = false;
@@ -210,7 +213,7 @@ export class Character {
     const look = this.look;
 
     // Orientación del cuerpo: mira hacia donde corre; al cargar, golpear o celebrar mira hacia donde apunta el esqueleto
-    const busy = f.charging || f.swinging || f.celeb || f.stun > 0;
+    const busy = f.charging || f.swinging || f.celeb || f.stun > 0 || f.cry;
     const runK = ss(1.2, 2.4, f.speed);
     let target = f.facing;
     if (!busy && runK > 0) target = f.facing + angleDiff(f.moveYaw, f.facing) * runK;
@@ -263,7 +266,11 @@ export class Character {
     const rig = this.rig;
 
     // ----- Tronco -----
-    if (f.stun > 0) {
+    if (f.cry) {
+      // Llorando: encorvado, con los hombros sacudidos por los sollozos
+      rig.lean(0.32 + Math.sin(this.time * 13) * 0.025);
+      rig.twist(Math.sin(this.time * 2.1) * 0.06);
+    } else if (f.stun > 0) {
       rig.twist(Math.sin(this.time * 4) * 0.25);
       rig.lean(0.3 + Math.sin(this.time * 3) * 0.08);
     } else {
@@ -275,7 +282,16 @@ export class Character {
     // ----- Brazos -----
     const toModel = (w, out) => out.copy(w).applyMatrix4(rig.inv);
     let tgtR, poleR, tgtL, poleL, handDir = null;
-    if (f.stun > 0) {
+    if (f.cry) {
+      // Cabeza abajo y manos a la cara: cada mano va a un ojo (en el marco de la cabeza ya inclinada)
+      rig.rot('Head', AXIS_X, 0.6 + Math.sin(this.time * 9) * 0.04);
+      rig.rot('neck_01', AXIS_X, 0.25);
+      const hp = rig.pos(this.bones.Head, new Vector3()), hq = rig.quat(this.bones.Head, new Quaternion());
+      const sob = Math.sin(this.time * 13) * 0.006;
+      const eye = (s, dz) => new Vector3(s * 0.04, 0.06 + sob, 0.115 + dz).applyQuaternion(hq).add(hp);
+      tgtR = eye(-1, 0.0); poleR = tgtR.clone().add(new Vector3(-0.3, -0.12, 0.08));
+      tgtL = eye(1, 0.0); poleL = tgtL.clone().add(new Vector3(0.3, -0.12, 0.08));
+    } else if (f.stun > 0) {
       // Brazos caídos, pala colgando
       const sway = Math.sin(this.time * 4);
       tgtR = _v.set(-0.3, 0.86, 0.1 + sway * 0.05); poleR = _v2.set(-0.5, 1.1, -0.2);
@@ -285,7 +301,7 @@ export class Character {
       tgtR = toModel(f.handR, new Vector3()); poleR = toModel(f.poleR, new Vector3());
       tgtL = toModel(f.handL, new Vector3()); poleL = toModel(f.poleL, new Vector3());
     }
-    const wLtarget = (f.charging || f.swinging || f.celeb || f.stun > 0) ? 1 : 0.35;
+    const wLtarget = (f.charging || f.swinging || f.celeb || f.stun > 0 || f.cry) ? 1 : 0.35;
     this.wL = lerp(this.wL, wLtarget, clamp(0.2 * dt * 60, 0, 1));
     rig.arm('l', tgtL, poleL, this.wL);
     const paddleDir = f.stun > 0 ? new Vector3(0.1, -0.95, 0.25).normalize() : _v3.copy(f.paddle.dir).transformDirection(rig.inv).clone();
@@ -293,10 +309,10 @@ export class Character {
 
     // ----- Manos -----
     const celeb = f.celeb ? f.celeb.kind : '';
-    if (celeb === 'peace') rig.curl('r', 1, ['ring', 'pinky', 'thumb']);
+    if (f.cry) { rig.curl('r', 0.25); rig.curl('l', 0.25); } else if (celeb === 'peace') rig.curl('r', 1, ['ring', 'pinky', 'thumb']);
     else if (f.paddle.show || f.stun > 0) rig.curl('r', 0.95);
     else rig.curl('r', celeb ? 0.9 : 0.3);
-    rig.curl('l', celeb === 'belly' ? 0.1 : (celeb || f.charging ? 0.8 : 0.35));
+    if (!f.cry) rig.curl('l', celeb === 'belly' ? 0.1 : (celeb || f.charging ? 0.8 : 0.35));
 
     // ----- Cabeza -----
     if (f.stun > 0) rig.rot('Head', AXIS_X, 0.45 + Math.sin(this.time * 3.3) * 0.1);
@@ -305,12 +321,19 @@ export class Character {
     this.fitPaddle(f, look);
     this.fitBelly(body, look);
     this.setHats(f.up.sombrero || 0);
+    this.medal.visible = !!f.medal;
     const u = this.bodyMat.userData.uniforms;
     u.uShoe.value.set(f.up.zapas ? '#ffd54a' : look.shoes);
     u.uBandR.value.set(f.up.remate ? '#ff3d00' : look.band);
     u.uBandL.value.set(f.teamColor);
     this.paddle.setDot(look.band);
     return reachedR;
+  }
+
+  // Posición en el mundo de un ojo (0 derecho, 1 izquierdo); sirve para las lágrimas. Usar después de update().
+  eyeWorld(side, out) {
+    out.set(side ? 0.033 : -0.033, this.eyeY, 0.09).applyMatrix4(this.rest.Head);
+    return this.bones.Head.localToWorld(out);
   }
 
   flinch(name) {

@@ -213,7 +213,7 @@ button.on { border-color: var(--ball); color: var(--ball); }
 }
 .overlay.show { display: flex; }
 /* Resultado final: el podio se ve detrás y el panel baja al borde inferior */
-.overlay.matchover { align-items: flex-end; background: linear-gradient(to bottom, rgba(5, 13, 22, 0) 35%, rgba(5, 13, 22, 0.88) 100%); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.overlay.matchover { align-items: flex-end; background: linear-gradient(to bottom, rgba(5, 13, 22, 0) 38%, rgba(5, 13, 22, 0.9) 68%); backdrop-filter: none; -webkit-backdrop-filter: none; }
 .overlay.matchover .ov-panel { margin: 0 auto; text-align: center; }
 .overlay.matchover .ov-sub { margin-left: auto; margin-right: auto; }
 .overlay.matchover .row, .overlay.matchover .chips { justify-content: center; }

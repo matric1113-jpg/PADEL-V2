@@ -69,6 +69,13 @@ export function planClips(f) {
     w.dance += k; ts.dance = 2.3;
   }
 
+  if (f.cry) {
+    // Llorando (podio): parado y algo encogido; la cabeza caída y las manos en la cara son procedurales
+    for (const n of LOOP_NAMES) w[n] = 0;
+    w.idle = 0.6; w.ready = 0.4;
+    jump = 0;
+  }
+
   if (f.stun > 0) {
     // Paralizado: parado y agachado; el resto (cabeza caída, balanceo) es procedural
     for (const n of LOOP_NAMES) w[n] = 0;

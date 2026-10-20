@@ -1,5 +1,5 @@
 import {
-  CapsuleGeometry, CircleGeometry, ConeGeometry, CylinderGeometry, DoubleSide, ExtrudeGeometry, Group, IcosahedronGeometry,
+  BoxGeometry, CapsuleGeometry, CircleGeometry, ConeGeometry, CylinderGeometry, DoubleSide, ExtrudeGeometry, Group, IcosahedronGeometry,
   InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, Quaternion, Shape, SphereGeometry, TorusGeometry, Vector3
 } from 'three';
 import { plainMaterial } from './materials.js';
@@ -238,4 +238,27 @@ export function makePaddle() {
       handle.position.set((handleLen + halfLen * 0.06) / 2, 0, 0);
     }
   };
+}
+
+// ---- Medalla de oro del podio: disco con cinta en V, en coordenadas de reposo del torso (se pega a spine_03) ----
+export function makeMedal() {
+  const g = new Group();
+  const gold = new MeshStandardMaterial({ color: '#e6b83a', roughness: 0.25, metalness: 0.9, emissive: '#6a4500', emissiveIntensity: 0.4 });
+  const ribbon = new MeshStandardMaterial({ color: '#c62828', roughness: 0.7, side: DoubleSide });
+  const disc = new Mesh(new CylinderGeometry(0.058, 0.058, 0.012, 28), gold);
+  disc.rotation.x = Math.PI / 2;
+  disc.position.set(0, 1.3, 0.155);
+  const rim = new Mesh(new TorusGeometry(0.058, 0.006, 8, 28), gold);
+  rim.position.copy(disc.position);
+  g.add(disc, rim);
+  for (const s of [-1, 1]) {
+    const a = new Vector3(s * 0.085, 1.55, 0.075), b = new Vector3(0, 1.36, 0.15);
+    const len = a.distanceTo(b);
+    const r = new Mesh(new BoxGeometry(0.026, len, 0.004), ribbon);
+    r.position.copy(a).lerp(b, 0.5);
+    r.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), b.clone().sub(a).normalize());
+    g.add(r);
+  }
+  g.traverse(o => { if (o.isMesh) o.castShadow = false; });
+  return g;
 }

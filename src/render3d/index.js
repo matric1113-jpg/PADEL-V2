@@ -18,12 +18,14 @@ import { MapScene } from './maps.js';
 import { Markers } from './markers.js';
 import { drawStunStars, drawVignette, drawWindStreaks } from './overlay.js';
 import { Players } from './players.js';
+import { Podium } from './podium.js';
 export { renderPortrait } from './portraits.js';
 
 // ---------- Render 3D (Three.js) ----------
 // La escena se dibuja en #game3d; el HUD sigue en el canvas 2D #game, que queda encima.
 const camera = newCamera();
 const aimCamera = newCamera();   // cámara de juego sin sacudida: la que usa la puntería
+let podium = null, stageT = 0, onStage = false, onStageHud = false, resultK = 0;
 let renderer = null, scene = null, markers = null, ball = null, court = null, lights = null, players = null, maps = null, effects = null;
 export const debug = {};   // solo para revisar desde la consola en desarrollo
 
@@ -49,8 +51,10 @@ export function init() {
   ball = new Ball();
   effects = new Effects();
   scene.add(players.group, ball.group, effects.group);
+  podium = new Podium();
+  scene.add(podium.group);
 
-  Object.assign(debug, { renderer, scene, court, lights, players, ball, maps, effects, camera });
+  Object.assign(debug, { renderer, scene, court, lights, players, ball, maps, effects, camera, podium });
   resize();
   new ResizeObserver(resize).observe(wrapper);
 }
@@ -100,8 +104,48 @@ function updateWorld(dt, now, inReplay, me) {
   return built;
 }
 
+// Cinemática final (pantallas 'podium' y 'matchover'): cámara en perspectiva propia sobre el podio, sin HUD de juego
+const podiumCam = new PerspectiveCamera(34, VIEW_W / VIEW_H, 1, 4000);
+const FADE_FRAMES = 28;
+function renderStage(now, dt) {
+  if (!onStage) { onStage = true; stageT = 0; }
+  stageT += dt;
+  if (import.meta.env.DEV && debug.stageT != null) stageT = debug.stageT;   // solo en desarrollo: __padel.r3d.stageT = 400 fija el instante de la cinemática
+  const winner = state.result ? state.result.winner : 0;
+  podium.group.visible = true;
+  if (!onStageHud) { onStageHud = true; document.getElementById('scorebug').style.display = 'none'; }
+  podium.setWinner(winner);
+  ball.group.visible = false;
+  effects.group.visible = false;
+  court.update();
+  lights.update(renderer, scene);
+  maps.update(now, scene);
+  players.podium = { T: stageT, spots: podium.spots(state.players, winner), winner };
+  players.update(dt, now, false);
+  markers.begin(); markers.end();
+  podium.update(stageT, dt);
+  resultK += ((state.screen === 'matchover' ? 1 : 0) - resultK) * Math.min(1, 0.04 * dt);
+  podium.camera(podiumCam, stageT, VIEW_W / VIEW_H, resultK);
+  renderer.render(scene, podiumCam);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const fade = 1 - stageT / FADE_FRAMES;
+  if (fade > 0) { ctx.fillStyle = `rgba(0, 0, 0, ${fade})`; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+}
+
 export function render(now) {
   const { me, dt } = beginFrame(now, () => {}, updateAimFromMouse);
+  if (state.screen === 'podium' || state.screen === 'matchover') { renderStage(now, dt); return; }
+  if (onStage) {   // de vuelta al juego: se quita el podio y se vuelven a mostrar la pelota y los efectos
+    onStage = false;
+    onStageHud = false;
+    resultK = 0;
+    document.getElementById('scorebug').style.display = '';
+    podium.group.visible = false;
+    ball.group.visible = true;
+    effects.group.visible = true;
+    players.podium = null;
+  }
   const which = fx.replay ? 'replay' : 'main';
   const sx = fx.shake ? (Math.random() - 0.5) * fx.shake : 0;
   const sy = fx.shake ? (Math.random() - 0.5) * fx.shake : 0;
