@@ -11,17 +11,19 @@ import { drawAimArc, drawHud, setWorldTransform } from '../view/hud.js';
 import { Ball } from './ball.js';
 import { applyCam, newCamera, screenToGround } from './camera.js';
 import { Court } from './court.js';
+import { Effects } from './effects.js';
 import { drawGroundMarks } from './ground.js';
 import { CourtLights } from './lights.js';
 import { MapScene } from './maps.js';
 import { Markers } from './markers.js';
+import { drawStunStars, drawVignette } from './overlay.js';
 import { Players } from './players.js';
 
 // ---------- Render 3D (Three.js) ----------
 // La escena se dibuja en #game3d; el HUD sigue en el canvas 2D #game, que queda encima.
 const camera = newCamera();
 const aimCamera = newCamera();   // cámara de juego sin sacudida: la que usa la puntería
-let renderer = null, scene = null, markers = null, ball = null, court = null, lights = null, players = null, maps = null;
+let renderer = null, scene = null, markers = null, ball = null, court = null, lights = null, players = null, maps = null, effects = null;
 export const debug = {};   // solo para revisar desde la consola en desarrollo
 
 export function init() {
@@ -44,9 +46,10 @@ export function init() {
   scene.add(markers.group);
   players = new Players();
   ball = new Ball();
-  scene.add(players.group, ball.group);
+  effects = new Effects();
+  scene.add(players.group, ball.group, effects.group);
 
-  Object.assign(debug, { renderer, scene, court, lights, players, ball, maps, camera });
+  Object.assign(debug, { renderer, scene, court, lights, players, ball, maps, effects, camera });
   resize();
   new ResizeObserver(resize).observe(wrapper);
 }
@@ -78,7 +81,10 @@ function updateWorld(dt, now, inReplay, me) {
   maps.update(now, scene);
   const built = players.update(dt, now, inReplay);
   ball.update(camera, inReplay);
+  markers.begin();
   drawGroundMarks(markers, me, built, inReplay, now);
+  effects.update(camera, renderer.domElement.height, markers);
+  markers.end();
   return built;
 }
 
@@ -102,6 +108,8 @@ export function render(now) {
   const S = canvas.width / VIEW_W;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (!fx.replay) { setWorldTransform(S, sx, sy); drawAimArc(me); }
+  setWorldTransform(S, sx, sy);
+  drawVignette();
+  if (!fx.replay) { drawAimArc(me); drawStunStars(built, now); }
   drawHud(me, built, S, () => setWorldTransform(S, sx, sy));
 }

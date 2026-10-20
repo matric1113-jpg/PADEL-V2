@@ -7,9 +7,8 @@ import { aimTarget, predictLanding } from '../view/hud.js';
 import { PLAYER_SCALE, scaleOf } from '../view/skeleton.js';
 
 // ---------- Marcas en el suelo: las mismas del render 2D, ahora bajo los jugadores ----------
-// built: esqueletos del cuadro (para saber quién está cargando el golpe).
+// built: esqueletos del cuadro (para saber quién está cargando el golpe). Va entre mk.begin() y mk.end().
 export function drawGroundMarks(mk, me, built, inReplay, now) {
-  mk.begin();
   const b = state.ball;
   const players = state.players;
 
@@ -38,7 +37,6 @@ export function drawGroundMarks(mk, me, built, inReplay, now) {
     landing(mk, me);
     aim(mk, me);
   }
-  mk.end();
 }
 
 function serveBox(mk, now) {
