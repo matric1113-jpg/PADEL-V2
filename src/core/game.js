@@ -1,8 +1,8 @@
 import { computeServeBox, nextServerSlot, showBanner } from './ballistics.js';
-import { PAD_F, PAD_S, POINTS_LABELS, SETS_TO_WIN } from './constants.js';
+import { AMERICANO_GAMES_TO_WIN, PAD_F, PAD_S, POINTS_LABELS, SETS_TO_WIN } from './constants.js';
 import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, LOOKS, MAPS, MAP_IDS, RUN_REWARD, TALK, TEAMMATE_SKILL, UPG, UPGRADES } from './data.js';
 import { hooks } from './events.js';
-import { mapOf, menuSel, rt, state } from './state.js';
+import { mapOf, menuSel, rt, slotOfUid, state, syncMySlot } from './state.js';
 import { emptyUpgrades, upLvl } from './stats.js';
 import { pick, shuffle } from './util.js';
 
@@ -104,6 +104,8 @@ export function awardPoint(winningTeam, reason, isFault = false) {
       const B = BOSSES[state.run.boss];
       if (g[winningTeam] >= B.gamesToWin) endRunMatch(winningTeam, finalScore);
       else showBanner(`Juego para ${winningTeam === 0 ? 'ustedes' : B.team}\n${g[0]}-${g[1]} en juegos: gana el primero en llegar a ${B.gamesToWin}`, 140);
+    } else if (state.mode === 'americano') {
+      americanoGameWon(winningTeam, reason);
     } else {
       const setWon = state.tiebreak || (g[winningTeam] >= 6 && g[winningTeam] - g[other] >= 2);
       if (setWon) {
@@ -126,9 +128,7 @@ export function awardPoint(winningTeam, reason, isFault = false) {
         } else {
           showBanner(`Juego para el equipo ${winningTeam === 0 ? 'azul' : 'rojo'}\n${reason}  (${g[0]}-${g[1]})`, 140);
         }
-        // Tienda y votación: después del juego 2 y luego cada 3 juegos
-        const played = g[0] + g[1];
-        if (played === 2 || (played > 2 && (played - 2) % 3 === 0)) state.afterPause = 'shop2';
+        shopAfterGame();
       }
     }
   } else if (state.tiebreak) {
@@ -145,9 +145,129 @@ export function awardPoint(winningTeam, reason, isFault = false) {
 export function goToScreen(s) {
   state.bannerTimer = 0;
   if (s === 'shop2') openShop2(false);
-  else if (s === 'nextset') beginSet();
+  else if (s === 'nextset') {
+    if (state.mode === 'americano') { state.amer.set++; beginAmericanoSet(); } else beginSet();
+  }
   else if (s === 'podium') { rt.podiumT = 0; state.screen = 'podium'; }
   else state.screen = s;
+}
+
+// Tienda y votación en mitad del set: después del juego 2 y luego cada 3 juegos
+function shopAfterGame() {
+  const played = state.games[0] + state.games[1];
+  if (played === 2 || (played > 2 && (played - 2) % 3 === 0)) state.afterPause = 'shop2';
+}
+
+// ---- Puestos y equipos ----
+// El equipo sale del puesto: 0 y 1 juegan en el azul (izquierda), 2 y 3 en el rojo. Para cambiar a alguien de
+// equipo se reordena state.players; cada jugador conserva su uid, y con él la red y los inputs lo siguen encontrando.
+export function seatPlayers(uids) {
+  const byUid = Object.fromEntries(state.players.map(p => [p.uid, p]));
+  const next = uids.map(u => byUid[u]);
+  if (next.length !== 4 || next.some(p => !p)) return;
+  state.players = next;
+  next.forEach((p, i) => {
+    p.team = i < 2 ? 0 : 1;
+    p.aimX = p.team === 0 ? 600 : 320;
+  });
+  syncMySlot();
+  // El bot que juega al lado del anfitrión rinde un poco más (como antes el compañero del equipo azul)
+  if (state.mode !== 'run') {
+    const hostTeam = (state.players.find(p => p.uid === 'u0') || {}).team || 0;
+    next.forEach(p => { if (p.isBot) p.skill = p.team === hostTeam ? Math.max(TEAMMATE_SKILL, state.difficulty) : state.difficulty; });
+  }
+}
+
+// Si un invitado elige el mismo personaje que un bot, el bot se cambia a uno que nadie use (los jefes no se tocan)
+export function fixBotLooks() {
+  const used = new Set(state.players.filter(p => !p.isBot).map(p => p.lookId));
+  state.players.forEach(p => {
+    if (!p.isBot || p.out || !CHARACTERS.includes(p.lookId) || (state.mode === 'run' && p.team === 1)) return;
+    if (used.has(p.lookId)) {
+      const free = CHARACTERS.filter(c => !used.has(c) && !state.players.some(o => o !== p && o.lookId === c));
+      if (free.length) setLook(p, pick(free));
+    }
+    used.add(p.lookId);
+  });
+}
+
+// Vuelve al orden original (u0 a u3): el anfitrión en el puesto 0
+export function resetSeats() {
+  seatPlayers(['u0', 'u1', 'u2', 'u3']);
+}
+
+// Sala del modo amistoso: el anfitrión intercambia a dos jugadores de equipos distintos (siempre quedan 2 por lado)
+export function swapSeats(a, b) {
+  if (state.screen !== 'lobby' || state.mode !== 'friendly') return;
+  const pa = state.players[a], pb = state.players[b];
+  if (!pa || !pb || pa.team === pb.team) return;
+  const uids = state.players.map(p => p.uid);
+  [uids[a], uids[b]] = [uids[b], uids[a]];
+  seatPlayers(uids);
+}
+
+// ---- Americano ----
+// 4 jugadores y 3 sets, con una pareja distinta cada set (A+B vs C+D, A+C vs B+D, A+D vs B+C). Cada set es al primero
+// en llegar a AMERICANO_GAMES_TO_WIN juegos; cada jugador suma los juegos que gana su pareja.
+export const AMERICANO_PAIRS = [[0, 1, 2, 3], [0, 2, 1, 3], [0, 3, 1, 2]];
+
+export function startAmericano() {
+  // "Jugar otra vez" conserva quién es A, B, C y D; una sala nueva toma el orden de la sala
+  const order = state.amer ? state.amer.order : state.players.map(p => p.uid);
+  const zero = () => Object.fromEntries(order.map(u => [u, 0]));
+  state.amer = { set: 0, order, pts: zero(), against: zero(), history: [] };
+  state.sets = [0, 0];
+  state.setHistory = [];
+  beginAmericanoSet();
+}
+
+function beginAmericanoSet() {
+  const A = state.amer;
+  seatPlayers(AMERICANO_PAIRS[A.set].map(k => A.order[k]));
+  beginSet();
+}
+
+const pairName = t => state.players.filter(p => p.team === t && !p.out).map(p => p.name).join(' y ');
+
+// Tabla del americano: más juegos ganados primero; a igualdad, menos juegos en contra; si sigue igual, comparten el puesto
+export function americanoRanking() {
+  const A = state.amer;
+  if (!A) return [];
+  const rows = A.order.map(uid => {
+    const p = state.players[slotOfUid(uid)] || {};
+    return { uid, name: p.name, lookId: p.lookId, pts: A.pts[uid] || 0, against: A.against[uid] || 0 };
+  });
+  const better = (a, b) => a.pts > b.pts || (a.pts === b.pts && a.against < b.against);
+  rows.forEach(r => { r.place = 1 + rows.filter(o => better(o, r)).length; });
+  return rows.sort((a, b) => a.place - b.place || A.order.indexOf(a.uid) - A.order.indexOf(b.uid));
+}
+
+function americanoGameWon(winningTeam, reason) {
+  const A = state.amer, g = state.games;
+  state.players.forEach(p => {
+    if (p.out) return;
+    if (p.team === winningTeam) A.pts[p.uid]++; else A.against[p.uid]++;
+  });
+  if (g[winningTeam] < AMERICANO_GAMES_TO_WIN) {
+    showBanner(`Juego para ${pairName(winningTeam)}\n${reason}  (${g[0]}-${g[1]})`, 140);
+    shopAfterGame();
+    return;
+  }
+  state.setHistory.push([g[0], g[1]]);
+  A.history.push({ teams: [0, 1].map(t => state.players.filter(p => p.team === t).map(p => p.uid)), games: [g[0], g[1]] });
+  const last = A.set >= AMERICANO_PAIRS.length - 1;
+  state.pauseTimer += 120;
+  if (last) {
+    const ranking = americanoRanking();
+    state.result = { americano: true, ranking, winner: winningTeam, games: [g[0], g[1]], match: true };
+    state.afterPause = 'podium';
+    const firsts = ranking.filter(r => r.place === 1).map(r => r.name);
+    showBanner(`Set para ${pairName(winningTeam)}: ${g[0]}-${g[1]}\n${firsts.length > 1 ? 'Comparten el primer lugar ' + firsts.join(', ') : '¡Gana el americano ' + firsts[0] + '!'}`, 9999);
+  } else {
+    state.result = { winner: winningTeam, games: [g[0], g[1]], match: false };
+    state.afterPause = 'nextset';
+    showBanner(`Set ${A.set + 1} para ${pairName(winningTeam)}: ${g[0]}-${g[1]}\nCambio de parejas para el set ${A.set + 2} de ${AMERICANO_PAIRS.length}`, 400);
+  }
 }
 
 export function setLook(p, id, speed) {
@@ -185,12 +305,14 @@ export function prepareRoster(mode) {
   state.mode = mode;
   state.difficulty = DIFFICULTIES[menuSel.diff].skill;
   const pool = shuffle(CHARACTERS.filter(c => c !== menuSel.char));
+  state.amer = null;
+  resetSeats();
   state.players.forEach((p, i) => {
     resetPlayerExtras(p);
     if (i === 0) {
       setLook(p, menuSel.char);
       p.isBot = false;
-    } else if (!rt.connections[i]) {
+    } else if (!rt.connections[p.uid]) {
       p.isBot = true;
       setLook(p, pool[i - 1]);
       p.skill = p.team === 0 ? Math.max(TEAMMATE_SKILL, state.difficulty) : state.difficulty;
@@ -401,8 +523,9 @@ export function tryBuy(slot, id) {
   p.up[id] = lvl + 1;
 }
 
-function resetMatch() {
-  if (!rt.isHost) return;
+// Empieza el partido del modo actual (botón "Empezar" de la sala, jugar solo, "Jugar otra vez")
+export function startMatch() {
   if (state.mode === 'run') startRun();
+  else if (state.mode === 'americano') startAmericano();
   else startFriendly();
 }

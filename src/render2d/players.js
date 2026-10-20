@@ -374,7 +374,7 @@ export function renderPortrait(cv, lookId, up) {
     pathPts(ctx, groundCircle(0, 0, 18, 0, 24));
     ctx.fillStyle = 'rgba(0, 8, 20, 0.4)';
     ctx.fill();
-    const fake = createPlayer(0, 0, 0, L.name, true, L.speed, lookId);
+    const fake = createPlayer('', 0, 0, 0, L.name, true, L.speed, lookId);
     if (up) fake.up = { ...up };
     const built = buildPlayerParts(fake, -1, 1, 0, newPf(), { portrait: true, facing: Math.PI / 2 - 0.5 });
     const items = drawPlayer(fake, -1, built);

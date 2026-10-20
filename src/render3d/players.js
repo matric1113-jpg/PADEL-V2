@@ -59,8 +59,8 @@ export class Players {
       const celeb = spot.win ? { celeb: { kind: CELEB_KIND[p.lookId] || 'fist', t: T + idx * 17 }, facing: spot.th } : { facing: spot.th };
       const b = buildPlayerParts(fake, idx, dt, now, this.podiumPf[idx], celeb);
       const f = frameFor(fake, b, dtSec, spot.x, spot.y);
-      f.y += spot.lift; f.speed = 0; f.cry = !spot.win; f.medal = spot.win; f.charging = false;
-      if (!spot.win) f.paddle.show = false;
+      f.y += spot.lift; f.speed = 0; f.cry = !spot.win; f.medal = spot.medal != null ? spot.medal : (spot.win ? 'gold' : ''); f.charging = false;
+      if (!spot.win) f.paddle.show = false;   // los que lloran se tapan la cara con las dos manos
       ch.update(f);
       if (f.cry) this.emitTears(ch, dt);
     });

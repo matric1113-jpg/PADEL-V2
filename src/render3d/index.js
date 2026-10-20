@@ -111,7 +111,8 @@ function renderStage(now, dt) {
   if (!onStage) { onStage = true; stageT = 0; }
   stageT += dt;
   if (import.meta.env.DEV && debug.stageT != null) stageT = debug.stageT;   // solo en desarrollo: __padel.r3d.stageT = 400 fija el instante de la cinemática
-  const winner = state.result ? state.result.winner : 0;
+  const amer = !!(state.result && state.result.americano);
+  const winner = amer ? -1 : state.result ? state.result.winner : 0;
   podium.group.visible = true;
   if (!onStageHud) { onStageHud = true; document.getElementById('scorebug').style.display = 'none'; }
   podium.setWinner(winner);
@@ -120,12 +121,12 @@ function renderStage(now, dt) {
   court.update();
   lights.update(renderer, scene);
   maps.update(now, scene);
-  players.podium = { T: stageT, spots: podium.spots(state.players, winner), winner };
+  players.podium = { T: stageT, spots: podium.spots(state.players, winner, state.result), winner };
   players.update(dt, now, false);
   markers.begin(); markers.end();
   podium.update(stageT, dt);
   resultK += ((state.screen === 'matchover' ? 1 : 0) - resultK) * Math.min(1, 0.04 * dt);
-  podium.camera(podiumCam, stageT, VIEW_W / VIEW_H, resultK);
+  podium.camera(podiumCam, stageT, VIEW_W / VIEW_H, resultK, amer);
   renderer.render(scene, podiumCam);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);

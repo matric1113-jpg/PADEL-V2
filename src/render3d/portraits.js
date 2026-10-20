@@ -62,7 +62,7 @@ export function renderPortrait(cv, lookId, up) {
   camera.aspect = cv.width / cv.height;
 
   // Pose: la misma que el retrato 2D (parado, mirando de tres cuartos hacia la cámara)
-  const fake = createPlayer(0, 0, 0, L.name, true, L.speed, lookId);
+  const fake = createPlayer('', 0, 0, 0, L.name, true, L.speed, lookId);
   if (up) fake.up = { ...up };
   const b = buildPlayerParts(fake, -1, 1, 0, newPf(), { portrait: true, facing: Math.PI / 2 - 0.5 });
   const ch = characterFor(lookId);

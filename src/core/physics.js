@@ -4,7 +4,7 @@ import { BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLAS
 import { BOSSES } from './data.js';
 import { awardPoint, checkVoteReady, emitSound, goToScreen, setupServe } from './game.js';
 import { activate, updateHazards } from './hazards.js';
-import { gustForce, tiltEase, localInput, mapOf, remoteInputs, rt, state } from './state.js';
+import { gustForce, tiltEase, inputOf, localInput, mapOf, remoteInputs, rt, state } from './state.js';
 import { actOn, chargeRateOf, reachOf, reachZOf, smashMinOf, upLvl } from './stats.js';
 import { clamp } from './util.js';
 
@@ -36,6 +36,16 @@ function launchContra(p) {
   b.wallBounced = false;
 }
 
+// Fuera del juego (tienda, pausa entre puntos, menús) un clic soltado no debe quedar pendiente: si no, al volver
+// al saque la física lo leería como un golpe nuevo y quien saca lanzaría la pelota solo (pasaba al tocar "Listo").
+function discardPendingSwings() {
+  state.players.forEach(p => {
+    if (p.isBot) return;
+    p.lastReleaseSeq = inputOf(p).releaseSeq;
+    p.charging = false; p.chargeFrames = 0;
+  });
+}
+
 export function stepPhysics() {
   if (localInput.charging) {
     rt.localChargeFrames = Math.min(MAX_CHARGE_FRAMES, rt.localChargeFrames + chargeRateOf(state.players[rt.mySlot]));
@@ -45,7 +55,8 @@ export function stepPhysics() {
 
   if (!rt.isHost) return;
 
-  remoteInputs[0] = { ...localInput };
+  remoteInputs[rt.myUid] = { ...localInput };
+  if (state.screen !== 'play' || state.phase === 'POINT_PAUSE') discardPendingSwings();
   if (state.screen === 'shop2') { checkVoteReady(); return; }
   if (state.screen === 'podium') { if (++rt.podiumT >= PODIUM_FRAMES) state.screen = 'matchover'; return; }
   if (state.screen !== 'play') return;
@@ -77,7 +88,7 @@ export function stepPhysics() {
     if (p.burn > 0) p.burn--;
     if (p.burnCd > 0) p.burnCd--;
 
-    const inp = p.isBot ? updateBotLogic(p, idx) : remoteInputs[idx];
+    const inp = p.isBot ? updateBotLogic(p, idx) : inputOf(p);
 
     if (typeof inp.speedPref === 'number' && !p.isBot) {
       p.speedStat = Math.max(0.15, Math.min(0.85, inp.speedPref));

@@ -3,9 +3,9 @@ import { ensureAudio } from '../audio/audio.js';
 import { hooks } from '../core/events.js';
 import { showBanner } from '../core/ballistics.js';
 import { BOSSES, CHARACTERS, TEAMMATE_SKILL } from '../core/data.js';
-import { prepareRoster, setLook, setReady, setVote, tryBuy } from '../core/game.js';
+import { fixBotLooks, prepareRoster, resetSeats, setLook, setReady, setVote, tryBuy } from '../core/game.js';
 import { recordFrame } from '../core/replay.js';
-import { localInput, menuSel, remoteInputs, rt, state } from '../core/state.js';
+import { localInput, menuSel, remoteInputs, rt, slotOfUid, state, syncMySlot } from '../core/state.js';
 import { openMenu, setNetMsg, setStatus } from '../ui/menu.js';
 
 // Prefijo de las salas de PeerJS. La versión 3D (beta) usa uno distinto al de la versión de main ('padel2v2-pro-'):
@@ -60,6 +60,9 @@ export function leaveNetwork() {
   rt.hostConn = null;
   rt.connections = {};
   rt.isHost = true;
+  rt.myUid = 'u0';
+  state.amer = null;
+  resetSeats();
   rt.mySlot = 0;
   state.roomCode = '';
   setStatus('Sin conexión');
@@ -100,11 +103,11 @@ export function createRoom() {
   });
 
   myPeer.on('connection', conn => {
-    // En el torneo solo se puede entrar como compañero; en amistoso, a cualquier puesto libre
+    // En el torneo solo se puede entrar como compañero; en amistoso y americano, a cualquier puesto libre
     const allowed = state.mode === 'run' ? [1] : [1, 2, 3];
     let slot = -1;
     for (const i of allowed) {
-      if (state.players[i].isBot && !rt.connections[i]) { slot = i; break; }
+      if (state.players[i].isBot && !rt.connections[state.players[i].uid]) { slot = i; break; }
     }
     if (slot === -1) {
       conn.on('open', () => {
@@ -114,36 +117,45 @@ export function createRoom() {
       return;
     }
 
-    rt.connections[slot] = conn;
+    // El invitado queda ligado al uid de su jugador: si el anfitrión arma los equipos (o cambian las parejas del
+    // americano) cambia de puesto, pero no de jugador
+    const uid = state.players[slot].uid;
+    const slotNow = () => slotOfUid(uid);
+    rt.connections[uid] = conn;
     state.players[slot].isBot = false;
 
     conn.on('open', () => {
-      conn.send({ type: 'welcome', slot });
+      conn.send({ type: 'welcome', slot, uid });
       sendStateTo(conn);     // no depende de que el loop del anfitrión esté corriendo
       showBanner('Se unió un jugador', 120);
     });
 
     conn.on('data', data => {
+      const s = slotNow();
+      if (s < 0) return;
       if (data.type === 'input') {
-        remoteInputs[slot] = data.input;
+        remoteInputs[uid] = data.input;
         const cid = data.input && data.input.charId;
-        if (cid && CHARACTERS.includes(cid) && state.players[slot].lookId !== cid) setLook(state.players[slot], cid);
+        if (cid && CHARACTERS.includes(cid) && state.players[s].lookId !== cid) { setLook(state.players[s], cid); fixBotLooks(); }
       } else if (data.type === 'buy') {
-        tryBuy(slot, data.id);
+        tryBuy(s, data.id);
       } else if (data.type === 'vote') {
-        setVote(slot, data.map);
+        setVote(s, data.map);
       } else if (data.type === 'ready') {
-        setReady(slot);
+        setReady(s);
       }
     });
 
     conn.on('error', () => { /* se maneja en close */ });
     conn.on('close', () => {
-      if (rt.connections[slot] !== conn) return;
-      const p = state.players[slot];
+      if (rt.connections[uid] !== conn) return;
+      const p = state.players[slotNow()];
+      delete rt.connections[uid];
+      delete remoteInputs[uid];
+      if (!p) return;
       p.isBot = true;
-      p.skill = state.mode === 'run' ? Math.max(0.3, BOSSES[state.run.boss].skill - 0.05) : (p.team === 0 ? Math.max(TEAMMATE_SKILL, state.difficulty) : state.difficulty);
-      delete rt.connections[slot];
+      const hostTeam = state.players[rt.mySlot].team;
+      p.skill = state.mode === 'run' ? Math.max(0.3, BOSSES[state.run.boss].skill - 0.05) : (p.team === hostTeam ? Math.max(TEAMMATE_SKILL, state.difficulty) : state.difficulty);
       showBanner('Un jugador salió; lo reemplaza un bot', 120);
     });
   });
@@ -189,6 +201,7 @@ export function joinRoom() {
         welcomed = true;
         clearTimeout(rt.joinTimer);
         rt.mySlot = data.slot;
+        rt.myUid = data.uid;
         rt.uiMenuOpen = false;
         setNetMsg('');
         setStatus('Sala ' + code);
@@ -200,6 +213,7 @@ export function joinRoom() {
       } else if (data.type === 'state') {
         rt.gotHostState = true;
         Object.assign(state, data.state);
+        syncMySlot();
         recordFrame();
         if (state.soundTrigger.seq !== rt.lastPlayedSoundSeq) {
           rt.lastPlayedSoundSeq = state.soundTrigger.seq;

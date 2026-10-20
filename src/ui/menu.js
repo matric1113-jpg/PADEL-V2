@@ -1,6 +1,7 @@
 import { ensureAudio, playJingle } from '../audio/audio.js';
-import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, LOOKS, MAPS, MAP_IDS, RUN_REWARD, UPGRADES } from '../core/data.js';
-import { prepareRoster, setLook, setMap, setReady, setVote, startBossMatch, startFriendly, startRun, tryBuy } from '../core/game.js';
+import { AMERICANO_GAMES_TO_WIN } from '../core/constants.js';
+import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, HELLO, LOOKS, MAPS, MAP_IDS, RUN_REWARD, UPGRADES } from '../core/data.js';
+import { AMERICANO_PAIRS, prepareRoster, setLook, setMap, setReady, setVote, startBossMatch, startMatch, startRun, swapSeats, tryBuy } from '../core/game.js';
 import { localInput, menuSel, rt, state } from '../core/state.js';
 import { upLvl } from '../core/stats.js';
 import { createRoom, joinRoom, leaveNetwork } from '../net/network.js';
@@ -37,8 +38,31 @@ function playSolo() {
   leaveNetwork();
   prepareRoster(menuSel.mode);
   rt.uiMenuOpen = false;
-  if (menuSel.mode === 'run') startRun(); else startFriendly();
+  startMatch();
 }
+
+// Al pasar el cursor por un personaje del menú, se presenta con la voz del navegador (Web Speech API).
+// Chrome solo deja hablar después de que el usuario tocó la página alguna vez; antes de eso queda solo el globo de texto.
+let spanishVoice;
+function pickVoice() {
+  const vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+  spanishVoice = vs.find(v => /^es[-_](CL|419|US|MX)/i.test(v.lang)) || vs.find(v => /^es/i.test(v.lang)) || null;
+}
+if (window.speechSynthesis) { pickVoice(); speechSynthesis.addEventListener('voiceschanged', pickVoice); }
+function sayHello(id) {
+  const h = HELLO[id];
+  if (!h || !window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(h.say || h.text);
+  u.lang = spanishVoice ? spanishVoice.lang : 'es-CL';
+  if (spanishVoice) u.voice = spanishVoice;
+  u.pitch = h.pitch || 1;
+  u.rate = h.rate || 1;
+  speechSynthesis.speak(u);
+}
+
+// Sala del amistoso: puesto elegido para intercambiar (uid), solo en la pantalla del anfitrión
+let seatPick = '';
 
 function skillWord(sk) {
   if (sk > 1) return 'Nivel: más bravos que los bots originales.';
@@ -86,8 +110,9 @@ function viewMenu() {
     return `<button class="card${menuSel.char === id ? ' sel' : ''}" data-act="char" data-v="${id}">
       <canvas class="portrait" data-look="${id}"></canvas>
       <span class="nm">${esc(L.name)}</span><span class="rl">${L.role}</span>
-      ${statBars(L)}<span class="ds">${esc(L.desc)}</span></button>`;
+      ${statBars(L)}<span class="ds">${esc(L.desc)}</span>${HELLO[id] ? `<span class="hello">${esc(HELLO[id].text)}</span>` : ''}</button>`;
   }).join('');
+  const mode = (id, title, text) => `<button class="mode${menuSel.mode === id ? ' sel' : ''}" data-act="mode" data-v="${id}"><h3>${title}</h3><p>${text}</p></button>`;
   const diffs = DIFFICULTIES.map((d, i) =>
     `<button data-act="diff" data-v="${i}" class="${menuSel.diff === i ? 'sel' : ''}">${d.name}</button>`).join('');
   return `<div class="ov-panel">
@@ -96,10 +121,9 @@ function viewMenu() {
     <div class="cards">${cards}</div>
     <div class="ov-h">Modo de juego</div>
     <div class="modes">
-      <button class="mode${run ? ' sel' : ''}" data-act="mode" data-v="run"><h3>Torneo de jefes</h3>
-        <p>${BOSSES.length} jefes, cada uno en su cancha: los 2 primeros a un juego y del 3 en adelante al mejor de 3. Cada victoria da $${fmt(RUN_REWARD)} por jugador para mejoras o activas. Si pierden, vuelven al inicio.</p></button>
-      <button class="mode${run ? '' : ' sel'}" data-act="mode" data-v="friendly"><h3>Partido amistoso</h3>
-        <p>Gana quien llegue primero a 2 sets (cada set, a 6 juegos), contra bots o con hasta 4 personas online. Tienda y votación de mapa al inicio de cada set, después del juego 2 y luego cada 3 juegos. Al final, podio.</p></button>
+      ${mode('run', 'Torneo de jefes', `${BOSSES.length} jefes, cada uno en su cancha: los 2 primeros a un juego y del 3 en adelante al mejor de 3. Cada victoria da $${fmt(RUN_REWARD)} por jugador para mejoras o activas. Si pierden, vuelven al inicio.`)}
+      ${mode('friendly', 'Partido amistoso', 'Gana quien llegue primero a 2 sets (cada set, a 6 juegos), contra bots o con hasta 4 personas online. En la sala, el anfitrión arma los equipos. Tienda y votación de mapa al inicio de cada set, después del juego 2 y luego cada 3 juegos. Al final, podio.')}
+      ${mode('americano', 'Americano', `4 jugadores y ${AMERICANO_PAIRS.length} sets, con una pareja distinta en cada uno (cada set, al primero en llegar a ${AMERICANO_GAMES_TO_WIN} juegos). Cada uno suma los juegos que gana su pareja. Tienda y mapa en cada set. Al final, podio con oro, plata y bronce.`)}
     </div>
     ${run ? '' : `<div class="row"><span class="lbl">Nivel de los bots</span><div class="seg">${diffs}</div></div>`}
     <div class="row">
@@ -122,16 +146,29 @@ function viewConnecting() {
 }
 
 function viewLobby() {
-  const run = state.mode === 'run';
+  const run = state.mode === 'run', amer = state.mode === 'americano';
+  // En el amistoso el anfitrión arma los equipos: toca a un jugador y luego a uno del otro equipo para intercambiarlos
+  const canSeat = rt.isHost && state.mode === 'friendly';
+  if (!canSeat || !state.players.some(p => p.uid === seatPick)) seatPick = '';
+  const pickTeam = seatPick ? state.players.find(p => p.uid === seatPick).team : -1;
+  const letter = i => 'ABCD'[i];
   const rows = state.players.map((p, i) => {
     const kind = i === rt.mySlot ? '<span class="kind me">Tú</span>'
       : `<span class="kind">${p.isBot ? (run && p.team === 1 ? 'Jefe' : 'Bot') : 'Jugador online'}</span>`;
-    return `<div class="slot${p.team ? ' red' : ''}"><span class="tm"></span><span>${esc(p.name)}</span>${kind}</div>`;
+    const seat = !canSeat ? '' : p.uid === seatPick
+      ? `<button class="seat on" data-act="seat" data-v="${p.uid}">Elegido</button>`
+      : `<button class="seat" data-act="seat" data-v="${p.uid}">${pickTeam >= 0 && pickTeam !== p.team ? 'Intercambiar' : 'Cambiar de equipo'}</button>`;
+    return `<div class="slot${amer ? ' amer' : p.team ? ' red' : ''}${p.uid === seatPick ? ' pick' : ''}"><span class="tm">${amer ? letter(i) : ''}</span><span>${esc(p.name)}</span>${kind}${seat}</div>`;
   }).join('');
+  const pairs = amer ? `<div class="chips">${AMERICANO_PAIRS.map((s, k) =>
+    `<span class="mapchip">Set ${k + 1}: ${letter(s[0])} y ${letter(s[1])} contra ${letter(s[2])} y ${letter(s[3])}</span>`).join('')}</div>` : '';
+  const sub = run ? 'Tu compañero entra con este código desde "Unirse a una sala". Si nadie entra, juega un bot a tu lado.'
+    : amer ? `Americano: ${AMERICANO_PAIRS.length} sets con una pareja distinta cada uno, cada set al primero en llegar a ${AMERICANO_GAMES_TO_WIN} juegos. Los puestos que nadie ocupe los juegan bots.`
+    : `Comparte el código. Los puestos que nadie ocupe los juegan bots.${canSeat ? ' Para armar los equipos, toca "Cambiar de equipo" en un jugador y después "Intercambiar" en uno del otro equipo.' : ' El anfitrión arma los equipos.'}`;
   return `<div class="ov-panel">
     <div class="ov-title">${state.roomCode ? 'Sala ' + state.roomCode : 'Creando sala…'}</div>
-    <div class="ov-sub">${run ? 'Tu compañero entra con este código desde "Unirse a una sala". Si nadie entra, juega un bot a tu lado.' : 'Comparte el código. Los puestos que nadie ocupe los juegan bots.'} Tus amigos escriben el código en "Unirse a una sala".</div>
-    <div class="slots">${rows}</div>
+    <div class="ov-sub">${sub} Tus amigos escriben el código en "Unirse a una sala".</div>
+    <div class="slots">${rows}</div>${pairs}
     <div class="row">${rt.isHost ? '<button class="primary big" data-act="start">Empezar</button><button data-act="menu">Volver al menú</button>' : '<span class="lbl">Esperando que el anfitrión empiece…</span>'}</div>
   </div>`;
 }
@@ -238,8 +275,34 @@ function viewChampion() {
 }
 
 // Resultado final del partido (después de la cinemática del podio). El podio queda visible detrás.
+const MEDALS = ['Oro', 'Plata', 'Bronce'];
+export const myAmericanoPlace = () => {
+  const me = state.players[rt.mySlot];
+  const row = state.result && state.result.ranking && me ? state.result.ranking.find(r => r.uid === me.uid) : null;
+  return row ? row.place : 0;
+};
+
+function viewAmericanoOver() {
+  const r = state.result;
+  const place = myAmericanoPlace();
+  const firsts = r.ranking.filter(x => x.place === 1);
+  const title = place === 1 ? (firsts.length > 1 ? '¡Comparten el primer lugar!' : '¡Ganaste el americano!') : place ? `Quedaste en el ${place}.º lugar` : 'Fin del americano';
+  const name = uid => esc((state.players.find(p => p.uid === uid) || {}).name || '');
+  const rows = r.ranking.map(x => `<tr class="pl${x.place}${x.uid === (state.players[rt.mySlot] || {}).uid ? ' me' : ''}"><td>${x.place}.º</td>
+    <td>${x.place <= 3 ? `<i class="medal m${x.place}"></i>${MEDALS[x.place - 1]}` : ''}</td><td class="nm">${esc(x.name)}</td><td>${x.pts}</td><td>${x.against}</td></tr>`).join('');
+  const chips = (state.amer ? state.amer.history : []).map((h, i) =>
+    `<span class="mapchip">Set ${i + 1}: ${h.teams[0].map(name).join(' y ')} ${h.games[0]}-${h.games[1]} ${h.teams[1].map(name).join(' y ')}</span>`).join('');
+  return `<div class="ov-panel matchover">
+    <div class="ov-title">${title}</div>
+    <table class="amer-table"><thead><tr><th></th><th>Medalla</th><th>Jugador</th><th>Juegos ganados</th><th>En contra</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="chips">${chips}</div>
+    <div class="row">${hostButtons('again', 'Jugar otra vez')}</div>
+  </div>`;
+}
+
 function viewMatchover() {
   const r = state.result || { winner: 0 };
+  if (r.americano) return viewAmericanoOver();
   const myTeam = (state.players[rt.mySlot] || {}).team || 0;
   const won = r.winner === myTeam;
   const team = r.winner === 0 ? 'azul' : 'rojo';
@@ -262,7 +325,7 @@ export function syncOverlay() {
     const myTeam = (state.players[rt.mySlot] || {}).team || 0;
     if (s === 'shop' || s === 'champion') playJingle(true);
     else if (s === 'lost') playJingle(false);
-    else if (s === 'podium' && state.result) playJingle(state.result.winner === myTeam);
+    else if (s === 'podium' && state.result) playJingle(state.result.americano ? myAmericanoPlace() === 1 : state.result.winner === myTeam);
   }
   lastScreenSeen = state.screen;
 
@@ -275,8 +338,9 @@ export function syncOverlay() {
     return;
   }
   const data = view === 'menu' ? [menuSel.char, menuSel.mode, menuSel.diff, rt.netMsg]
-    : [state.roomCode, state.mode, state.run, state.result, state.sets, rt.mySlot, rt.isHost, state.map, state.vote,
-       state.players.map(p => [p.name, p.isBot, p.money, p.up, p.team, p.active, p.ready, p.vote, p.out])];
+    : [state.roomCode, state.mode, state.run, state.result, state.sets, rt.mySlot, rt.isHost, state.map, state.vote, seatPick,
+       state.amer && state.amer.history,
+       state.players.map(p => [p.uid, p.name, p.isBot, p.money, p.up, p.team, p.active, p.ready, p.vote, p.out])];
   const key = view + '|' + JSON.stringify(data);
   if (key === rt.overlayKey) return;
   rt.overlayKey = key;
@@ -300,7 +364,16 @@ overlayEl.addEventListener('click', e => {
     case 'solo': playSolo(); break;
     case 'host': setNetMsg(''); createRoom(); break;
     case 'join': joinRoom(); break;
-    case 'start': if (rt.isHost) { if (state.mode === 'run') startRun(); else startFriendly(); } break;
+    case 'start': if (rt.isHost) { seatPick = ''; startMatch(); } break;
+    case 'seat':
+      if (!rt.isHost) break;
+      if (!seatPick || seatPick === v) seatPick = seatPick === v ? '' : v;
+      else {
+        const a = state.players.findIndex(p => p.uid === seatPick), b = state.players.findIndex(p => p.uid === v);
+        if (state.players[a].team === state.players[b].team) seatPick = v;
+        else { swapSeats(a, b); seatPick = ''; }
+      }
+      break;
     case 'buy':
       if (rt.isHost) tryBuy(rt.mySlot, v);
       else if (rt.hostConn && rt.hostConn.open) rt.hostConn.send({ type: 'buy', id: v });
@@ -316,11 +389,21 @@ overlayEl.addEventListener('click', e => {
       else if (rt.hostConn && rt.hostConn.open) rt.hostConn.send({ type: 'ready' });
       break;
     case 'restart': if (rt.isHost) startRun(); break;
-    case 'again': if (rt.isHost) startFriendly(); break;
+    case 'again': if (rt.isHost) startMatch(); break;
     case 'menu': openMenu(); setNetMsg(''); break;
   }
   rt.overlayKey = '';
 });
+// Al entrar el cursor a la tarjeta de un personaje, se presenta (una vez por entrada, no en cada movimiento)
+// (el menú se redibuja al elegir, así que se recuerda el último personaje en vez de mirar relatedTarget)
+let helloId = '';
+overlayEl.addEventListener('mouseover', e => {
+  const card = e.target.closest('.card[data-v]');
+  const id = card ? card.dataset.v : '';
+  if (id && id !== helloId) sayHello(id);
+  helloId = id;
+});
+overlayEl.addEventListener('mouseleave', () => { helloId = ''; });
 overlayEl.addEventListener('input', e => {
   if (e.target.id === 'room-code-input') menuSel.code = e.target.value;
 });

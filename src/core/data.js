@@ -1,4 +1,4 @@
-export const CHARACTERS = ['german', 'maxi', 'joaquin', 'alvaro', 'fernando', 'matias'];
+export const CHARACTERS = ['german', 'maxi', 'joaquin', 'alvaro', 'fernando', 'matias', 'marco'];
 export const LOOKS = {
   german: {
     name: 'Germán', role: 'Pegador', speed: 0.15,
@@ -54,6 +54,16 @@ export const LOOKS = {
     shirt: '#ff7a1a', shirtHi: '#ffb27a', shirtLo: '#b04a00', shorts: '#0f2238', shoes: '#ffffff', band: '#ff7a1a', socksHigh: true,
     extras: {},
     paddle: { face: '#ffe600', rim: '#0f2238', shape: 'tear' }
+  },
+
+  marco: {
+    name: 'Marco', role: 'Todoterreno', speed: 0.45,
+    desc: 'Cubano, español y chileno a la vez. Pelado, sonrisa grande y un revés con sabor caribeño.',
+    skin: '#4a2c1d', hair: 'bald', hairColor: '#140d09',
+    body: { w: 1.06, h: 1.03, belly: 1.0, arm: 1.12, leg: 1.06 },
+    shirt: '#00a884', shirtHi: '#7ee8c9', shirtLo: '#00664f', shorts: '#0d1b2a', shoes: '#ffd600', band: '#ffd600',
+    extras: {},
+    paddle: { face: '#0050b5', rim: '#ffd600', shape: 'diamond' }
   },
 
   // ---- Jefes del torneo ----
@@ -235,6 +245,7 @@ export const TALK = {
     alvaro: ['Puro gimnasio', '¿Quieres otra?'],
     fernando: ['Sin despeinar el jockey', 'Equilibrio, hermano'],
     matias: ['Globito y a cobrar', 'Paciencia, puro cerebro'],
+    marco: ['¡Qué bolá, asere!', '¡Venga, hombre!', 'Wena, po'],
     gladys: ['¡Ay, mijito!', 'Como en mis tiempos'],
     nena: ['Pasa la pelota, cariño', 'Y eso que no calenté'],
     patricio: ['Esto va al informe', 'Reunión terminada'],
@@ -247,4 +258,16 @@ export const TALK = {
     martinez: ['Primera lección: no fallar', 'Eso se entrena'],
     capitana: ['Así se gana un club', 'Siguiente']
   }
+};
+
+// Lo que dice cada personaje al pasar el cursor por su tarjeta en el menú (text: lo que se lee en pantalla;
+// say: cómo lo pronuncia la voz del navegador, si cambia; pitch y rate: tono y velocidad de esa voz)
+export const HELLO = {
+  joaquin: { text: '¡Hola, cabros! Hola, Germancito, la paz del Señor.', pitch: 1.05, rate: 1.05 },
+  matias: { text: '¡Mati Neira! ¡Illaoi número 1 de LAS!', say: '¡Mati Neira! ¡Ilaói número uno de las!', pitch: 1.1, rate: 1.1 },
+  alvaro: { text: '¡Álvaro! Los esmeraldas son horribles, no como yo: diamante 4.', pitch: 0.85, rate: 1 },
+  maxi: { text: '¡El Maxi, siiii! Katarina, Katarina, Kastarina, Kastina, Kast.', say: '¡El Maxi, siiiii! Katarina, Katarina, Kastarina, Kastina, Kast.', pitch: 1.35, rate: 1.25 },
+  marco: { text: 'Soy el Marco: cubano, español y chileno.', pitch: 0.9, rate: 0.95 },
+  german: { text: '¡Soy el Germancito! ¡Viva Jeannette Jara! ¡Suban el sueldo mínimo!', say: '¡Soy el Germancito! ¡Viva Yanet Jara! ¡Suban el sueldo mínimo!', pitch: 0.7, rate: 0.95 },
+  fernando: { text: '¡Soy el Xerny! ¡Haré que respeten la ley!', say: '¡Soy el Cherny! ¡Haré que respeten la ley!', pitch: 0.95, rate: 1 }
 };

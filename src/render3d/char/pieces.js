@@ -260,5 +260,18 @@ export function makeMedal() {
     g.add(r);
   }
   g.traverse(o => { if (o.isMesh) o.castShadow = false; });
+  g.userData.metal = gold;
   return g;
+}
+
+// Color de la medalla según el puesto (oro, plata o bronce)
+const MEDAL_COLORS = {
+  gold: { color: '#e6b83a', emissive: '#6a4500', ei: 0.4 },
+  silver: { color: '#d4dae4', emissive: '#3a4250', ei: 0.3 },
+  bronze: { color: '#c97a3a', emissive: '#4a2208', ei: 0.35 }
+};
+export function setMedalKind(medal, kind) {
+  const c = MEDAL_COLORS[kind] || MEDAL_COLORS.gold;
+  const m = medal.userData.metal;
+  m.color.set(c.color); m.emissive.set(c.emissive); m.emissiveIntensity = c.ei;
 }

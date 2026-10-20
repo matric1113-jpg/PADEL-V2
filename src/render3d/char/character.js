@@ -322,6 +322,7 @@ export class Character {
     this.fitBelly(body, look);
     this.setHats(f.up.sombrero || 0);
     this.medal.visible = !!f.medal;
+    if (f.medal && f.medal !== this.medalKind) { this.medalKind = f.medal; P.setMedalKind(this.medal, f.medal); }
     const u = this.bodyMat.userData.uniforms;
     u.uShoe.value.set(f.up.zapas ? '#ffd54a' : look.shoes);
     u.uBandR.value.set(f.up.remate ? '#ff3d00' : look.band);

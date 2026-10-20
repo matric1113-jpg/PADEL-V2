@@ -6,8 +6,9 @@ import { emptyUpgrades } from './stats.js';
 export const rt = {
   peer: null,
   isHost: true,
-  mySlot: 0,
-  connections: {},
+  mySlot: 0,                 // puesto actual en state.players (cambia al armar equipos o en el americano)
+  myUid: 'u0',               // id fijo de mi jugador: el puesto se busca con él (syncMySlot)
+  connections: {},           // conexiones de los invitados, por uid de su jugador
   hostConn: null,
   gotHostState: false,       // el invitado ya recibió el estado del anfitrión
   joinTimer: null,
@@ -49,8 +50,9 @@ export const localInput = {
   lastChargeRatio: 0,
   lastReleaseLob: false
 };
-export function createPlayer(x, y, team, name, isBot, speedPref = 0.5, lookId = 'fernando') {
+export function createPlayer(uid, x, y, team, name, isBot, speedPref = 0.5, lookId = 'fernando') {
   return {
+    uid,                           // id fijo; el puesto (índice en state.players) puede cambiar
     x, y, vx: 0, vy: 0, team, name, isBot,
     lookId,
     skill: 1,                      // solo bots: 1 = dificultad original
@@ -91,7 +93,7 @@ export const state = {
   pauseTimer: 0,
   afterPause: null,
   soundTrigger: { seq: 0, type: '' },
-  mode: 'friendly',     // 'friendly' (2v2 a un set con tienda y mapas) | 'run' (torneo de jefes)
+  mode: 'friendly',     // 'friendly' (2v2 a 2 sets con tienda y mapas) | 'run' (torneo de jefes) | 'americano'
   screen: 'menu',       // 'menu' | 'lobby' | 'route' | 'play' | 'shop' | 'shop2' | 'lost' | 'champion' | 'podium' | 'matchover'
   difficulty: 0.5,
   sets: [0, 0],
@@ -113,11 +115,12 @@ export const state = {
   celebrate: { seq: 0, team: 0 },
   talk: { seq: 0, slot: 0, text: '' },
   vote: { first: true },
+  amer: null,                      // americano: { set, order: [uid A, B, C, D], pts: {uid: juegos ganados}, against: {uid: juegos perdidos} }
   players: [
-    createPlayer(145, 150, 0, 'Fernando', false, 0.50, 'fernando'),
-    createPlayer(145, 370, 0, 'Joaquín', true, 0.68, 'joaquin'),
-    createPlayer(775, 150, 1, 'Maxi', true, 0.85, 'maxi'),
-    createPlayer(775, 370, 1, 'Germán', true, 0.15, 'german')
+    createPlayer('u0', 145, 150, 0, 'Fernando', false, 0.50, 'fernando'),
+    createPlayer('u1', 145, 370, 0, 'Joaquín', true, 0.68, 'joaquin'),
+    createPlayer('u2', 775, 150, 1, 'Maxi', true, 0.85, 'maxi'),
+    createPlayer('u3', 775, 370, 1, 'Germán', true, 0.15, 'german')
   ],
   ball: {
     x: 175, y: 150, z: 18,
@@ -137,10 +140,14 @@ export const state = {
   bannerText: '',
   bannerTimer: 0
 };
-export const remoteInputs = [
-  { ...localInput },
-  { ...localInput },
-  { ...localInput },
-  { ...localInput }
-];
-export const menuSel = { char: 'fernando', mode: 'run', diff: 1, code: '' };
+// Input de cada jugador humano, por uid (el del anfitrión lo copia la física desde localInput)
+export const remoteInputs = {};
+export const inputOf = p => remoteInputs[p.uid] || localInput;
+export const slotOfUid = uid => state.players.findIndex(p => p.uid === uid);
+// Los puestos 0-1 son el equipo azul y 2-3 el rojo. Si se reordena state.players (equipos de la sala, americano)
+// o llega el estado del anfitrión, mi puesto se vuelve a buscar por uid.
+export function syncMySlot() {
+  const i = slotOfUid(rt.myUid);
+  if (i >= 0) rt.mySlot = i;
+}
+export const menuSel = { char: 'fernando', mode: 'run', diff: 1, code: '' };   // mode: 'run' | 'friendly' | 'americano'

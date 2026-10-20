@@ -4,12 +4,16 @@ import {
 } from 'three';
 import { TEAM_COLORS } from '../view/skeleton.js';
 
-// ---------- Podio de la cinemática final (modo amistoso) ----------
-// Un escalón alto al centro para los ganadores y dos bajos a los lados para los perdedores, sobre la cancha
-// (a un costado de la red). Unidades de mundo del juego; la altura (y de Three.js) de cada escalón es el "lift"
-// con el que se levanta a los personajes.
+// ---------- Podio de la cinemática final (amistoso y americano) ----------
+// Amistoso: un escalón alto al centro para los ganadores y dos bajos a los lados para los perdedores.
+// Americano: escalones 1 (centro), 2 (izquierda) y 3 (derecha) con medallas de oro, plata y bronce; el 4.º, en el suelo.
+// Todo sobre la cancha (a un costado de la red). Unidades de mundo del juego; la altura (y de Three.js) de cada
+// escalón es el "lift" con el que se levanta a los personajes.
 export const PODIUM_C = { x: 300, y: 165 };
-const HIGH = 34, LOW = 13;
+const HIGH = 34, MID = 22, LOW = 13;
+// Americano: centro y alto de cada escalón por puesto (el 4.º no tiene escalón)
+const AMER_STEPS = { 1: { x: 0, h: HIGH, w: 100 }, 2: { x: -84, h: MID, w: 64 }, 3: { x: 84, h: LOW, w: 64 }, 4: { x: -152, h: 0, w: 60 } };   // el 4.º, en el suelo junto al 2 (a la derecha está la red)
+const MEDAL_OF = { 1: 'gold', 2: 'silver', 3: 'bronze' };
 const FACE_TH = Math.PI / 2;                        // los personajes miran hacia +y, donde está la cámara
 const START_T = 0, TRAVEL_T = 330;                  // cuadros que dura el acercamiento
 
@@ -37,6 +41,11 @@ export class Podium {
     const stone2 = new MeshStandardMaterial({ color: '#cfd6e0', roughness: 0.6 });
     const gold = new MeshStandardMaterial({ color: '#e6b83a', roughness: 0.28, metalness: 0.85, emissive: '#5a3c00', emissiveIntensity: 0.35 });
     const silver = new MeshStandardMaterial({ color: '#c3cad6', roughness: 0.3, metalness: 0.8 });
+    const bronze = new MeshStandardMaterial({ color: '#c97a3a', roughness: 0.32, metalness: 0.8 });
+    this.friendly = new Group();
+    this.amer = new Group();
+    this.group.add(this.friendly, this.amer);
+    let parent = this.friendly;
     const step = (cx, w, h, body, top, label, labelColor) => {
       const g = new Group();
       const b = new Mesh(new BoxGeometry(w, h, 46), body);
@@ -47,11 +56,16 @@ export class Podium {
       n.position.set(0, h * 0.5, 23.2);
       g.add(b, t, n);
       g.position.set(PODIUM_C.x + cx, 0, PODIUM_C.y);
-      this.group.add(g);
+      parent.add(g);
     };
     step(0, 124, HIGH, stone, gold, '1', '#b8860b');
     step(-100, 72, LOW, stone2, silver, '2', '#6b7480');
     step(100, 72, LOW, stone2, silver, '2', '#6b7480');
+    parent = this.amer;
+    step(AMER_STEPS[1].x, AMER_STEPS[1].w, HIGH, stone, gold, '1', '#b8860b');
+    step(AMER_STEPS[2].x, AMER_STEPS[2].w, MID, stone2, silver, '2', '#6b7480');
+    step(AMER_STEPS[3].x, AMER_STEPS[3].w, LOW, stone2, bronze, '3', '#8a4b1c');
+    this.amer.visible = false;
 
     // Foco sobre el podio
     this.spot = new SpotLight('#fff0d0', 9, 0, 0.55, 0.7, 0);
@@ -70,7 +84,7 @@ export class Podium {
     this.pieces = Array.from({ length: 160 }, () => this.newPiece(true));
     this.group.add(this.confetti);
     this.tmpM = new Matrix4(); this.tmpQ = new Quaternion(); this.tmpV = new Vector3(); this.tmpE = new Euler(); this.one = new Vector3(1, 1, 1);
-    this.winner = -1;
+    this.winner = null;
   }
 
   newPiece(scatter) {
@@ -80,17 +94,33 @@ export class Podium {
     };
   }
 
+  // team -1: americano (confeti dorado en vez del color de un equipo)
   setWinner(team) {
     if (team === this.winner) return;
     this.winner = team;
-    const palette = [TEAM_COLORS[team], '#ffd54a', '#ffffff', '#ff5fa8'].map(c => new Color(c));
+    this.friendly.visible = team >= 0;
+    this.amer.visible = team < 0;
+    const palette = [team >= 0 ? TEAM_COLORS[team] : '#e6b83a', '#ffd54a', '#ffffff', '#ff5fa8'].map(c => new Color(c));
     this.pieces.forEach((p, i) => this.confetti.setColorAt(i, palette[p.c]));
     this.confetti.instanceColor.needsUpdate = true;
   }
 
   // Dónde se para cada jugador. Ganadores en el escalón alto, perdedores abajo a los lados.
-  spots(players, winner) {
+  // En el americano manda la tabla final (result.ranking): los empatados comparten escalón y medalla.
+  spots(players, winner, result) {
     const out = [];
+    if (result && result.americano) {
+      const place = uid => (result.ranking.find(r => r.uid === uid) || { place: 4 }).place;
+      const groups = {};
+      players.forEach((p, idx) => { (groups[place(p.uid)] = groups[place(p.uid)] || []).push(idx); });
+      for (const [pl, idxs] of Object.entries(groups)) {
+        const st = AMER_STEPS[pl] || AMER_STEPS[4];
+        idxs.forEach((idx, k) => {
+          out[idx] = { x: PODIUM_C.x + st.x + (k - (idxs.length - 1) / 2) * 30, y: PODIUM_C.y, lift: st.h ? st.h + 2.2 : 0, th: FACE_TH, win: Number(pl) === 1, medal: MEDAL_OF[pl] || '' };
+        });
+      }
+      return out;
+    }
     let w = 0, l = 0;
     players.forEach((p, idx) => {
       if (p.out) { out[idx] = null; return; }
@@ -118,9 +148,11 @@ export class Podium {
 
   // Cámara: parte lejos, en diagonal y desde arriba, y se acerca hasta un plano frontal del podio; después se mueve apenas.
   // low (0..1): en la pantalla de resultado el podio sube en el cuadro para dejar sitio al panel de abajo
-  camera(cam, T, aspect, low = 0) {
+  // wide: el americano usa cuatro puestos a lo ancho, así que la cámara termina un poco más lejos
+  camera(cam, T, aspect, low = 0, wide = false) {
     const k = ss(START_T, TRAVEL_T, T);
-    const d = 400 + (255 - 400) * k, h = 250 + (84 - 250) * k;
+    const end = wide ? 315 : 255;
+    const d = 400 + (end - 400) * k, h = 250 + ((wide ? 96 : 84) - 250) * k;
     const a = 0.95 * (1 - k) + 0.03 * k + 0.07 * Math.sin(T / 190) * k;
     cam.position.set(PODIUM_C.x + Math.sin(a) * d, h, PODIUM_C.y + Math.cos(a) * d);
     cam.lookAt(PODIUM_C.x, 40 + 28 * k - 26 * low, PODIUM_C.y);
