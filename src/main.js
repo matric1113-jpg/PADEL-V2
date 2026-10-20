@@ -74,4 +74,4 @@ updateScoreUI();
 requestAnimationFrame(gameLoop);
 
 // Solo en `npm run dev`: acceso desde la consola para revisar mapas y efectos (no va en el build)
-if (import.meta.env.DEV) window.__padel = { state, rt, menuSel, localInput, game, fx, camera };
+if (import.meta.env.DEV) window.__padel = { state, rt, menuSel, localInput, game, fx, camera, r3d: renderer.debug };
