@@ -1,6 +1,6 @@
-import { ACESFilmicToneMapping, PCFSoftShadowMap, Scene, SRGBColorSpace, WebGLRenderer } from 'three';
+import { ACESFilmicToneMapping, PCFSoftShadowMap, PerspectiveCamera, Scene, SRGBColorSpace, WebGLRenderer } from 'three';
 import { VIEW_H, VIEW_W } from '../core/constants.js';
-import { localInput } from '../core/state.js';
+import { localInput, state } from '../core/state.js';
 import { canvas, wrapper } from '../dom.js';
 import { mouseView } from '../input/input.js';
 import { CAMS, cam } from '../view/camera.js';
@@ -75,6 +75,17 @@ export function updateAimFromMouse() {
   }
 }
 
+// Solo en desarrollo: __padel.r3d.closeup = { slot: 0, dist: 120, height: 45, angle: 0.6, fov: 30 } mira de cerca a un jugador
+const closeCam = new PerspectiveCamera(30, VIEW_W / VIEW_H, 1, 4000);
+function closeupCamera() {
+  const { slot = 0, dist = 120, height = 45, angle = 0.6, fov = 30, ty = 38 } = debug.closeup;
+  const p = state.players[slot];
+  closeCam.fov = fov; closeCam.updateProjectionMatrix();
+  closeCam.position.set(p.x + Math.sin(angle) * dist, height, p.y + Math.cos(angle) * dist);
+  closeCam.lookAt(p.x, ty, p.y);
+  return closeCam;
+}
+
 function updateWorld(dt, now, inReplay, me) {
   court.update();
   lights.update(renderer, scene);
@@ -99,7 +110,7 @@ export function render(now) {
   try {
     applyCam(camera, CAMS[which], fx.view, sx, sy);
     built = updateWorld(dt, now, which === 'replay', me);
-    renderer.render(scene, camera);
+    renderer.render(scene, import.meta.env.DEV && debug.closeup ? closeupCamera() : camera);
   } finally {
     swapOutReplay(saved);
   }

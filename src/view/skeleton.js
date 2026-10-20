@@ -306,5 +306,12 @@ export function buildPlayerParts(p, idx, dt, now, pf, opts = {}) {
   // Zeus salta sobre una nube cuando remata
   const cloud = p.lookId === 'zeus' && (pose.kind === 'smash' || (swinging && pf.swingKind === 'smash'));
   const jumpZ = (cel ? cel.jump : 0) + (cloud ? 14 : 0);
-  return { parts, pf, look, charging, cr, lob, swinging, portrait: !!opts.portrait, jumpZ, cloud };
+  // Datos para el modelo animado (render3d/players.js): hacia dónde mira, giro del tronco, objetivos de las manos y medidas de la pala
+  const rig = {
+    th, twist, speed: sp, elbowR: elbow, elbowL: lel, handR: hand, handL: lh,
+    swingU: pf.swingT >= 0 ? clamp(pf.swingT / SWING_FRAMES, 0, 1) : 0,
+    celeb: cel ? opts.celeb.kind : '',
+    paddle: { show: !(cel && cel.hide), hand, center: pc, tip, side: face[Math.round(face.length / 4)], handleLen: 5.5 * ps, ps }
+  };
+  return { parts, pf, look, charging, cr, lob, swinging, portrait: !!opts.portrait, jumpZ, cloud, rig };
 }

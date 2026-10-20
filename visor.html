@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Visor de personajes</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #20242c; color: #dde; font: 13px system-ui, sans-serif; overflow: hidden; }
+    #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+    #ui { position: fixed; top: 8px; left: 8px; background: #000a; padding: 8px 10px; border-radius: 6px; max-width: 330px; max-height: 96vh; overflow: auto; }
+    #ui select, #ui button, #ui input { font: inherit; margin: 2px 0; }
+    #ui label { display: block; margin-top: 4px; }
+    #info { white-space: pre; font: 11px ui-monospace, monospace; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="ui"></div>
+  <script type="module" src="/src/dev/visor.js"></script>
+</body>
+</html>
