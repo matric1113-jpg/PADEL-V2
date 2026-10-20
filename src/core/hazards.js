@@ -1,4 +1,4 @@
-import { ACTIVE_COOLDOWN, ACTIVE_DURATION, BODY_MARGIN, COURT, GUST_FRAMES, GUST_GAP_MIN, GUST_GAP_RANGE, GUST_STRENGTH_MIN, GUST_STRENGTH_RANGE } from './constants.js';
+import { ACTIVE_COOLDOWN, ACTIVE_DURATION, BODY_MARGIN, COURT, GUST_FRAMES, GUST_GAP_MIN, GUST_GAP_RANGE, GUST_STRENGTH_MIN, GUST_STRENGTH_RANGE, TILT_FRAMES, TILT_GAP_MIN, TILT_GAP_RANGE } from './constants.js';
 import { ACTIVES, ACTIVE_IDS, BOSSES, TALK } from './data.js';
 import { emitSound, say, talkLine } from './game.js';
 import { mapOf, state } from './state.js';
@@ -41,8 +41,8 @@ export function updateHazards() {
       if (--state.tilt.t === 0) { state.tilt.x = 0; state.tilt.y = 0; }
     } else if (--state.hz.tilt <= 0) {
       const a = Math.random() * Math.PI * 2;
-      state.tilt = { x: Math.cos(a), y: Math.sin(a), t: 240 };
-      state.hz.tilt = 480 + Math.random() * 360;
+      state.tilt = { x: Math.cos(a), y: Math.sin(a), t: TILT_FRAMES };
+      state.hz.tilt = TILT_GAP_MIN + Math.random() * TILT_GAP_RANGE;
     }
   }
   if (M.bolts && state.phase === 'PLAY') {

@@ -1,7 +1,7 @@
 import { computeLaunch, getClampedTarget } from '../core/ballistics.js';
-import { ACTIVE_COOLDOWN, ACTIVE_DURATION, BALL_R, COURT, GRAVITY, MAX_CHARGE_FRAMES, NET_H, PAD_F, PAD_S, SPRINT_COOLDOWN, SPRINT_DURATION, VIEW_H, VIEW_W, ZS } from '../core/constants.js';
+import { ACTIVE_COOLDOWN, ACTIVE_DURATION, BALL_R, COURT, GRAVITY, MAX_CHARGE_FRAMES, NET_H, PAD_F, PAD_S, SPRINT_COOLDOWN, SPRINT_DURATION, TILT_BALL_ACCEL, VIEW_H, VIEW_W, ZS } from '../core/constants.js';
 import { contraTarget, isContraAim } from '../core/physics.js';
-import { gustForce, localInput, rt, state } from '../core/state.js';
+import { gustForce, tiltEase, localInput, rt, state } from '../core/state.js';
 import { smashMinOf, upLvl } from '../core/stats.js';
 import { clamp } from '../core/util.js';
 import { mouseView } from '../input/input.js';
@@ -70,7 +70,7 @@ export function predictLanding() {
   let x = b.x, y = b.y, z = b.z, vx = b.vx, vy = b.vy, vz = b.vz;
   for (let i = 0; i < 400; i++) {
     x += vx; y += vy; z += vz; vz -= GRAVITY;
-    if (z > 0) vy += gustForce(i + 1);
+    if (z > 0) { vy += gustForce(i + 1); const e = tiltEase(i + 1) * TILT_BALL_ACCEL; vx += state.tilt.x * e; vy += state.tilt.y * e; }
     if (x < COURT.x + 10 || x > COURT.x + COURT.w - 10 || y < COURT.y + 10 || y > COURT.y + COURT.h - 10) return null;
     if (z <= 0) return i < 2 ? null : { x, y };
   }
@@ -109,7 +109,7 @@ export function drawAimArc(me) {
   for (let i = 0; i < 300; i++) {
     const px = x;
     x += vx; y += vy; z += vz; vz -= GRAVITY;
-    if (z > 0) vy += gustForce(i + 1);
+    if (z > 0) { vy += gustForce(i + 1); const e = tiltEase(i + 1) * TILT_BALL_ACCEL; vx += state.tilt.x * e; vy += state.tilt.y * e; }
     if ((px - COURT.netX) * (x - COURT.netX) < 0 && z < NET_H) netFail = true;
     if (z <= 0) { pts.push(P(x, y, BALL_R)); shadow.push(P(x, y, 0)); break; }
     if (i % 2 === 0) { pts.push(P(x, y, z * ZS + BALL_R)); shadow.push(P(x, y, 0)); }

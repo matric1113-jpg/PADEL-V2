@@ -6,6 +6,7 @@
 //  2. Posiciones del mouse en toda la pantalla: la conversión 3D y la 2D deben coincidir.
 //  3. Puntos con altura: la proyección de Three.js debe caer en el mismo píxel que P().
 import { VIEW_H, VIEW_W } from '../src/core/constants.js';
+import { TILT_CAM_ROT, TILT_CAM_SHIFT } from '../src/core/constants.js';
 import { CAMS, P, cam, setupCamera, unprojectGround } from '../src/view/camera.js';
 import { applyCam, newCamera, projectPoint, screenToGround } from '../src/render3d/camera.js';
 
@@ -28,8 +29,9 @@ function viewInverse(v, mx, my) {
 
 const VIEWS = [
   { name: 'sin giro', rot: 0, oy: 0, k: 1 },
-  { name: 'Atlas inclinada', rot: 0.03, oy: 7, k: 1 + 0.03 * 1.6 },
-  { name: 'Atlas al otro lado', rot: -0.021, oy: -10, k: 1 + 0.021 * 1.6 }
+  { name: 'Atlas inclinada (máximo)', rot: TILT_CAM_ROT, oy: TILT_CAM_SHIFT, k: 1 + TILT_CAM_ROT * 1.6 },
+  { name: 'Atlas al otro lado (máximo)', rot: -TILT_CAM_ROT, oy: -TILT_CAM_SHIFT, k: 1 + TILT_CAM_ROT * 1.6 },
+  { name: 'Atlas a medias', rot: TILT_CAM_ROT * 0.4, oy: -TILT_CAM_SHIFT * 0.6, k: 1 + TILT_CAM_ROT * 0.4 * 1.6 }
 ];
 const groundPts = [];
 for (let x = 0; x <= 920; x += 46) for (let y = 0; y <= 520; y += 26) groundPts.push([x, y]);

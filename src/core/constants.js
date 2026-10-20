@@ -52,6 +52,15 @@ export const GUST_RAMP = 30;                // cuadros que tarda en subir y en b
 export const GUST_GAP_MIN = 420;            // pausa entre ráfagas
 export const GUST_GAP_RANGE = 360;
 export const GUST_PLAYER_PUSH = 8;          // cuánto arrastra a los jugadores (unidades por cuadro por unidad de fuerza)
+// Mapa Hombros de Atlas: inclinación de la cancha (antes: cámara 0,03 rad y 10 px, jugadores 0,5, pelota 0,011)
+export const TILT_FRAMES = 240;             // duración de una inclinación (4 s)
+export const TILT_RAMP = 30;                // cuadros que tarda en subir y en bajar
+export const TILT_GAP_MIN = 360;            // pausa entre inclinaciones (antes 480 + hasta 360)
+export const TILT_GAP_RANGE = 300;
+export const TILT_CAM_ROT = 0.1;            // giro de cámara (rad) con la inclinación al máximo
+export const TILT_CAM_SHIFT = 34;           // desplazamiento vertical de la cámara (px de pantalla)
+export const TILT_PLAYER_PUSH = 1.5;        // unidades por cuadro que arrastra a los jugadores
+export const TILT_BALL_ACCEL = 0.03;        // aceleración de la pelota en el aire por cuadro
 export const BASE_ROLL = 0.95;               // velocidad horizontal que conserva la pelota al botar (antes 0,90): llega más al fondo
 export const ACTIVE_DURATION = 300;          // 5 s
 export const ACTIVE_COOLDOWN = 2700;         // 45 s

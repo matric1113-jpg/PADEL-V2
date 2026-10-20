@@ -1,4 +1,4 @@
-import { GUST_FRAMES, GUST_RAMP, SPRINT_COOLDOWN, SPRINT_DURATION } from './constants.js';
+import { GUST_FRAMES, GUST_RAMP, SPRINT_COOLDOWN, SPRINT_DURATION, TILT_FRAMES, TILT_RAMP } from './constants.js';
 import { MAPS } from './data.js';
 import { emptyUpgrades } from './stats.js';
 
@@ -25,6 +25,14 @@ export function gustForce(ahead = 0) {
   const t = state.gust.t - ahead;
   if (t <= 0 || ahead < 0) return 0;
   return state.gust.w * Math.min(1, t / GUST_RAMP, (GUST_FRAMES - t) / GUST_RAMP + 0.001);
+}
+
+// Cuánto de la inclinación está aplicada (0 a 1) dentro de `ahead` cuadros: la cancha se inclina y vuelve suave.
+// La usan la cámara, los jugadores, la pelota y las guías de tiro.
+export function tiltEase(ahead = 0) {
+  const t = state.tilt.t - ahead;
+  if (t <= 0 || ahead < 0) return 0;
+  return Math.min(1, t / TILT_RAMP, (TILT_FRAMES - t) / TILT_RAMP + 0.0001);
 }
 
 export const localInput = {

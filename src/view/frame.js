@@ -1,4 +1,5 @@
-import { rt, state } from '../core/state.js';
+import { TILT_CAM_ROT, TILT_CAM_SHIFT } from '../core/constants.js';
+import { rt, state, tiltEase } from '../core/state.js';
 import { clamp, lerp } from '../core/util.js';
 import { CAMS, cam, setupCamera } from './camera.js';
 import { detectStateEvents, fx, updateFx } from './fx.js';
@@ -24,8 +25,8 @@ export function beginFrame(now, onCamChange, aim) {
   updateFx(dt);
 
   // Inclinación de la cancha de Atlas (se ve como un leve giro de cámara)
-  const tilt = state.tilt.t > 0 ? Math.min(1, state.tilt.t / 30, (240 - state.tilt.t) / 30 + 0.0001) : 0;
-  const targetRot = state.tilt.x * 0.03 * tilt, targetOy = state.tilt.y * 10 * tilt;
+  const tilt = tiltEase();
+  const targetRot = state.tilt.x * TILT_CAM_ROT * tilt, targetOy = state.tilt.y * TILT_CAM_SHIFT * tilt;
   fx.view.rot = lerp(fx.view.rot, targetRot, clamp(0.1 * dt, 0, 1));
   fx.view.oy = lerp(fx.view.oy, targetOy, clamp(0.1 * dt, 0, 1));
   fx.view.k = 1 + Math.abs(fx.view.rot) * 1.6;
