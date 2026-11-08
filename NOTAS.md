@@ -286,6 +286,6 @@ Cada uno en su commit y con constantes con nombre en `src/core/constants.js`.
 
 ## Estilos de la interfaz (prueba)
 
-- El CSS ahora usa variables (`--accent`, `--surface`, `--stroke`, `--radius`, `--cond`/`--body`...) en `src/style.css`; el estilo "clásico" quedó igual. `src/themes.css` define tres estilos nuevos con `<html data-theme="...">`: **Estadio** (transmisión deportiva: negro, cian, cortes en diagonal, Barlow Condensed), **Club** (crema, verde inglés y terracota, Fraunces + DM Sans) y **Neo** (neobrutalista: bordes negros, sombras duras, amarillo y rosa, Space Grotesk).
-- Se elige en el menú ("Estilo de la interfaz") o con `?ui=estadio|club|neo|clasico` (se recuerda en `localStorage`, clave `padel-ui`). Lógica en `src/ui/theme.js`. Las tipografías nuevas se cargan desde Google Fonts en `index.html`.
-- **Falta:** lo que se dibuja dentro del canvas (nombres, barras, banner, botón de la activa, guía de tiro) todavía usa los colores y fuentes de `view/theme.js` y no cambia con el estilo.
+- El CSS usa variables (, , , , /...) en ; el estilo **Clásico** quedó igual.  define cuatro estilos con : **Estadio** (transmisión deportiva: negro, cian, cortes en diagonal, Barlow Condensed), **Club** (club de arcilla de noche: verde inglés oscuro, crema y terracota, Fraunces + DM Sans; una primera versión crema era demasiado clara), **Grafito** (oscuro sobrio con un solo acento cobre, Inter) y **Neón** (violeta profundo con brillos cian y magenta, Orbitron + Rajdhani). Neo (neobrutalista claro) se descartó.
+- Se elige en el menú ("Estilo de la interfaz") o con  (se recuerda en , clave ). Lógica en . Las tipografías se cargan desde Google Fonts en .
+- **Falta:** lo que se dibuja dentro del canvas (nombres, barras, banner, botón de la activa, guía de tiro) todavía usa los colores y fuentes de  y no cambia con el estilo.

@@ -1,7 +1,7 @@
 // ---------- Estilo de la interfaz ----------
 // "clasico" es el de siempre (sin atributo); los demás se definen en themes.css con <html data-theme="...">.
 // Se elige en el menú o con ?ui=club, y se recuerda en el navegador.
-export const THEMES = [['clasico', 'Clásico'], ['estadio', 'Estadio'], ['club', 'Club'], ['neo', 'Neo']];
+export const THEMES = [['clasico', 'Clásico'], ['estadio', 'Estadio'], ['club', 'Club'], ['grafito', 'Grafito'], ['neon', 'Neón']];
 const KEY = 'padel-ui';
 let current = 'clasico';
 
