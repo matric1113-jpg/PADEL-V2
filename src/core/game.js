@@ -31,7 +31,7 @@ export function setupServe(nextServerSlot) {
     p.charging = false; p.chargeFrames = 0;
     p.swingTimer = 0; p.cooldown = 0;
     p.activeT = 0; p.activeKind = ''; p.clone = null;
-    p.stun = 0; p.slow = 0; p.burn = 0;
+    p.stun = 0; p.down = false; p.slow = 0; p.burn = 0;
     p.jz = 0; p.jvz = 0; p.jumpCharge = 0; p.landStop = 0; p.landSlow = 0;
     p.outside = false;
   });
@@ -287,7 +287,7 @@ function resetPlayerExtras(p) {
   p.money = 0;
   p.active = ''; p.activePool = ''; p.activeKind = ''; p.activeT = 0; p.activeCd = 0; p.clone = null;
   p.bodyScale = 1; p.speedMult = 1; p.powerMult = 1; p.backPref = false; p.out = false;
-  p.stun = 0; p.slow = 0; p.burn = 0; p.burnCd = 0;
+  p.stun = 0; p.down = false; p.slow = 0; p.burn = 0; p.burnCd = 0;
   p.sprintCooldown = 0; p.sprintActiveTimer = 0;
   p.ready = false; p.vote = '';
 }

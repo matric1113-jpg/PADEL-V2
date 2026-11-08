@@ -1,6 +1,6 @@
 import { computeLaunch, computeServeBox, getClampedTarget, launchBall, showBanner } from './ballistics.js';
 import { updateBotLogic } from './bots.js';
-import { BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, GUST_PLAYER_PUSH, JUMP_CHARGE_FRAMES, JUMP_CHARGE_SLOW, JUMP_G, JUMP_LAND_FRAMES, JUMP_LAND_SLOW, JUMP_LAND_STOP, JUMP_MAX_H, JUMP_MIN_H, JUMP_REJUMP_FRAMES, JUMP_SMASH_BONUS, MATE_HIT_RADIUS, MATE_STUN_FRAMES, SMASH_FULL_Z, SMASH_LOW_BOUNCE, SMASH_LOW_SPEED, TILT_BALL_ACCEL, TILT_PLAYER_PUSH, LIGHTS, MAX_CHARGE_FRAMES, NET_H, PODIUM_FRAMES, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
+import { BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, GUST_PLAYER_PUSH, JUMP_CHARGE_FRAMES, JUMP_CHARGE_SLOW, JUMP_G, JUMP_LAND_FRAMES, JUMP_LAND_SLOW, JUMP_LAND_STOP, JUMP_MAX_H, JUMP_MIN_H, JUMP_REJUMP_FRAMES, JUMP_SMASH_BONUS, MATE_HIT_RADIUS, MATE_KO_CHARGE, MATE_KO_FRAMES, MATE_STUN_FRAMES, MATE_STUN_MAX_FRAMES, MIN_SWING_CHARGE, SMASH_FULL_Z, SMASH_LOW_BOUNCE, SMASH_LOW_SPEED, TILT_BALL_ACCEL, TILT_PLAYER_PUSH, LIGHTS, MAX_CHARGE_FRAMES, NET_H, PODIUM_FRAMES, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
 import { BOSSES } from './data.js';
 import { awardPoint, checkVoteReady, emitSound, goToScreen, setupServe } from './game.js';
 import { activate, updateHazards } from './hazards.js';
@@ -202,7 +202,7 @@ export function stepPhysics() {
       p.lastReleaseSeq = inp.releaseSeq;
       if (p.cooldown === 0) {
         p.swingTimer = 11;
-        p.swingCharge = Math.max(0.15, inp.lastChargeRatio || (p.chargeFrames / MAX_CHARGE_FRAMES));
+        p.swingCharge = Math.max(MIN_SWING_CHARGE, inp.lastChargeRatio || (p.chargeFrames / MAX_CHARGE_FRAMES));
         p.swingLob = inp.lastReleaseLob;
         p.cooldown = 28;
       }
@@ -310,10 +310,18 @@ export function stepPhysics() {
       // Raquetazo al compañero: lo aturde (no es falta ni pierde el punto)
       const mate = state.players.find((q, j) => j !== idx && !q.out && q.team === p.team);
       if (mate && mate.stun === 0 && Math.hypot(mate.x - paddleX, mate.y - paddleY) <= MATE_HIT_RADIUS) {
-        mate.stun = MATE_STUN_FRAMES;
         mate.charging = false; mate.chargeFrames = 0;
         emitSound('hit');
-        showBanner(`¡${p.name} le pegó con la pala a ${mate.name}!`, 70);
+        if (p.swingCharge > MATE_KO_CHARGE) {
+          // Más de la mitad de carga: cae al suelo y no vuelve hasta que termine el punto (setupServe lo levanta)
+          mate.stun = MATE_KO_FRAMES; mate.down = true;
+          showBanner(`¡${p.name} noqueó a ${mate.name}!\nQueda en el suelo hasta que termine el punto`, 90);
+        } else {
+          // Golpe suave: 2 s; con la mitad de carga, 4 s (entre medio, proporcional)
+          const k = clamp((p.swingCharge - MIN_SWING_CHARGE) / (MATE_KO_CHARGE - MIN_SWING_CHARGE), 0, 1);
+          mate.stun = Math.round(MATE_STUN_FRAMES + (MATE_STUN_MAX_FRAMES - MATE_STUN_FRAMES) * k);
+          showBanner(`¡${p.name} le pegó con la pala a ${mate.name}!`, 70);
+        }
       }
 
       const ballStrictlyOnMySide = (p.team === 0 && b.x < COURT.netX - 6) || (p.team === 1 && b.x > COURT.netX + 6);

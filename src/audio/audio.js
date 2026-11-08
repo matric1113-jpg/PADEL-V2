@@ -278,3 +278,8 @@ function stopMusic() {
   musicTimer = null;
 }
 
+
+// Al abrir el juego la primera canción se precarga y se intenta sonar de inmediato. Si el navegador lo bloquea (pasa casi
+// siempre al abrir un link), arranca con el primer clic, toque o tecla en cualquier parte de la página, sin esperar a otra carga.
+if (hasSongs && musicPlaying) startSongs();
+for (const ev of ['pointerdown', 'keydown', 'touchstart']) window.addEventListener(ev, ensureAudio, { capture: true, passive: true });

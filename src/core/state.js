@@ -64,7 +64,7 @@ export function createPlayer(uid, x, y, team, name, isBot, speedPref = 0.5, look
     activePool: '',                // 'all' = jefe que alterna todas las activas
     activeKind: '', activeT: 0, activeCd: 0,
     clone: null,
-    stun: 0, slow: 0, burn: 0, burnCd: 0,
+    stun: 0, down: false, slow: 0, burn: 0, burnCd: 0,   // down: noqueado por un raquetazo de su compañero (en el suelo hasta que termine el punto)
     bodyScale: 1, speedMult: 1, powerMult: 1, backPref: false, out: false,
     ready: false, vote: '',
     speedStat: speedPref,          // 0.15 a 0.85

@@ -11,8 +11,8 @@
 import { localInput, rt, state } from '../src/core/state.js';
 import { ACTIVE_COST, BOSSES, FRIENDLY_START_MONEY, MAP_IDS, UPG, runReward } from '../src/core/data.js';
 import { DOORS, insideCourt } from '../src/core/walls.js';
-import { AMERICANO_GAMES_TO_WIN, JUMP_LAND_FRAMES, JUMP_LAND_STOP, JUMP_MAX_H, JUMP_MIN_H, SETS_TO_WIN } from '../src/core/constants.js';
-import { AMERICANO_PAIRS, americanoRanking, prepareRoster, resolveVoteAndPlay, setMap, startBossMatch, startFriendly, startMatch, startRun, swapSeats } from '../src/core/game.js';
+import { AMERICANO_GAMES_TO_WIN, JUMP_LAND_FRAMES, JUMP_LAND_STOP, JUMP_MAX_H, JUMP_MIN_H, MIN_SWING_CHARGE, SETS_TO_WIN } from '../src/core/constants.js';
+import { AMERICANO_PAIRS, americanoRanking, prepareRoster, resolveVoteAndPlay, setMap, setupServe, startBossMatch, startFriendly, startMatch, startRun, swapSeats } from '../src/core/game.js';
 import { stepPhysics } from '../src/core/physics.js';
 
 const FRAMES = Number(process.argv[2] || 120000);
@@ -215,7 +215,7 @@ function testDoors() {
 }
 
 // Doble golpe: la pelota que pegó su equipo y vuelve a su lado es falta si el mismo jugador o su compañero la toca con la
-// pala; si ya salió por 3 o por 4 no cuenta. Raquetazo al compañero: lo aturde 2 s sin dar punto
+// pala; si ya salió por 3 o por 4 no cuenta. Raquetazo al compañero: según la carga lo aturde 2 a 4 s o lo tira al suelo hasta que termine el punto, sin dar punto
 function testDoubleHit() {
   prepareRoster('friendly'); startFriendly(); resolveVoteAndPlay();
   const me = state.players[rt.mySlot], mate = state.players[rt.mySlot ^ 1];
@@ -247,15 +247,29 @@ function testDoubleHit() {
   if (state.score[1 - me.team] !== 0 || b.lastHitTeam !== me.team) fail('un golpe normal al saque del rival se contó como falta');
 
   // Raquetazo al compañero
-  setup('mate'); b.lastHitTeam = 1 - me.team; b.x = me.team === 0 ? 700 : 220;      // pelota lejos, en el lado rival
-  me.x = mate.x - dir * 17 / 1.15; me.y = mate.y - 6 / 1.15; me.swingTimer = 5;        // el compañero queda donde pega mi pala
-  mate.swingTimer = 0;
-  stepFrozen();
-  if (mate.stun < 100 || mate.stun > 120) fail('el raquetazo no aturdió al compañero 2 s: ' + mate.stun);
+  // Con la pala justo en el compañero y una carga dada: pega y devuelve cuántos cuadros queda aturdido
+  const hitMate = charge => {
+    setup('mate'); b.lastHitTeam = 1 - me.team; b.x = me.team === 0 ? 700 : 220;      // pelota lejos, en el lado rival
+    me.x = mate.x - dir * 17 / 1.15; me.y = mate.y - 6 / 1.15; me.swingTimer = 5;        // el compañero queda donde pega mi pala
+    me.swingCharge = charge; mate.swingTimer = 0; mate.down = false;
+    stepFrozen();
+    return mate.stun;
+  };
+  const soft = hitMate(MIN_SWING_CHARGE);
+  if (soft < 100 || soft > 120) fail('el golpe más suave no aturdió 2 s: ' + soft);
   const mx = mate.x; stepFrozen();
   if (mate.x !== mx) fail('el compañero aturdido se movió');
   for (let k = 0; k < 125; k++) stepFrozen();
-  if (mate.stun !== 0) fail('el aturdimiento no terminó');
+  if (mate.stun !== 0 || mate.down) fail('el aturdimiento no terminó');
+  const mid = hitMate(0.5);
+  if (mid < 220 || mid > 240 || mate.down) fail('el golpe con la mitad de carga no aturdió 4 s: ' + mid + ' down=' + mate.down);
+  const between = hitMate((MIN_SWING_CHARGE + 0.5) / 2);
+  if (!(between > soft + 30 && between < mid - 30)) fail('la carga intermedia no da un aturdimiento intermedio: ' + between);
+  if (hitMate(0.8) < 1000 || !mate.down) fail('con más de la mitad de carga el compañero no cayó al suelo');
+  for (let k = 0; k < 600; k++) stepFrozen();   // 10 s después sigue en el suelo mientras el punto no termina
+  if (!mate.down || mate.stun <= 0) fail('el compañero noqueado se levantó antes de que terminara el punto');
+  setupServe(0);                                 // el punto siguiente: de pie otra vez
+  if (mate.down || mate.stun !== 0) fail('el compañero noqueado no se levantó en el punto siguiente');
   if (state.score[0] + state.score[1] !== 0) fail('el raquetazo al compañero dio punto');
   setup('mate'); me.x = b.x - dir * 300; me.y = 420; b.x = me.team === 0 ? 700 : 220; b.lastHitTeam = 1 - me.team;   // compañero lejos de mi pala
   me.swingTimer = 5; stepFrozen();

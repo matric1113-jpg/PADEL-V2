@@ -98,6 +98,12 @@ export const JUMP_LAND_FRAMES = 24;          // después, cuadros que tarda en r
 export const JUMP_LAND_SLOW = 0.2;           // vuelve a correr desde el 80 % de su velocidad
 export const JUMP_REJUMP_FRAMES = 6;         // no puede volver a cargar el salto apenas cae
 export const JUMP_SMASH_BONUS = 0.04;        // remate en el aire: hasta un 4 % más fuerte
-// Raquetazo al compañero: si la pala de un jugador golpea a su pareja mientras balancea, la deja aturdida 2 s
+// Raquetazo al compañero: si la pala de un jugador golpea a su pareja mientras balancea, depende de la carga del golpe:
+// el más suave la deja aturdida 2 s, con la mitad de carga 4 s (en medio, proporcional) y con más de la mitad cae al
+// suelo y no vuelve hasta que termina el punto
 export const MATE_HIT_RADIUS = 18 * ENTITY_K; // distancia de la pala al cuerpo del compañero para golpearlo
-export const MATE_STUN_FRAMES = 120;         // 2 s a 60 cuadros por segundo
+export const MIN_SWING_CHARGE = 0.15;        // carga mínima de un golpe (aunque se suelte el clic al instante)
+export const MATE_STUN_FRAMES = 120;         // 2 s a 60 cuadros por segundo (golpe más suave)
+export const MATE_STUN_MAX_FRAMES = 240;     // 4 s (golpe con la mitad de carga)
+export const MATE_KO_CHARGE = 0.5;           // por encima de esta carga el compañero cae al suelo
+export const MATE_KO_FRAMES = 1000000;       // "hasta que termine el punto": setupServe lo deja en 0

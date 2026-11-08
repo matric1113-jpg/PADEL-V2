@@ -70,7 +70,7 @@ export function updateBotLogic(p, idx) {
   }
 
   const partner = state.players[idx % 2 === 0 ? idx + 1 : idx - 1];
-  const solo = !partner || partner.out;
+  const solo = !partner || partner.out || partner.down;   // con el compañero en el suelo, cubre toda la cancha
   const isTopPlayer = (idx % 2 === 0);
   const backX = p.team === 0 ? 175 : 745;
   const netXPos = p.backPref ? backX : (p.team === 0 ? 315 : 605);

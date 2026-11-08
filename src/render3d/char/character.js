@@ -260,8 +260,12 @@ export class Character {
     let hop = plan.jump * 0.16;
     if (f.burn > 0) hop += Math.abs(Math.sin(this.time * 17)) * 0.07;
     this.root.position.set(f.x, f.y + hop * f.Kz * MODEL_U, f.z);
-    this.root.rotation.set(0, this.yaw, 0);
-    if (f.stun > 0) this.root.rotation.z = Math.sin(this.time * 5) * 0.07;
+    // Noqueado por un raquetazo de su compañero: cae de espaldas al suelo (se levanta cuando empieza el siguiente punto)
+    this.downK = (this.downK || 0) + ((f.down ? 1 : 0) - (this.downK || 0)) * clamp(0.12 * dt * 60, 0, 1);
+    this.root.rotation.order = 'YXZ';
+    this.root.rotation.set(-Math.PI / 2 * this.downK, this.yaw, 0);
+    this.root.position.y += this.downK * 0.14 * f.Kz * MODEL_U;
+    if (f.stun > 0 && !f.down) this.root.rotation.z = Math.sin(this.time * 5) * 0.07;
     else this.root.rotation.z = 0;
     this.root.updateMatrixWorld(true);
     this.rig.begin();
