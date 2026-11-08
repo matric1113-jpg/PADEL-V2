@@ -1,4 +1,4 @@
-import { ensureAudio, playJingle } from '../audio/audio.js';
+import { ensureAudio, nextSong, playJingle } from '../audio/audio.js';
 import { sayHello } from '../audio/voice.js';
 import { AMERICANO_GAMES_TO_WIN } from '../core/constants.js';
 import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, HELLO, LOOKS, MAPS, MAP_IDS, RUN_REWARD, UPGRADES } from '../core/data.js';
@@ -371,6 +371,8 @@ export function syncOverlay() {
     else if (s === 'lost') playJingle(false);
     else if (s === 'podium' && state.result) playJingle(state.result.americano ? myAmericanoPlace() === 1 : state.result.winner === myTeam);
     trackProgress(s, myTeam);
+    // Al cerrar una tienda (la del torneo o la de antes y durante el partido) cambia la canción, cortando la anterior
+    if ((lastScreenSeen === 'shop' || lastScreenSeen === 'shop2') && s !== 'shop' && s !== 'shop2') nextSong();
     persistRun();
   }
   lastScreenSeen = state.screen;

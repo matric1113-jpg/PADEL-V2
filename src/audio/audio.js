@@ -216,10 +216,11 @@ function musicScheduler() {
     musicStep++;
   }
 }
-// ---- Canciones: los archivos de assets/music/ (mp3, ogg, m4a o wav) suenan una tras otra, en orden al azar y sin repetir
-// la misma dos veces seguidas. Si la carpeta está vacía, queda el groove sintético de arriba. Usan la barra de música. ----
+// ---- Canciones: los archivos de assets/music/ (mp3, ogg, m4a o wav; el número del nombre fija el orden) ----
+// Al abrir el juego suena la primera. Cada vez que se cierra una tienda, se corta la que sonaba y entra otra al azar (nunca
+// la misma); si una canción termina sola, sigue otra al azar. Si la carpeta está vacía, queda el groove sintético de arriba.
 const SONG_URLS = import.meta.glob('../../assets/music/*.{mp3,ogg,m4a,wav}', { eager: true, query: '?url', import: 'default' });
-const SONGS = Object.entries(SONG_URLS).map(([path, url]) => ({
+const SONGS = Object.entries(SONG_URLS).sort((a, b) => a[0].localeCompare(b[0], 'es', { numeric: true })).map(([path, url]) => ({
   url,
   name: decodeURIComponent(path.split('/').pop()).replace(/\.[^.]+$/, '').replace(/^\d+[\s._-]+/, '').replace(/[_]+/g, ' ').trim()
 }));
@@ -253,7 +254,7 @@ function startSongs() {
     songEl.addEventListener('error', () => { if (++songErrors < SONGS.length) nextSong(); });   // un archivo dañado se salta
   }
   songEl.volume = SONG_GAIN * vol.music;
-  if (songIdx < 0) loadSong(pickNextSong());
+  if (songIdx < 0) loadSong(0);   // en el menú inicial suena la primera (la de número más bajo en assets/music)
   else if (songEl.paused) songEl.play().catch(() => {});
 }
 function stopSongs() { if (songEl) songEl.pause(); }

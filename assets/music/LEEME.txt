@@ -1,1 +1,1 @@
-Aquí van las canciones de fondo (mp3, ogg, m4a o wav). Suenan una tras otra, en orden al azar.
+Canciones de fondo (mp3, ogg, m4a o wav). El número del nombre fija el orden: la 1 suena en el menu inicial; al cerrar cada tienda se corta y entra otra al azar.
