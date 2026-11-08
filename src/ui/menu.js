@@ -7,6 +7,7 @@ import { localInput, menuSel, rt, state } from '../core/state.js';
 import { upLvl } from '../core/stats.js';
 import { createRoom, joinRoom, leaveNetwork } from '../net/network.js';
 import { renderer } from '../renderer.js';
+import { THEMES, currentTheme, setTheme } from './theme.js';
 import { TUTORIAL_PAGES, viewTutorial } from './tutorial.js';
 import { clearRun, progress, progressRev, recordAmericano, recordBossBeaten, recordFriendly, recordRunLost, recordRunWon, resetProgress, saveRun, savePrefs, savedRun } from '../storage/progress.js';
 
@@ -132,6 +133,7 @@ function viewMenu() {
     `<button data-act="diff" data-v="${i}" class="${menuSel.diff === i ? 'sel' : ''}">${d.name}</button>`).join('');
   return `<div class="ov-panel">
     <div class="hero"><span class="hero-ball"></span><div><div class="hero-t">Padel Club</div><div class="hero-s">Elige a tu jugador y el modo de juego. Todos están parejos: cambia el estilo, no la fuerza.</div></div><button class="big" data-act="tutorial" style="margin-left:auto">Tutorial</button></div>
+    <div class="row"><span class="lbl">Estilo de la interfaz</span><div class="seg">${THEMES.map(([id, name]) => `<button data-act="ui" data-v="${id}" class="${currentTheme() === id ? 'sel' : ''}">${name}</button>`).join('')}</div></div>
     <div class="ov-h">Tu jugador</div>
     <div class="cards">${cards}</div>
     <div class="ov-h">Modo de juego</div>
@@ -384,7 +386,7 @@ export function syncOverlay() {
     return;
   }
   const data = view === 'tutorial' ? [rt.tutorialPage]
-    : view === 'menu' ? [menuSel.char, menuSel.mode, menuSel.diff, rt.netMsg, progressRev.n]
+    : view === 'menu' ? [menuSel.char, menuSel.mode, menuSel.diff, rt.netMsg, progressRev.n, currentTheme()]
     : [state.roomCode, state.mode, state.run, state.result, state.sets, rt.mySlot, rt.isHost, state.map, state.vote, seatPick,
        state.amer && state.amer.history,
        state.players.map(p => [p.uid, p.name, p.isBot, p.money, p.up, p.team, p.active, p.ready, p.vote, p.out])];
@@ -414,6 +416,7 @@ overlayEl.addEventListener('click', e => {
       playSolo();
       break;
     case 'continue': continueRun(); break;
+    case 'ui': setTheme(v); break;
     case 'tutorial': rt.tutorialPage = 0; break;
     case 'tut-next': rt.tutorialPage = Math.min(rt.tutorialPage + 1, TUTORIAL_PAGES.length - 1); break;
     case 'tut-prev': rt.tutorialPage = Math.max(rt.tutorialPage - 1, 0); break;

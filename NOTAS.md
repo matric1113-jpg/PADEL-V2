@@ -283,3 +283,9 @@ Cada uno en su commit y con constantes con nombre en `src/core/constants.js`.
 - **Progreso guardado.** `storage/progress.js` (localStorage con respaldo en memoria): lo último elegido en el menú (jugador, modo y nivel), récords (jefes derrotados, torneos ganados y perdidos, amistosos y americanos) y el torneo en curso (jefe, plata, mejoras y activa de tu jugador), que se guarda entre jefes solo jugando con un bot de compañero. El menú muestra "Tu progreso", "Continuar torneo" y "Borrar progreso". Empezar un torneo nuevo pide confirmación y borra el guardado.
 - **Tutorial.** Botón "Tutorial" en el menú (`ui/tutorial.js`, 8 páginas de texto con las mecánicas). La página abierta vive en `rt.tutorialPage`; no es una pantalla del juego ni viaja por la red.
 - **Sin probar:** el online con dos pestañas con las reglas nuevas, y el dibujo a 144 Hz en una pantalla real.
+
+## Estilos de la interfaz (prueba)
+
+- El CSS ahora usa variables (`--accent`, `--surface`, `--stroke`, `--radius`, `--cond`/`--body`...) en `src/style.css`; el estilo "clásico" quedó igual. `src/themes.css` define tres estilos nuevos con `<html data-theme="...">`: **Estadio** (transmisión deportiva: negro, cian, cortes en diagonal, Barlow Condensed), **Club** (crema, verde inglés y terracota, Fraunces + DM Sans) y **Neo** (neobrutalista: bordes negros, sombras duras, amarillo y rosa, Space Grotesk).
+- Se elige en el menú ("Estilo de la interfaz") o con `?ui=estadio|club|neo|clasico` (se recuerda en `localStorage`, clave `padel-ui`). Lógica en `src/ui/theme.js`. Las tipografías nuevas se cargan desde Google Fonts en `index.html`.
+- **Falta:** lo que se dibuja dentro del canvas (nombres, barras, banner, botón de la activa, guía de tiro) todavía usa los colores y fuentes de `view/theme.js` y no cambia con el estilo.

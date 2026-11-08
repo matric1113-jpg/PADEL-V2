@@ -1,4 +1,5 @@
 import './style.css';
+import './themes.css';
 import { getVolume, playSound, setVolume } from './audio/audio.js';
 import { watchTalk } from './audio/voice.js';
 import { hooks } from './core/events.js';
@@ -9,6 +10,7 @@ import { recordFrame } from './core/replay.js';
 import { localInput, menuSel, rt, state } from './core/state.js';
 import { sendStateTo } from './net/network.js';
 import { applyPrefs } from './storage/progress.js';
+import { initTheme } from './ui/theme.js';
 import { countStep, endFrame, timed } from './perf.js';
 import { renderer } from './renderer.js';
 import { syncHud, updateScoreUI } from './ui/hud.js';
@@ -81,6 +83,7 @@ function gameLoop(now) {
   }
 })();
 
+initTheme();
 renderer.init();
 applyPrefs(menuSel);   // lo último que elegiste en el menú
 chooseChar(menuSel.char);

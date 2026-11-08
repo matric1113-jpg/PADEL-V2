@@ -1,0 +1,232 @@
+/* Estilos de la interfaz. El estilo actual ("clásico") vive en style.css; estos se activan con
+   <html data-theme="estadio | club | neo"> (selector en el menú o ?ui=club). Cada tema redefine las variables de
+   :root (colores, tipografías, radios) y, donde hace falta, la forma de botones, tarjetas y títulos. */
+
+/* ================= ESTADIO: transmisión deportiva, negro y cian, cortes en diagonal ================= */
+:root[data-theme="estadio"] {
+  --night: #06080b; --night-2: #0c1015; --panel: #0d1116; --line: rgba(255, 255, 255, 0.1);
+  --ink: #f5f7fa; --ink-dim: #8e99a6;
+  --accent: #00e5ff; --accent-ink: #001318; --blue: #2f8bff; --red: #ff3d47;
+  --cond: 'Barlow Condensed', 'Arial Narrow', sans-serif; --body: 'Barlow', system-ui, sans-serif;
+  --surface: #10151b; --surface-hover: #171e27; --stroke: rgba(255, 255, 255, 0.24);
+  --overlay-rgb: 3 5 8; --overlay: rgb(var(--overlay-rgb) / 0.84); --sticky: #080b0f;
+  --hud-bg: rgba(5, 7, 10, 0.94); --hud-bg-2: rgba(5, 7, 10, 0.9); --pts-bg: #fff; --pts-ink: #05070a;
+  --portrait-bg: linear-gradient(165deg, #223a52 0%, #0d1824 72%);
+  --page-bg: linear-gradient(180deg, #0a0e13 0%, #05070a 100%);
+  --hero-bg: linear-gradient(100deg, #0e141b 0%, #0e141b 55%, color-mix(in srgb, var(--accent) 38%, #0e141b) 135%);
+  --radius: 0px; --radius-sm: 0px;
+}
+:root[data-theme="estadio"] :is(.ov-title, .hero-t, .ov-h, .mode h3, .card .nm, .item h4, .stop-team, .brand, .mapcard b, .money, .sb-team) {
+  text-transform: uppercase; font-style: italic; letter-spacing: 0.03em;
+}
+:root[data-theme="estadio"] .ov-title { font-size: clamp(30px, 3.4vw, 46px); }
+:root[data-theme="estadio"] .ov-h { color: var(--accent); font-size: 17px; letter-spacing: 0.14em; font-style: normal; }
+:root[data-theme="estadio"] button {
+  font-family: var(--cond); font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+  border: 0; padding: 8px 24px; background: #1c242e;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+}
+:root[data-theme="estadio"] button:hover { background: #28323f; }
+:root[data-theme="estadio"] button.primary { background: var(--accent); color: var(--accent-ink); }
+:root[data-theme="estadio"] button.primary:hover { background: color-mix(in srgb, var(--accent) 75%, #fff); }
+:root[data-theme="estadio"] button.big { font-size: 19px; padding: 10px 32px; }
+:root[data-theme="estadio"] button.on, :root[data-theme="estadio"] .seg button.sel { background: var(--accent); color: var(--accent-ink); }
+:root[data-theme="estadio"] .seg { border: 0; gap: 4px; }
+:root[data-theme="estadio"] .seg button { border: 0; padding: 6px 18px; }
+:root[data-theme="estadio"] .slot .seat { padding: 3px 16px; font-size: 13px; }
+:root[data-theme="estadio"] :is(.card, .mode, .item, .stop, .mapcard, .slot, .hero) {
+  border: 0; box-shadow: inset 0 3px 0 var(--mc, rgba(255, 255, 255, 0.2));
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
+}
+:root[data-theme="estadio"] :is(.card, .mode, .item, .stop, .mapcard, .slot):hover { background: var(--surface-hover); }
+:root[data-theme="estadio"] :is(.card, .mode, .mapcard, .stop, .slot).sel, :root[data-theme="estadio"] .stop.now, :root[data-theme="estadio"] .slot.pick {
+  background: var(--surface-hover); box-shadow: inset 0 4px 0 var(--accent), inset 0 0 0 2px var(--accent);
+}
+:root[data-theme="estadio"] .hero { box-shadow: inset 4px 0 0 var(--accent); }
+:root[data-theme="estadio"] .mode { background: var(--surface); }
+:root[data-theme="estadio"] .mode.m-run { --mc: #ffd54a; }
+:root[data-theme="estadio"] .mode.m-friendly { --mc: #45a8ff; }
+:root[data-theme="estadio"] .mode.m-americano { --mc: #39e07a; }
+:root[data-theme="estadio"] .mode h3 { color: var(--mc); }
+:root[data-theme="estadio"] .mode.m-run h3, :root[data-theme="estadio"] .mode.m-run .m-tags span { color: var(--mc); }
+:root[data-theme="estadio"] .mode.m-americano h3 { color: var(--mc); }
+:root[data-theme="estadio"] .m-ico, :root[data-theme="estadio"] .m-tags span { border-radius: 0; }
+:root[data-theme="estadio"] .portrait { background: var(--portrait-bg); }
+:root[data-theme="estadio"] .bar, :root[data-theme="estadio"] .pips i, :root[data-theme="estadio"] .bar i { border-radius: 0; }
+:root[data-theme="estadio"] .sb-row { border-radius: 0 !important; }
+:root[data-theme="estadio"] .sb-sub, :root[data-theme="estadio"] .sb-tag, :root[data-theme="estadio"] .sb-amer { border-radius: 0; }
+:root[data-theme="estadio"] .room-pill { border-radius: 0; text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--cond); font-weight: 600; }
+:root[data-theme="estadio"] .ladder span, :root[data-theme="estadio"] .m-tags span { border-radius: 0; }
+:root[data-theme="estadio"] #canvas-wrapper { box-shadow: 0 0 0 2px #1a232d, 0 24px 60px rgba(0, 0, 0, 0.65); }
+:root[data-theme="estadio"] .dock { border: 0; border-left: 4px solid var(--accent); }
+
+/* ================= CLUB: club de arcilla, crema, verde inglés y terracota, tipografía con serif ================= */
+:root[data-theme="club"] {
+  --night: #e9dfc9; --night-2: #e1d5bb; --panel: #f6efdf; --line: rgba(20, 56, 42, 0.16);
+  --ink: #16271f; --ink-dim: #5a6a5f;
+  --accent: #bf4a2c; --accent-ink: #fff6e8; --blue: #2b6a99; --red: #b43a2c;
+  --cond: 'Fraunces', Georgia, 'Times New Roman', serif; --body: 'DM Sans', system-ui, sans-serif;
+  --surface: #fbf6ea; --surface-hover: #fffbf1; --stroke: rgba(20, 56, 42, 0.38);
+  --overlay-rgb: 233 224 201; --overlay: rgb(var(--overlay-rgb) / 0.9); --sticky: #efe6d0;
+  --hud-bg: rgba(16, 46, 34, 0.95); --hud-bg-2: rgba(16, 46, 34, 0.9); --pts-bg: #f6efdf; --pts-ink: #14382a;
+  --portrait-bg: radial-gradient(120% 90% at 50% 100%, #e3b58c 0%, #c07a4f 48%, #6d3b24 100%);
+  --page-bg: radial-gradient(120% 90% at 50% 0%, #f3ecda 0%, var(--night) 70%);
+  --hero-bg: linear-gradient(115deg, #12402e 0%, #1c5740 58%, #bf4a2c 175%);
+  --radius: 16px; --radius-sm: 10px;
+}
+:root[data-theme="club"] .overlay { backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+:root[data-theme="club"] :is(.ov-title, .hero-t, .ov-h, .mode h3, .card .nm, .item h4, .stop-team, .brand, .mapcard b, .money, .am-row b) { font-weight: 600; letter-spacing: -0.01em; }
+:root[data-theme="club"] .ov-title { font-size: clamp(30px, 3.2vw, 44px); font-weight: 600; }
+:root[data-theme="club"] .ov-h { font-size: 20px; margin-top: 22px; }
+:root[data-theme="club"] .ov-h::after { content: ''; display: block; height: 1px; margin-top: 6px; background: var(--stroke); opacity: 0.5; }
+:root[data-theme="club"] .hero { color: #f6efdf; --ink: #f6efdf; --ink-dim: #cdd7c6; border: 0; }
+:root[data-theme="club"] .hero-t { font-size: clamp(32px, 3.8vw, 48px); font-weight: 700; }
+:root[data-theme="club"] button { border-radius: 999px; padding: 8px 20px; border-color: var(--stroke); font-weight: 600; }
+:root[data-theme="club"] button:hover { background: rgba(20, 56, 42, 0.07); }
+:root[data-theme="club"] button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+:root[data-theme="club"] button.primary:hover { background: color-mix(in srgb, var(--accent) 85%, #000); }
+:root[data-theme="club"] button.big { padding: 11px 26px; }
+:root[data-theme="club"] .seg { border-radius: 999px; }
+:root[data-theme="club"] .seg button.sel { background: #14382a; color: #f6efdf; }
+:root[data-theme="club"] .card, :root[data-theme="club"] .item, :root[data-theme="club"] .mapcard, :root[data-theme="club"] .stop { box-shadow: 0 1px 0 rgba(20, 56, 42, 0.08), 0 6px 16px rgba(60, 40, 10, 0.1); }
+:root[data-theme="club"] .card:hover, :root[data-theme="club"] .mode:hover { border-color: var(--accent); }
+:root[data-theme="club"] .card.sel, :root[data-theme="club"] .mode.sel, :root[data-theme="club"] .mapcard.sel, :root[data-theme="club"] .stop.now {
+  border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent), 0 8px 20px rgba(191, 74, 44, 0.18);
+}
+:root[data-theme="club"] .mode { background: var(--surface); border-left: 6px solid var(--mc, var(--stroke)); }
+:root[data-theme="club"] .mode.m-run { --mc: #d9a21b; background: var(--surface); }
+:root[data-theme="club"] .mode.m-friendly { --mc: #2b6a99; background: var(--surface); }
+:root[data-theme="club"] .mode.m-americano { --mc: #3f8a5a; background: var(--surface); }
+:root[data-theme="club"] .mode h3, :root[data-theme="club"] .mode.m-run h3, :root[data-theme="club"] .mode.m-americano h3 { color: var(--ink); }
+:root[data-theme="club"] .mode.m-run .m-tags span { color: var(--ink-dim); }
+:root[data-theme="club"] .m-ico { background: rgba(20, 56, 42, 0.08); }
+:root[data-theme="club"] .m-tags span { background: transparent; border-color: var(--stroke); color: var(--ink-dim); }
+:root[data-theme="club"] .mode.m-run.sel, :root[data-theme="club"] .mode.m-friendly.sel, :root[data-theme="club"] .mode.m-americano.sel {
+  border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent), 0 8px 20px rgba(191, 74, 44, 0.18);
+}
+:root[data-theme="club"] .bar, :root[data-theme="club"] .pips i { background: rgba(20, 56, 42, 0.14); }
+:root[data-theme="club"] .pips i.on { background: var(--accent); }
+:root[data-theme="club"] .key { background: rgba(20, 56, 42, 0.07); border-color: rgba(20, 56, 42, 0.3); }
+:root[data-theme="club"] .item.act .team, :root[data-theme="club"] .item.act { color: inherit; }
+:root[data-theme="club"] .item.act .team { color: #7a4fc4; }
+:root[data-theme="club"] .item.act { border-color: rgba(122, 79, 196, 0.45); }
+:root[data-theme="club"] .actchip { background: rgba(122, 79, 196, 0.15); color: #5c3a9c; }
+:root[data-theme="club"] .money { color: var(--accent); }
+:root[data-theme="club"] .slot { border: 1px solid var(--line); }
+:root[data-theme="club"] .ladder span { border-color: var(--stroke); }
+:root[data-theme="club"] .amer-table { background: rgba(251, 246, 234, 0.9); }
+:root[data-theme="club"] .net-msg { background: rgba(180, 58, 44, 0.1); border-color: rgba(180, 58, 44, 0.45); }
+:root[data-theme="club"] #canvas-wrapper { box-shadow: 0 18px 44px rgba(60, 40, 10, 0.4), 0 0 0 1px rgba(20, 56, 42, 0.25); }
+:root[data-theme="club"] .dock { box-shadow: 0 1px 0 rgba(20, 56, 42, 0.08); }
+:root[data-theme="club"] .sb-team { font-family: var(--body); font-weight: 700; }
+:root[data-theme="club"] .overlay.matchover { background: linear-gradient(to bottom, rgb(var(--overlay-rgb) / 0) 30%, rgb(var(--overlay-rgb) / 0.95) 62%); }
+
+/* ================= NEO: neobrutalista, bordes negros gruesos, sombras duras y colores planos ================= */
+:root[data-theme="neo"] {
+  --night: #f3efe4; --night-2: #ebe6d6; --panel: #ffffff; --line: #111;
+  --ink: #111; --ink-dim: #454545;
+  --accent: #ff5ea8; --accent-ink: #111; --blue: #2f5bff; --red: #ff4d2e;
+  --cond: 'Space Grotesk', system-ui, sans-serif; --body: 'Space Grotesk', system-ui, sans-serif;
+  --surface: #fff; --surface-hover: #fff3b8; --stroke: #111;
+  --overlay-rgb: 255 222 62; --overlay: rgb(var(--overlay-rgb) / 0.93); --sticky: #ffd93d;
+  --hud-bg: #111; --hud-bg-2: #111; --pts-bg: #ffd93d; --pts-ink: #111;
+  --portrait-bg: #bfe3ff;
+  --page-bg: radial-gradient(rgba(17, 17, 17, 0.16) 1.3px, transparent 1.4px) 0 0 / 18px 18px, #f3efe4;
+  --hero-bg: #2f5bff;
+  --radius: 6px; --radius-sm: 4px;
+  --hard: 5px 5px 0 #111;
+}
+:root[data-theme="neo"] :is(.ov-title, .hero-t, .ov-h, .mode h3, .card .nm, .item h4, .stop-team, .brand, .mapcard b, .money) { font-weight: 700; letter-spacing: -0.01em; text-transform: uppercase; }
+:root[data-theme="neo"] .overlay { backdrop-filter: none; -webkit-backdrop-filter: none; }
+:root[data-theme="neo"] .ov-title { display: inline-block; background: #fff; border: 3px solid #111; box-shadow: var(--hard); padding: 4px 14px; font-size: clamp(24px, 2.8vw, 36px); }
+:root[data-theme="neo"] .overlay.matchover .ov-title { margin-bottom: 6px; }
+:root[data-theme="neo"] .ov-sub { color: #111; font-weight: 500; }
+:root[data-theme="neo"] .ov-h { display: inline-block; background: #111; color: #fff; padding: 2px 10px; font-size: 15px; letter-spacing: 0.08em; }
+:root[data-theme="neo"] .hero { color: #fff; --ink: #fff; --ink-dim: #dfe6ff; border: 3px solid #111; box-shadow: var(--hard); }
+:root[data-theme="neo"] button {
+  font-weight: 700; border: 3px solid #111; background: #fff; color: #111; box-shadow: 3px 3px 0 #111;
+  transition: transform 0.08s, box-shadow 0.08s, background 0.08s;
+}
+:root[data-theme="neo"] button:hover { background: #fff3b8; transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #111; }
+:root[data-theme="neo"] button:active { transform: translate(3px, 3px); box-shadow: 0 0 0 #111; }
+:root[data-theme="neo"] button.primary { background: var(--accent); }
+:root[data-theme="neo"] button.primary:hover { background: color-mix(in srgb, var(--accent) 80%, #fff); }
+:root[data-theme="neo"] button.big { font-size: 17px; padding: 10px 22px; box-shadow: var(--hard); }
+:root[data-theme="neo"] button:disabled { box-shadow: none; transform: none; background: #ddd; }
+:root[data-theme="neo"] .seg { border: 3px solid #111; box-shadow: 3px 3px 0 #111; background: #fff; }
+:root[data-theme="neo"] .seg button { border: 0; box-shadow: none; border-right: 3px solid #111; border-radius: 0; background: #fff; }
+:root[data-theme="neo"] .seg button:last-child { border-right: 0; }
+:root[data-theme="neo"] .seg button:active { transform: none; }
+:root[data-theme="neo"] .seg button.sel { background: #ffd93d; color: #111; }
+:root[data-theme="neo"] button.on { background: #ffd93d; color: #111; }
+:root[data-theme="neo"] :is(.card, .mode, .item, .stop, .mapcard, .slot, .dock) { border: 3px solid #111; box-shadow: var(--hard); }
+:root[data-theme="neo"] .card:hover, :root[data-theme="neo"] .mode:hover { background: var(--surface-hover); border-color: #111; transform: translate(-2px, -2px); box-shadow: 7px 7px 0 #111; }
+:root[data-theme="neo"] .card.sel, :root[data-theme="neo"] .mapcard.sel, :root[data-theme="neo"] .stop.now, :root[data-theme="neo"] .slot.pick {
+  background: #ffd93d; border-color: #111; box-shadow: var(--hard), inset 0 0 0 3px var(--accent);
+}
+:root[data-theme="neo"] .mode.m-run { background: #ffe27a; }
+:root[data-theme="neo"] .mode.m-friendly { background: #9fd4ff; }
+:root[data-theme="neo"] .mode.m-americano { background: #9cf2b5; }
+:root[data-theme="neo"] .mode h3, :root[data-theme="neo"] .mode.m-run h3, :root[data-theme="neo"] .mode.m-americano h3 { color: #111; }
+:root[data-theme="neo"] .mode.m-run .m-tags span { color: #111; }
+:root[data-theme="neo"] .mode.sel, :root[data-theme="neo"] .mode.m-run.sel, :root[data-theme="neo"] .mode.m-friendly.sel, :root[data-theme="neo"] .mode.m-americano.sel {
+  border-color: #111; box-shadow: var(--hard), inset 0 0 0 3px var(--accent); transform: translate(-2px, -2px);
+}
+:root[data-theme="neo"] .m-ico { background: #fff; border: 2px solid #111; border-radius: 4px; }
+:root[data-theme="neo"] .m-tags span { background: #fff; border: 2px solid #111; color: #111; }
+:root[data-theme="neo"] .portrait { border: 3px solid #111; }
+:root[data-theme="neo"] .card .rl, :root[data-theme="neo"] .item .team, :root[data-theme="neo"] .mapcard .tag, :root[data-theme="neo"] .mapcard em, :root[data-theme="neo"] .stop-n { color: #c2185b; }
+:root[data-theme="neo"] .bar, :root[data-theme="neo"] .pips i { background: #e3dfd2; border: 2px solid #111; border-radius: 0; height: 9px; }
+:root[data-theme="neo"] .pips i { width: 18px; }
+:root[data-theme="neo"] .pips i.on { background: var(--accent); }
+:root[data-theme="neo"] .bar i { border-radius: 0; }
+:root[data-theme="neo"] .money { color: #111; background: #ffd93d; padding: 0 8px; border: 2px solid #111; }
+:root[data-theme="neo"] .money.sm { font-size: 18px; }
+:root[data-theme="neo"] .wallets div { color: #111; font-weight: 600; }
+:root[data-theme="neo"] .key { background: #fff; border: 2px solid #111; border-bottom-width: 4px; color: #111; }
+:root[data-theme="neo"] .keys { color: #111; font-weight: 500; }
+:root[data-theme="neo"] .vol { color: #111; font-weight: 600; }
+:root[data-theme="neo"] .item.act { border-color: #111; background: #e6dcff; }
+:root[data-theme="neo"] .item.act .team { color: #5b21b6; }
+:root[data-theme="neo"] .actchip { background: #e6dcff; color: #111; border: 2px solid #111; }
+:root[data-theme="neo"] .okchip { background: #ffd93d; color: #111; border: 2px solid #111; }
+:root[data-theme="neo"] .ladder span { border: 2px solid #111; color: #111; background: #fff; }
+:root[data-theme="neo"] .ladder span.done { background: var(--accent); }
+:root[data-theme="neo"] .slot .kind { color: #333; }
+:root[data-theme="neo"] .slot .kind.me { color: #c2185b; }
+:root[data-theme="neo"] .slot .tm { border-radius: 0; }
+:root[data-theme="neo"] .net-msg { background: #ffd0c7; border: 3px solid #111; box-shadow: 3px 3px 0 #111; color: #111; }
+:root[data-theme="neo"] .amer-table { background: #fff; border: 3px solid #111; box-shadow: var(--hard); border-radius: 0; }
+:root[data-theme="neo"] .amer-table th { color: #111; }
+:root[data-theme="neo"] .amer-table td { border-top: 2px solid #111; }
+:root[data-theme="neo"] .mapchip { color: #111; font-weight: 600; }
+:root[data-theme="neo"] input, :root[data-theme="neo"] select { background: #fff; border: 3px solid #111; border-radius: 4px; color: #111; }
+:root[data-theme="neo"] .row.sticky { border-top: 3px solid #111; }
+:root[data-theme="neo"] .card .hello { border: 2px solid #111; background: #fff; box-shadow: 3px 3px 0 #111; border-radius: 4px; }
+:root[data-theme="neo"] .card .hello::after { display: none; }
+:root[data-theme="neo"] #canvas-wrapper { border: 3px solid #111; box-shadow: 8px 8px 0 #111; }
+:root[data-theme="neo"] .sb-row { border-radius: 0 !important; border: 2px solid #111; }
+:root[data-theme="neo"] .sb-sub, :root[data-theme="neo"] .sb-amer { border-radius: 0; border: 2px solid #111; }
+:root[data-theme="neo"] .sb-tag { border-radius: 0; border: 2px solid #111; }
+:root[data-theme="neo"] .room-pill { border: 2px solid #111; border-radius: 0; background: #111; }
+:root[data-theme="neo"] .overlay.matchover { background: linear-gradient(to bottom, rgb(var(--overlay-rgb) / 0) 32%, rgb(var(--overlay-rgb) / 0.96) 64%); }
+
+/* Las tarjetas de personaje, modo y mapa son <button>: no deben heredar la forma ni el texto de los botones de cada tema */
+:root[data-theme] :is(button.card, button.mode, button.mapcard) {
+  font-family: var(--body); font-size: 14px; font-weight: 400; text-transform: none; letter-spacing: normal; font-style: normal; line-height: 1.3;
+  background: var(--surface); color: var(--ink); clip-path: none;
+}
+:root[data-theme] button.card, :root[data-theme] button.mapcard { padding: 8px; }
+:root[data-theme] button.mode { padding: 12px 14px; }
+:root[data-theme="estadio"] :is(button.card, button.mode, button.mapcard) { clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%); }
+:root[data-theme="estadio"] :is(button.card, button.mode, button.mapcard):hover { background: var(--surface-hover); }
+:root[data-theme="club"] :is(button.card, button.mode, button.mapcard) { border-radius: var(--radius); }
+:root[data-theme="club"] :is(button.card, button.mode, button.mapcard):hover { background: var(--surface-hover); }
+:root[data-theme="club"] .seg button { border-radius: 0; }
+:root[data-theme="neo"] :is(button.card, button.mode, button.mapcard) { border-radius: var(--radius); }
+:root[data-theme="neo"] button.mode.m-run { background: #ffe27a; }
+:root[data-theme="neo"] button.mode.m-friendly { background: #9fd4ff; }
+:root[data-theme="neo"] button.mode.m-americano { background: #9cf2b5; }
+:root[data-theme="neo"] :is(button.card, button.mapcard):hover { background: var(--surface-hover); }
+:root[data-theme="neo"] button.card.sel, :root[data-theme="neo"] button.mapcard.sel { background: #ffd93d; }
+:root[data-theme="estadio"] button.card.sel, :root[data-theme="estadio"] button.mode.sel, :root[data-theme="estadio"] button.mapcard.sel { background: var(--surface-hover); }
