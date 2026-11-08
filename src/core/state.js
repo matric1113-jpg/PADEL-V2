@@ -15,6 +15,7 @@ export const rt = {
   localChargeFrames: 0,
   lastPlayedSoundSeq: 0,
   netMsg: '',                // mensaje de conexión visible en el menú
+  tutorialPage: -1,          // página abierta del tutorial del menú (-1 = cerrado)
   uiMenuOpen: true,
   overlayKey: '',
   podiumT: 0                 // cuadros transcurridos de la cinemática del podio (lo cuenta el anfitrión)

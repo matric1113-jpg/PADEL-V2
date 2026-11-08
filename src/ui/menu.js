@@ -7,6 +7,8 @@ import { localInput, menuSel, rt, state } from '../core/state.js';
 import { upLvl } from '../core/stats.js';
 import { createRoom, joinRoom, leaveNetwork } from '../net/network.js';
 import { renderer } from '../renderer.js';
+import { TUTORIAL_PAGES, viewTutorial } from './tutorial.js';
+import { clearRun, progress, progressRev, recordAmericano, recordBossBeaten, recordFriendly, recordRunLost, recordRunWon, resetProgress, saveRun, savePrefs, savedRun } from '../storage/progress.js';
 
 export function setStatus(t) { document.getElementById('status-text').innerText = t; }
 export function setNetMsg(t) { rt.netMsg = t; rt.overlayKey = ''; }
@@ -40,6 +42,21 @@ function playSolo() {
   prepareRoster(menuSel.mode);
   rt.uiMenuOpen = false;
   startMatch();
+}
+
+// Retoma el torneo guardado: mismo jugador, plata, mejoras y activa, en el camino hacia el jefe en que quedaste
+function continueRun() {
+  const r = savedRun();
+  if (!r) return;
+  if (CHARACTERS.includes(r.char)) menuSel.char = r.char;
+  menuSel.mode = 'run';
+  playSolo();
+  const me = state.players[rt.mySlot];
+  state.run.boss = Math.min(Math.max(1, r.boss), BOSSES.length - 1);
+  setMap(BOSSES[state.run.boss].map);
+  me.money = Number(r.money) || 0;
+  me.up = { ...me.up, ...r.up };
+  me.active = ACTIVE_IDS.includes(r.active) ? r.active : '';
 }
 
 // Sala del amistoso: puesto elegido para intercambiar (uid), solo en la pantalla del anfitrión
@@ -84,8 +101,22 @@ function statBars(L) {
     `<div class="stat">Fuerza<span class="bar pw"><i style="width:${100 - v}%"></i></span></div>`;
 }
 
+// Récords guardados en el navegador (ver storage/progress.js)
+function progressHtml() {
+  const s = progress.stats;
+  const chips = [];
+  if (s.bestBoss) chips.push(`Torneo: mejor marca ${s.bestBoss} de ${BOSSES.length} jefes`);
+  if (s.runsWon || s.runsLost) chips.push(`Torneos ganados: ${s.runsWon} de ${s.runsWon + s.runsLost}`);
+  if (s.friendlyPlayed) chips.push(`Amistosos ganados: ${s.friendlyWon} de ${s.friendlyPlayed}`);
+  if (s.americanoPlayed) chips.push(`Americanos: ${s.americanoGold} primeros lugares de ${s.americanoPlayed}`);
+  if (!chips.length && !progress.run) return '';
+  return `<div class="ov-h">Tu progreso</div>
+    <div class="chips">${chips.map(c => `<span class="mapchip">${c}</span>`).join('')}<button data-act="resetprogress">Borrar progreso</button></div>`;
+}
+
 function viewMenu() {
   const run = menuSel.mode === 'run';
+  const saved = run ? savedRun() : null;
   const cards = CHARACTERS.map(id => {
     const L = LOOKS[id];
     return `<button class="card${menuSel.char === id ? ' sel' : ''}" data-act="char" data-v="${id}">
@@ -100,7 +131,7 @@ function viewMenu() {
   const diffs = DIFFICULTIES.map((d, i) =>
     `<button data-act="diff" data-v="${i}" class="${menuSel.diff === i ? 'sel' : ''}">${d.name}</button>`).join('');
   return `<div class="ov-panel">
-    <div class="hero"><span class="hero-ball"></span><div><div class="hero-t">Padel Club</div><div class="hero-s">Elige a tu jugador y el modo de juego. Todos están parejos: cambia el estilo, no la fuerza.</div></div></div>
+    <div class="hero"><span class="hero-ball"></span><div><div class="hero-t">Padel Club</div><div class="hero-s">Elige a tu jugador y el modo de juego. Todos están parejos: cambia el estilo, no la fuerza.</div></div><button class="big" data-act="tutorial" style="margin-left:auto">Tutorial</button></div>
     <div class="ov-h">Tu jugador</div>
     <div class="cards">${cards}</div>
     <div class="ov-h">Modo de juego</div>
@@ -109,9 +140,11 @@ function viewMenu() {
       ${mode('friendly', 'Partido amistoso', 'Gana quien llegue primero a 2 sets (cada set, a 6 juegos), contra bots o con hasta 4 personas online. El anfitrión arma los equipos. Tienda y votación de mapa en cada set. Al final, podio.', ['2 sets', 'Azul contra rojo', 'Hasta 4 online'])}
       ${mode('americano', 'Americano', `${AMERICANO_PAIRS.length} sets con una pareja distinta en cada uno (al primero en llegar a ${AMERICANO_GAMES_TO_WIN} juegos). Cada uno suma los juegos que gana. Al final, podio con oro, plata y bronce.`, [`${AMERICANO_PAIRS.length} sets`, 'Parejas rotativas', 'Medallas'])}
     </div>
+    ${progressHtml()}
     ${run ? '' : `<div class="row"><span class="lbl">Nivel de los bots</span><div class="seg">${diffs}</div></div>`}
     <div class="row">
-      <button class="primary big" data-act="solo">${run ? 'Jugar con un bot de compañero' : 'Jugar contra bots'}</button>
+      ${saved ? `<button class="primary big" data-act="continue">Continuar torneo (jefe ${saved.boss + 1} de ${BOSSES.length})</button>` : ''}
+      <button class="${saved ? '' : 'primary '}big" data-act="solo">${run ? (saved ? 'Torneo nuevo con un bot' : 'Jugar con un bot de compañero') : 'Jugar contra bots'}</button>
       <button class="big" data-act="host">${run ? 'Crear sala para tu compañero' : 'Crear sala online'}</button>
       <span class="spacer"></span>
       <input type="text" id="room-code-input" placeholder="Código" maxlength="6" value="${esc(menuSel.code)}" style="width: 96px; text-transform: uppercase;" aria-label="Código de sala">
@@ -307,16 +340,38 @@ function viewMatchover() {
   </div>`;
 }
 
-const VIEWS = { connecting: viewConnecting, menu: viewMenu, lobby: viewLobby, route: viewRoute, shop: viewShop, shop2: viewShop2, lost: viewLost, champion: viewChampion, matchover: viewMatchover };
+const VIEWS = { connecting: viewConnecting, menu: viewMenu, tutorial: () => viewTutorial(rt.tutorialPage), lobby: viewLobby, route: viewRoute, shop: viewShop, shop2: viewShop2, lost: viewLost, champion: viewChampion, matchover: viewMatchover };
+
+// Récords y torneo en curso. Se llama una vez por cada cambio de pantalla (y el torneo, también al comprar).
+function trackProgress(s, myTeam) {
+  const r = state.result;
+  if (s === 'shop' && r && Number.isInteger(r.boss)) recordBossBeaten(r.boss);
+  else if (s === 'champion') { if (r && Number.isInteger(r.boss)) recordBossBeaten(r.boss); recordRunWon(); }
+  else if (s === 'lost') recordRunLost();
+  else if (s === 'podium' && r) {
+    if (r.americano) recordAmericano(myAmericanoPlace());
+    else recordFriendly(r.winner === myTeam);
+  }
+}
+// El torneo en curso se guarda entre jefes (en la tienda y en el camino), solo si juegas con un bot de compañero
+function persistRun() {
+  const me = state.players[rt.mySlot];
+  if (state.mode !== 'run' || !rt.isHost || !me || Object.keys(rt.connections).length) return;
+  if (state.screen !== 'shop' && state.screen !== 'route') return;
+  const boss = state.screen === 'shop' ? state.run.boss + 1 : state.run.boss;
+  if (boss > 0) saveRun({ boss, char: me.lookId, money: me.money, up: { ...me.up }, active: me.active });
+}
 
 export function syncOverlay() {
-  const view = rt.uiMenuOpen ? 'menu' : (!rt.isHost && !rt.gotHostState ? 'connecting' : state.screen);
+  const view = rt.uiMenuOpen ? (rt.tutorialPage >= 0 ? 'tutorial' : 'menu') : (!rt.isHost && !rt.gotHostState ? 'connecting' : state.screen);
   if (!rt.uiMenuOpen && state.screen !== lastScreenSeen) {
     const s = state.screen;
     const myTeam = (state.players[rt.mySlot] || {}).team || 0;
     if (s === 'shop' || s === 'champion') playJingle(true);
     else if (s === 'lost') playJingle(false);
     else if (s === 'podium' && state.result) playJingle(state.result.americano ? myAmericanoPlace() === 1 : state.result.winner === myTeam);
+    trackProgress(s, myTeam);
+    persistRun();
   }
   lastScreenSeen = state.screen;
 
@@ -328,7 +383,8 @@ export function syncOverlay() {
     }
     return;
   }
-  const data = view === 'menu' ? [menuSel.char, menuSel.mode, menuSel.diff, rt.netMsg]
+  const data = view === 'tutorial' ? [rt.tutorialPage]
+    : view === 'menu' ? [menuSel.char, menuSel.mode, menuSel.diff, rt.netMsg, progressRev.n]
     : [state.roomCode, state.mode, state.run, state.result, state.sets, rt.mySlot, rt.isHost, state.map, state.vote, seatPick,
        state.amer && state.amer.history,
        state.players.map(p => [p.uid, p.name, p.isBot, p.money, p.up, p.team, p.active, p.ready, p.vote, p.out])];
@@ -352,7 +408,17 @@ overlayEl.addEventListener('click', e => {
     case 'char': chooseChar(v); break;
     case 'mode': menuSel.mode = v; break;
     case 'diff': menuSel.diff = Number(v); break;
-    case 'solo': playSolo(); break;
+    case 'solo':
+      if (menuSel.mode === 'run' && savedRun() && !confirm('Empezar un torneo nuevo borra el torneo guardado. ¿Seguir?')) break;
+      if (menuSel.mode === 'run') clearRun();
+      playSolo();
+      break;
+    case 'continue': continueRun(); break;
+    case 'tutorial': rt.tutorialPage = 0; break;
+    case 'tut-next': rt.tutorialPage = Math.min(rt.tutorialPage + 1, TUTORIAL_PAGES.length - 1); break;
+    case 'tut-prev': rt.tutorialPage = Math.max(rt.tutorialPage - 1, 0); break;
+    case 'tut-close': rt.tutorialPage = -1; break;
+    case 'resetprogress': if (confirm('Se borran tus récords y el torneo guardado. ¿Seguir?')) resetProgress(); break;
     case 'host': setNetMsg(''); createRoom(); break;
     case 'join': joinRoom(); break;
     case 'start': if (rt.isHost) { seatPick = ''; startMatch(); } break;
@@ -383,6 +449,8 @@ overlayEl.addEventListener('click', e => {
     case 'again': if (rt.isHost) startMatch(); break;
     case 'menu': openMenu(); setNetMsg(''); break;
   }
+  savePrefs(menuSel);
+  persistRun();
   rt.overlayKey = '';
 });
 // Al entrar el cursor a la tarjeta de un personaje, se presenta (una vez por entrada, no en cada movimiento)

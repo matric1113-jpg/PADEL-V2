@@ -389,3 +389,11 @@ button:disabled:hover { background: transparent; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
+
+/* Tutorial del menú */
+.tut { max-width: 720px; }
+.tut-body { font-size: 15px; line-height: 1.55; margin-top: 8px; }
+.tut-body p { margin: 10px 0; }
+.tut-body ul { margin: 10px 0; padding-left: 20px; }
+.tut-body li { margin: 8px 0; }
+.tut-body .key { margin-right: 4px; }

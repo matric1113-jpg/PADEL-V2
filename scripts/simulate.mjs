@@ -214,6 +214,55 @@ function testDoors() {
   me.isBot = true;
 }
 
+// Doble golpe: la pelota que pegó su equipo y vuelve a su lado es falta si el mismo jugador o su compañero la toca con la
+// pala; si ya salió por 3 o por 4 no cuenta. Raquetazo al compañero: lo aturde 2 s sin dar punto
+function testDoubleHit() {
+  prepareRoster('friendly'); startFriendly(); resolveVoteAndPlay();
+  const me = state.players[rt.mySlot], mate = state.players[rt.mySlot ^ 1];
+  const rivals = state.players.filter(p => p.team !== me.team);
+  me.isBot = false;
+  const b = state.ball;
+  const dir = me.team === 0 ? 1 : -1;
+  const setup = who => {
+    state.phase = 'PLAY'; state.screen = 'play'; state.score = [0, 0];
+    Object.assign(b, { x: me.team === 0 ? 300 : 620, y: 260, z: 30, vx: 0, vy: 0, vz: 0, lastHitTeam: me.team, bouncesInOpponentSide: 0, out: false, isServeShot: false });
+    for (const p of state.players) { p.swingTimer = 0; p.cooldown = 0; p.stun = 0; p.jz = 0; p.jvz = 0; p.landStop = 0; }
+    me.x = b.x - dir * 100; me.y = 420; mate.x = b.x - dir * 100; mate.y = 100;   // lejos de la pelota
+    rivals.forEach(r => { r.x = r.team === 0 ? 150 : 780; r.y = r.uid === rivals[0].uid ? 100 : 420; });
+    const q = who === 'me' ? me : mate;
+    q.x = b.x - dir * 17 * (1 / 1.15); q.y = b.y - 6 * (1 / 1.15);                  // la pala justo en la pelota
+    q.swingTimer = 5;
+  };
+  const stepFrozen = () => { Object.assign(b, { x: b.x, y: b.y, z: 30, vx: 0, vy: 0, vz: 0 }); stepPhysics(); };
+  for (const who of ['me', 'mate']) {
+    setup(who);
+    stepFrozen();
+    if (state.score[1 - me.team] !== 1 || !/^Falta: doble golpe/.test(state.bannerText.split('\n')[0] || '')) fail(`doble golpe de ${who}: ${state.bannerText} ${state.score}`);
+  }
+  setup('mate'); b.out = true; b.outTeam = me.team;
+  stepFrozen();
+  if (state.score[0] + state.score[1] !== 0) fail('la pelota afuera contó como doble golpe');
+  setup('mate'); b.lastHitTeam = 1 - me.team;
+  stepFrozen();
+  if (state.score[1 - me.team] !== 0 || b.lastHitTeam !== me.team) fail('un golpe normal al saque del rival se contó como falta');
+
+  // Raquetazo al compañero
+  setup('mate'); b.lastHitTeam = 1 - me.team; b.x = me.team === 0 ? 700 : 220;      // pelota lejos, en el lado rival
+  me.x = mate.x - dir * 17 / 1.15; me.y = mate.y - 6 / 1.15; me.swingTimer = 5;        // el compañero queda donde pega mi pala
+  mate.swingTimer = 0;
+  stepFrozen();
+  if (mate.stun < 100 || mate.stun > 120) fail('el raquetazo no aturdió al compañero 2 s: ' + mate.stun);
+  const mx = mate.x; stepFrozen();
+  if (mate.x !== mx) fail('el compañero aturdido se movió');
+  for (let k = 0; k < 125; k++) stepFrozen();
+  if (mate.stun !== 0) fail('el aturdimiento no terminó');
+  if (state.score[0] + state.score[1] !== 0) fail('el raquetazo al compañero dio punto');
+  setup('mate'); me.x = b.x - dir * 300; me.y = 420; b.x = me.team === 0 ? 700 : 220; b.lastHitTeam = 1 - me.team;   // compañero lejos de mi pala
+  me.swingTimer = 5; stepFrozen();
+  if (mate.stun !== 0) fail('un raquetazo lejos aturdió al compañero');
+  me.isBot = true;
+}
+
 // Premio del torneo según el marcador
 function testRewards() {
   const one = BOSSES.find(B => B.gamesToWin === 1), three = BOSSES.find(B => B.gamesToWin > 1);
@@ -226,8 +275,9 @@ testStaleRelease();
 testJump();
 testOutBall();
 testDoors();
+testDoubleHit();
 testRewards();
-console.log('pruebas fijas: desempates del americano, clic pendiente al sacar, salto, pelota afuera, puertas y premios, sin errores');
+console.log('pruebas fijas: desempates del americano, clic pendiente al sacar, salto, pelota afuera, puertas, doble golpe, raquetazo al compañero y premios, sin errores');
 
 for (const mode of MODES) {
   setup(mode);

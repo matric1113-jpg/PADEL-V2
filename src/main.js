@@ -8,12 +8,14 @@ import { stepPhysics } from './core/physics.js';
 import { recordFrame } from './core/replay.js';
 import { localInput, menuSel, rt, state } from './core/state.js';
 import { sendStateTo } from './net/network.js';
+import { applyPrefs } from './storage/progress.js';
 import { countStep, endFrame, timed } from './perf.js';
 import { renderer } from './renderer.js';
 import { syncHud, updateScoreUI } from './ui/hud.js';
 import { chooseChar, openMenu, syncOverlay } from './ui/menu.js';
 import * as camera from './view/camera.js';
 import { fx, onGameEvent } from './view/fx.js';
+import { applyInterp, snapshot } from './view/interp.js';
 
 // La lógica avisa por hooks; aquí se conectan al sonido, los efectos y la interfaz
 hooks.sound = type => { playSound(type); onGameEvent(type); };
@@ -44,6 +46,7 @@ function runSteps(now) {
   let n = 0;
   while (accumulator >= STEP && n < 15) {
     timed('physics', () => { stepPhysics(); if (rt.isHost) recordFrame(); });
+    snapshot();
     countStep();
     accumulator -= STEP;
     n++;
@@ -54,7 +57,11 @@ function runSteps(now) {
 
 function gameLoop(now) {
   runSteps(now);
-  timed('render', () => renderer.render(now));
+  timed('render', () => {
+    // A 120/144/165 Hz se dibuja el punto intermedio entre los dos últimos pasos de física (no durante la repetición)
+    const undo = fx.replay ? null : applyInterp(accumulator / STEP);
+    try { renderer.render(now); } finally { if (undo) undo(); }
+  });
   timed('ui', () => { syncHud(); updateScoreUI(); syncOverlay(); });
   watchTalk(state, !rt.uiMenuOpen && state.screen === 'play');   // las frases del partido se escuchan
   endFrame(now);
@@ -75,6 +82,7 @@ function gameLoop(now) {
 })();
 
 renderer.init();
+applyPrefs(menuSel);   // lo último que elegiste en el menú
 chooseChar(menuSel.char);
 setupServe(0);
 state.bannerTimer = 0;

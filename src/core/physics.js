@@ -1,6 +1,6 @@
 import { computeLaunch, computeServeBox, getClampedTarget, launchBall, showBanner } from './ballistics.js';
 import { updateBotLogic } from './bots.js';
-import { BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, GUST_PLAYER_PUSH, JUMP_CHARGE_FRAMES, JUMP_CHARGE_SLOW, JUMP_G, JUMP_LAND_FRAMES, JUMP_LAND_SLOW, JUMP_LAND_STOP, JUMP_MAX_H, JUMP_MIN_H, JUMP_REJUMP_FRAMES, JUMP_SMASH_BONUS, SMASH_FULL_Z, SMASH_LOW_BOUNCE, SMASH_LOW_SPEED, TILT_BALL_ACCEL, TILT_PLAYER_PUSH, LIGHTS, MAX_CHARGE_FRAMES, NET_H, PODIUM_FRAMES, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
+import { BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, GUST_PLAYER_PUSH, JUMP_CHARGE_FRAMES, JUMP_CHARGE_SLOW, JUMP_G, JUMP_LAND_FRAMES, JUMP_LAND_SLOW, JUMP_LAND_STOP, JUMP_MAX_H, JUMP_MIN_H, JUMP_REJUMP_FRAMES, JUMP_SMASH_BONUS, MATE_HIT_RADIUS, MATE_STUN_FRAMES, SMASH_FULL_Z, SMASH_LOW_BOUNCE, SMASH_LOW_SPEED, TILT_BALL_ACCEL, TILT_PLAYER_PUSH, LIGHTS, MAX_CHARGE_FRAMES, NET_H, PODIUM_FRAMES, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
 import { BOSSES } from './data.js';
 import { awardPoint, checkVoteReady, emitSound, goToScreen, setupServe } from './game.js';
 import { activate, updateHazards } from './hazards.js';
@@ -307,12 +307,33 @@ export function stepPhysics() {
 
     // FASE DE JUEGO: impacto con la pala (o con la del clon)
     if (state.phase === 'PLAY' && p.swingTimer > 0) {
+      // Raquetazo al compañero: lo aturde (no es falta ni pierde el punto)
+      const mate = state.players.find((q, j) => j !== idx && !q.out && q.team === p.team);
+      if (mate && mate.stun === 0 && Math.hypot(mate.x - paddleX, mate.y - paddleY) <= MATE_HIT_RADIUS) {
+        mate.stun = MATE_STUN_FRAMES;
+        mate.charging = false; mate.chargeFrames = 0;
+        emitSound('hit');
+        showBanner(`¡${p.name} le pegó con la pala a ${mate.name}!`, 70);
+      }
+
       const ballStrictlyOnMySide = (p.team === 0 && b.x < COURT.netX - 6) || (p.team === 1 && b.x > COURT.netX + 6);
-      if (b.lastHitTeam === p.team || !ballStrictlyOnMySide) return;
+      if (!ballStrictlyOnMySide) return;
 
       let distToPaddle = Math.hypot(b.x - paddleX, b.y - paddleY);
       if (p.clone) distToPaddle = Math.min(distToPaddle, Math.hypot(b.x - (p.clone.x + dir * PAD_F), b.y - (p.clone.y + PAD_S)));
-      if (distToPaddle <= reachOf(p) && b.z <= reachZOf(p) + p.jz) {
+      const inReach = distToPaddle <= reachOf(p) && b.z <= reachZOf(p) + p.jz;
+
+      // Doble golpe: la pelota que pegó su equipo vuelve a su lado y alguien del equipo (él o su compañero) la toca de
+      // nuevo con la pala. Si ya salió por 3 o por 4 no cuenta: ahí solo la rescata el rival.
+      if (b.lastHitTeam === p.team) {
+        if (inReach && !b.out) {
+          p.swingTimer = 0;
+          awardPoint(1 - p.team, 'Falta: doble golpe', true);
+        }
+        return;
+      }
+
+      if (inReach) {
         p.swingTimer = 0;
         const chargePct = Math.round(p.swingCharge * 100);
 
