@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="estadio">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Padel Club 2v2 Online – Pro Edition</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Saira:wght@400;500;600&family=Barlow+Condensed:ital,wght@0,600;0,700;1,600;1,700&family=Barlow:wght@400;500;600&family=Fraunces:wght@500;600;700&family=DM+Sans:wght@400;500;700&family=Inter:wght@400;500;600&family=Inter+Tight:wght@500;600;700&family=Orbitron:wght@600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;1,600;1,700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -45,6 +45,7 @@
     <div class="group">
       <button id="menu-btn">Menú</button>
       <label class="vol"><span>Música</span><input type="range" id="vol-music" min="0" max="100" step="1" aria-label="Volumen de la música"></label>
+      <button id="music-next" hidden title="Pasar a la siguiente canción">Siguiente ▸</button><span class="vol music-title" id="music-title" hidden></span>
       <label class="vol"><span>Efectos y voces</span><input type="range" id="vol-sfx" min="0" max="100" step="1" aria-label="Volumen de los efectos y las voces"></label>
     </div>
   </section>

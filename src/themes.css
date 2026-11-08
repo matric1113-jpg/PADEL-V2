@@ -1,19 +1,19 @@
-/* Estilos de la interfaz. El estilo actual ("clásico") vive en style.css; estos se activan con
-   <html data-theme="estadio | club | neo"> (selector en el menú o ?ui=club). Cada tema redefine las variables de
-   :root (colores, tipografías, radios) y, donde hace falta, la forma de botones, tarjetas y títulos. */
+/* Estilo de la interfaz: Estadio (transmisión deportiva, grafito azulado y cian, cortes en diagonal). Se activa con
+   <html data-theme="estadio"> en index.html y redefine las variables de :root de style.css (colores, tipografías, radios);
+   donde hace falta cambia también la forma de botones, tarjetas y títulos. */
 
 /* ================= ESTADIO: transmisión deportiva, negro y cian, cortes en diagonal ================= */
 :root[data-theme="estadio"] {
-  --night: #06080b; --night-2: #0c1015; --panel: #0d1116; --line: rgba(255, 255, 255, 0.1);
-  --ink: #f5f7fa; --ink-dim: #8e99a6;
+  --night: #0d1218; --night-2: #121921; --panel: #141b23; --line: rgba(255, 255, 255, 0.13);
+  --ink: #f5f7fa; --ink-dim: #9aa6b3;
   --accent: #00e5ff; --accent-ink: #001318; --blue: #2f8bff; --red: #ff3d47;
   --cond: 'Barlow Condensed', 'Arial Narrow', sans-serif; --body: 'Barlow', system-ui, sans-serif;
-  --surface: #10151b; --surface-hover: #171e27; --stroke: rgba(255, 255, 255, 0.24);
-  --overlay-rgb: 3 5 8; --overlay: rgb(var(--overlay-rgb) / 0.84); --sticky: #080b0f;
-  --hud-bg: rgba(5, 7, 10, 0.94); --hud-bg-2: rgba(5, 7, 10, 0.9); --pts-bg: #fff; --pts-ink: #05070a;
-  --portrait-bg: linear-gradient(165deg, #223a52 0%, #0d1824 72%);
-  --page-bg: linear-gradient(180deg, #0a0e13 0%, #05070a 100%);
-  --hero-bg: linear-gradient(100deg, #0e141b 0%, #0e141b 55%, color-mix(in srgb, var(--accent) 38%, #0e141b) 135%);
+  --surface: #18202a; --surface-hover: #212b37; --stroke: rgba(255, 255, 255, 0.28);
+  --overlay-rgb: 9 13 18; --overlay: rgb(var(--overlay-rgb) / 0.8); --sticky: #0e141b;
+  --hud-bg: rgba(10, 14, 19, 0.92); --hud-bg-2: rgba(10, 14, 19, 0.88); --pts-bg: #fff; --pts-ink: #05070a;
+  --portrait-bg: linear-gradient(165deg, #2a455f 0%, #132233 72%);
+  --page-bg: linear-gradient(180deg, #131a22 0%, #0a0e13 100%);
+  --hero-bg: linear-gradient(100deg, #17202a 0%, #17202a 55%, color-mix(in srgb, var(--accent) 38%, #17202a) 135%);
   --radius: 0px; --radius-sm: 0px;
 }
 :root[data-theme="estadio"] :is(.ov-title, .hero-t, .ov-h, .mode h3, .card .nm, .item h4, .stop-team, .brand, .mapcard b, .money, .sb-team) {
@@ -23,10 +23,10 @@
 :root[data-theme="estadio"] .ov-h { color: var(--accent); font-size: 17px; letter-spacing: 0.14em; font-style: normal; }
 :root[data-theme="estadio"] button {
   font-family: var(--cond); font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
-  border: 0; padding: 8px 24px; background: #1c242e;
+  border: 0; padding: 8px 24px; background: #27313d;
   clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
 }
-:root[data-theme="estadio"] button:hover { background: #28323f; }
+:root[data-theme="estadio"] button:hover { background: #333f4e; }
 :root[data-theme="estadio"] button.primary { background: var(--accent); color: var(--accent-ink); }
 :root[data-theme="estadio"] button.primary:hover { background: color-mix(in srgb, var(--accent) 75%, #fff); }
 :root[data-theme="estadio"] button.big { font-size: 19px; padding: 10px 32px; }
@@ -57,153 +57,9 @@
 :root[data-theme="estadio"] .sb-sub, :root[data-theme="estadio"] .sb-tag, :root[data-theme="estadio"] .sb-amer { border-radius: 0; }
 :root[data-theme="estadio"] .room-pill { border-radius: 0; text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--cond); font-weight: 600; }
 :root[data-theme="estadio"] .ladder span, :root[data-theme="estadio"] .m-tags span { border-radius: 0; }
-:root[data-theme="estadio"] #canvas-wrapper { box-shadow: 0 0 0 2px #1a232d, 0 24px 60px rgba(0, 0, 0, 0.65); }
+:root[data-theme="estadio"] #canvas-wrapper { box-shadow: 0 0 0 2px #2a3644, 0 24px 60px rgba(0, 0, 0, 0.55); }
 :root[data-theme="estadio"] .dock { border: 0; border-left: 4px solid var(--accent); }
 
-/* ================= CLUB: club de arcilla de noche, verde inglés oscuro, crema y terracota, tipografía con serif ================= */
-:root[data-theme="club"] {
-  --night: #0d1a14; --night-2: #12241b; --panel: #13251c; --line: rgba(226, 214, 184, 0.14);
-  --ink: #efe8d6; --ink-dim: #a9b5a6;
-  --accent: #e2764f; --accent-ink: #1d0d06; --blue: #4a95c9; --red: #e0584a;
-  --cond: 'Fraunces', Georgia, 'Times New Roman', serif; --body: 'DM Sans', system-ui, sans-serif;
-  --surface: #16291f; --surface-hover: #1c3428; --stroke: rgba(226, 214, 184, 0.32);
-  --overlay-rgb: 7 18 13; --overlay: rgb(var(--overlay-rgb) / 0.86); --sticky: #0f1f17;
-  --hud-bg: rgba(8, 22, 16, 0.95); --hud-bg-2: rgba(8, 22, 16, 0.9); --pts-bg: #efe8d6; --pts-ink: #12301f;
-  --portrait-bg: radial-gradient(120% 90% at 50% 100%, #c98a5e 0%, #8d5236 50%, #3b2316 100%);
-  --page-bg: radial-gradient(120% 90% at 50% 0%, #17301f 0%, var(--night) 65%);
-  --hero-bg: linear-gradient(115deg, #1a4a34 0%, #143826 55%, color-mix(in srgb, var(--accent) 55%, #143826) 190%);
-  --radius: 16px; --radius-sm: 10px;
-}
-:root[data-theme="club"] :is(.ov-title, .hero-t, .ov-h, .mode h3, .card .nm, .item h4, .stop-team, .brand, .mapcard b, .money, .am-row b) { font-weight: 600; letter-spacing: -0.01em; }
-:root[data-theme="club"] .ov-title { font-size: clamp(30px, 3.2vw, 44px); }
-:root[data-theme="club"] .ov-h { font-size: 20px; margin-top: 22px; }
-:root[data-theme="club"] .ov-h::after { content: ''; display: block; height: 1px; margin-top: 6px; background: var(--stroke); opacity: 0.5; }
-:root[data-theme="club"] .hero { border: 0; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3); }
-:root[data-theme="club"] .hero-t { font-size: clamp(32px, 3.8vw, 48px); font-weight: 700; }
-:root[data-theme="club"] button { border-radius: 999px; padding: 8px 20px; }
-:root[data-theme="club"] button:hover { background: rgba(239, 232, 214, 0.08); }
-:root[data-theme="club"] button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-:root[data-theme="club"] button.primary:hover { background: color-mix(in srgb, var(--accent) 82%, #fff); }
-:root[data-theme="club"] button.big { padding: 11px 26px; }
-:root[data-theme="club"] .seg { border-radius: 999px; }
-:root[data-theme="club"] .seg button { border-radius: 0; }
-:root[data-theme="club"] .seg button.sel { background: #efe8d6; color: #12301f; }
-:root[data-theme="club"] :is(.card, .item, .mapcard, .stop) { box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28); }
-:root[data-theme="club"] :is(.card, .mode):hover { border-color: var(--accent); }
-:root[data-theme="club"] :is(.card, .mode, .mapcard, .stop).sel, :root[data-theme="club"] .stop.now {
-  border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent), 0 8px 22px rgba(226, 118, 79, 0.2);
-}
-:root[data-theme="club"] .mode { background: var(--surface); border-left: 6px solid var(--mc, var(--stroke)); }
-:root[data-theme="club"] .mode.m-run { --mc: #e0b13a; background: var(--surface); }
-:root[data-theme="club"] .mode.m-friendly { --mc: #4a95c9; background: var(--surface); }
-:root[data-theme="club"] .mode.m-americano { --mc: #5cb67e; background: var(--surface); }
-:root[data-theme="club"] .mode h3, :root[data-theme="club"] .mode.m-run h3, :root[data-theme="club"] .mode.m-americano h3 { color: var(--ink); }
-:root[data-theme="club"] .mode.m-run .m-tags span { color: var(--ink-dim); }
-:root[data-theme="club"] .m-tags span { background: transparent; border-color: var(--stroke); color: var(--ink-dim); }
-:root[data-theme="club"] :is(.mode.m-run, .mode.m-friendly, .mode.m-americano).sel { border-color: var(--accent); border-left-color: var(--mc); box-shadow: inset 0 0 0 2px var(--accent), 0 8px 22px rgba(226, 118, 79, 0.2); }
-:root[data-theme="club"] .sb-team { font-family: var(--body); font-weight: 700; }
-:root[data-theme="club"] #canvas-wrapper { box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(226, 214, 184, 0.18); }
-
-/* ================= GRAFITO: oscuro sobrio de marca deportiva premium, grafito con un solo acento cobre ================= */
-:root[data-theme="grafito"] {
-  --night: #101012; --night-2: #161618; --panel: #161618; --line: rgba(255, 255, 255, 0.08);
-  --ink: #ececee; --ink-dim: #8c8c93;
-  --accent: #e59a56; --accent-ink: #1a0f05; --blue: #5aa2ff; --red: #ff6b5e;
-  --cond: 'Inter Tight', 'Inter', system-ui, sans-serif; --body: 'Inter', system-ui, sans-serif;
-  --surface: #1a1a1d; --surface-hover: #212125; --stroke: rgba(255, 255, 255, 0.18);
-  --overlay-rgb: 8 8 10; --overlay: rgb(var(--overlay-rgb) / 0.86); --sticky: #111113;
-  --hud-bg: rgba(10, 10, 12, 0.94); --hud-bg-2: rgba(10, 10, 12, 0.9); --pts-bg: #ececee; --pts-ink: #101012;
-  --portrait-bg: linear-gradient(180deg, #2b2b30 0%, #17171a 100%);
-  --page-bg: #0d0d0f;
-  --hero-bg: #17171a;
-  --radius: 8px; --radius-sm: 6px;
-}
-:root[data-theme="grafito"] :is(.ov-title, .hero-t, .mode h3, .card .nm, .item h4, .stop-team, .brand, .mapcard b, .money) { font-weight: 600; letter-spacing: -0.02em; }
-:root[data-theme="grafito"] .ov-title { font-size: clamp(28px, 3vw, 40px); }
-:root[data-theme="grafito"] .ov-h { font-family: var(--body); font-size: 12px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim); margin-top: 26px; }
-:root[data-theme="grafito"] .hero { border: 1px solid var(--line); box-shadow: inset 3px 0 0 var(--accent); }
-:root[data-theme="grafito"] .hero-ball { box-shadow: none; }
-:root[data-theme="grafito"] .hero-t { font-size: clamp(30px, 3.4vw, 42px); }
-:root[data-theme="grafito"] button { font-weight: 500; }
-:root[data-theme="grafito"] button:hover { background: rgba(255, 255, 255, 0.07); border-color: rgba(255, 255, 255, 0.32); }
-:root[data-theme="grafito"] button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
-:root[data-theme="grafito"] button.primary:hover { background: color-mix(in srgb, var(--accent) 85%, #fff); }
-:root[data-theme="grafito"] .seg button.sel { background: #ececee; color: #101012; }
-:root[data-theme="grafito"] :is(.card, .mode, .item, .mapcard, .stop, .slot) { border-color: var(--line); }
-:root[data-theme="grafito"] :is(.card, .mode, .mapcard, .stop, .slot):hover { border-color: var(--stroke); }
-:root[data-theme="grafito"] :is(.card, .mode, .mapcard, .stop).sel, :root[data-theme="grafito"] .stop.now, :root[data-theme="grafito"] .slot.pick {
-  border-color: var(--accent); box-shadow: none; background: color-mix(in srgb, var(--accent) 8%, var(--surface));
-}
-:root[data-theme="grafito"] .mode { background: var(--surface); box-shadow: inset 0 2px 0 var(--mc, var(--line)); }
-:root[data-theme="grafito"] .mode.m-run { --mc: #c9a45a; background: var(--surface); }
-:root[data-theme="grafito"] .mode.m-friendly { --mc: #6f93c9; background: var(--surface); }
-:root[data-theme="grafito"] .mode.m-americano { --mc: #6fa88a; background: var(--surface); }
-:root[data-theme="grafito"] .mode h3, :root[data-theme="grafito"] .mode.m-run h3, :root[data-theme="grafito"] .mode.m-americano h3 { color: var(--ink); }
-:root[data-theme="grafito"] .mode.m-run .m-tags span { color: var(--ink-dim); }
-:root[data-theme="grafito"] :is(.mode.m-run, .mode.m-friendly, .mode.m-americano).sel { border-color: var(--accent); box-shadow: inset 0 2px 0 var(--mc); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
-:root[data-theme="grafito"] .m-ico { background: rgba(255, 255, 255, 0.06); }
-:root[data-theme="grafito"] .m-tags span { background: transparent; border-color: var(--line); color: var(--ink-dim); }
-:root[data-theme="grafito"] .bar i { background: #c9c9cf; }
-:root[data-theme="grafito"] .bar.pw i { background: var(--accent); }
-:root[data-theme="grafito"] .stat { font-size: 11px; }
-:root[data-theme="grafito"] .sb-team { font-family: var(--body); font-weight: 600; }
-:root[data-theme="grafito"] #canvas-wrapper { box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.08); }
-
-/* ================= NEON: sintetizador de esports, violeta profundo con brillos cian y magenta ================= */
-:root[data-theme="neon"] {
-  --night: #080514; --night-2: #0e0a22; --panel: #0f0a24; --line: rgba(125, 90, 255, 0.3);
-  --ink: #eeeaff; --ink-dim: #a39bd2;
-  --accent: #34f5ff; --accent-ink: #021417; --blue: #3a8bff; --red: #ff3d8b;
-  --cond: 'Orbitron', 'Rajdhani', sans-serif; --body: 'Rajdhani', system-ui, sans-serif;
-  --surface: rgba(18, 11, 44, 0.9); --surface-hover: rgba(30, 18, 70, 0.95); --stroke: rgba(52, 245, 255, 0.45);
-  --overlay-rgb: 6 3 18; --overlay: rgb(var(--overlay-rgb) / 0.84); --sticky: #0b0720;
-  --hud-bg: rgba(8, 5, 22, 0.94); --hud-bg-2: rgba(8, 5, 22, 0.9); --pts-bg: #fff; --pts-ink: #12082e;
-  --portrait-bg: radial-gradient(120% 90% at 50% 100%, #5a1c8f 0%, #2a0f5a 48%, #0d0626 100%);
-  --page-bg: radial-gradient(90% 60% at 80% 0%, #2a0f5a 0%, transparent 60%), radial-gradient(70% 50% at 10% 100%, #0b3a4a 0%, transparent 60%), #080514;
-  --hero-bg: linear-gradient(110deg, #1b0b4a 0%, #3b0f6e 55%, #a0176f 130%);
-  --radius: 10px; --radius-sm: 8px;
-  --glow: color-mix(in srgb, var(--accent) 45%, transparent);
-}
-:root[data-theme="neon"] :is(.ov-title, .hero-t, .ov-h, .mode h3, .card .nm, .item h4, .stop-team, .brand, .mapcard b, .money, .am-row b) { text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
-:root[data-theme="neon"] :is(.ov-title, .hero-t) { text-shadow: 0 0 16px var(--glow); }
-:root[data-theme="neon"] .ov-title { font-size: clamp(22px, 2.5vw, 32px); }
-:root[data-theme="neon"] .hero-t { font-size: clamp(24px, 2.8vw, 36px); }
-:root[data-theme="neon"] .ov-h { font-size: 14px; color: var(--accent); letter-spacing: 0.16em; }
-:root[data-theme="neon"] .card .nm { font-size: 14px; }
-:root[data-theme="neon"] .mode h3 { font-size: 16px; }
-:root[data-theme="neon"] .item h4, :root[data-theme="neon"] .mapcard b { font-size: 13px; }
-:root[data-theme="neon"] :is(.ov-sub, .mode p, .item p, .mapcard span, .slot, .row .lbl, .tut-body, .keys, .vol, .hero-s) { font-size: 1.1em; font-weight: 500; }
-:root[data-theme="neon"] .card .ds, :root[data-theme="neon"] .stat { font-size: 13.5px; }
-:root[data-theme="neon"] button { font-family: var(--body); font-size: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); border-color: var(--stroke); background: rgba(52, 245, 255, 0.06); }
-:root[data-theme="neon"] button:hover { background: rgba(52, 245, 255, 0.14); box-shadow: 0 0 16px var(--glow); }
-:root[data-theme="neon"] button.primary { background: linear-gradient(90deg, #34f5ff, #a46bff); color: #08051a; border-color: transparent; box-shadow: 0 0 20px var(--glow); }
-:root[data-theme="neon"] button.primary:hover { background: linear-gradient(90deg, #7bf9ff, #c09bff); }
-:root[data-theme="neon"] button.big { font-size: 17px; }
-:root[data-theme="neon"] .seg button.sel { background: var(--accent); color: var(--accent-ink); }
-:root[data-theme="neon"] .seg { box-shadow: 0 0 12px rgba(52, 245, 255, 0.2); }
-:root[data-theme="neon"] :is(.card, .mode, .item, .mapcard, .stop, .slot, .dock) { border-color: var(--line); box-shadow: 0 0 16px rgba(125, 90, 255, 0.16); }
-:root[data-theme="neon"] :is(.card, .mode, .mapcard):hover { border-color: var(--accent); box-shadow: 0 0 20px var(--glow); }
-:root[data-theme="neon"] :is(.card, .mode, .mapcard, .stop).sel, :root[data-theme="neon"] .stop.now, :root[data-theme="neon"] .slot.pick {
-  border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 26px var(--glow);
-}
-:root[data-theme="neon"] .hero { border-color: rgba(164, 107, 255, 0.5); box-shadow: 0 0 28px rgba(164, 107, 255, 0.25); }
-:root[data-theme="neon"] .mode { background: var(--surface); border-color: color-mix(in srgb, var(--mc, #7d5aff) 60%, transparent); }
-:root[data-theme="neon"] .mode.m-run { --mc: #ffd54a; background: var(--surface); }
-:root[data-theme="neon"] .mode.m-friendly { --mc: #34f5ff; background: var(--surface); }
-:root[data-theme="neon"] .mode.m-americano { --mc: #ff3dd0; background: var(--surface); }
-:root[data-theme="neon"] .mode h3, :root[data-theme="neon"] .mode.m-run h3, :root[data-theme="neon"] .mode.m-americano h3 { color: var(--mc); text-shadow: 0 0 12px color-mix(in srgb, var(--mc) 50%, transparent); }
-:root[data-theme="neon"] .mode.m-run .m-tags span { color: var(--ink-dim); }
-:root[data-theme="neon"] :is(.mode.m-run, .mode.m-friendly, .mode.m-americano).sel { border-color: var(--mc); box-shadow: 0 0 0 1px var(--mc), 0 0 26px color-mix(in srgb, var(--mc) 45%, transparent); }
-:root[data-theme="neon"] .money { color: var(--accent); text-shadow: 0 0 12px var(--glow); }
-:root[data-theme="neon"] .sb-team { font-family: var(--body); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
-:root[data-theme="neon"] .room-pill { border-color: var(--stroke); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
-:root[data-theme="neon"] #canvas-wrapper { box-shadow: 0 0 0 1px rgba(125, 90, 255, 0.5), 0 0 40px rgba(125, 90, 255, 0.28), 0 24px 60px rgba(0, 0, 0, 0.6); }
-:root[data-theme="neon"] .dock { border-color: rgba(125, 90, 255, 0.4); }
-
-/* Ajustes de las tarjetas (<button>) de los estilos nuevos */
-:root[data-theme="grafito"] :is(button.card, button.mode, button.mapcard), :root[data-theme="neon"] :is(button.card, button.mode, button.mapcard) { border-radius: var(--radius); }
-:root[data-theme="grafito"] :is(button.card, button.mapcard):hover, :root[data-theme="neon"] :is(button.card, button.mapcard):hover { background: var(--surface-hover); }
-:root[data-theme="neon"] :is(button.card, button.mode, button.mapcard) { font-family: var(--body); font-size: 15px; font-weight: 500; }
 
 /* Las tarjetas de personaje, modo y mapa son <button>: no deben heredar la forma ni el texto de los botones de cada tema */
 :root[data-theme] :is(button.card, button.mode, button.mapcard) {
@@ -214,7 +70,4 @@
 :root[data-theme] button.mode { padding: 12px 14px; }
 :root[data-theme="estadio"] :is(button.card, button.mode, button.mapcard) { clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%); }
 :root[data-theme="estadio"] :is(button.card, button.mode, button.mapcard):hover { background: var(--surface-hover); }
-:root[data-theme="club"] :is(button.card, button.mode, button.mapcard) { border-radius: var(--radius); }
-:root[data-theme="club"] :is(button.card, button.mode, button.mapcard):hover { background: var(--surface-hover); }
-:root[data-theme="club"] .seg button { border-radius: 0; }
 :root[data-theme="estadio"] button.card.sel, :root[data-theme="estadio"] button.mode.sel, :root[data-theme="estadio"] button.mapcard.sel { background: var(--surface-hover); }

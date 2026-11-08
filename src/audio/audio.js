@@ -18,6 +18,7 @@ export function setVolume(k, v) {
   if (k === 'sfx' && sfxBus) sfxBus.gain.value = vol.sfx;
   if (k === 'music') {
     if (musicBus) musicBus.gain.value = MUSIC_GAIN * vol.music;
+    if (songEl) songEl.volume = SONG_GAIN * vol.music;
     const on = vol.music > 0;
     if (on !== musicPlaying) { musicPlaying = on; if (on) { ensureAudio(); startMusic(); } else stopMusic(); }
   }
@@ -34,7 +35,7 @@ export function ensureAudio() {
     audioCtx = new AudioContextClass();
   }
   if (audioCtx.state === 'suspended') audioCtx.resume();
-  if (musicPlaying && !musicTimer) startMusic();
+  if (musicPlaying && !musicTimer && !(songEl && !songEl.paused)) startMusic();
 }
 
 function getNoise() {
@@ -215,7 +216,50 @@ function musicScheduler() {
     musicStep++;
   }
 }
+// ---- Canciones: los archivos de assets/music/ (mp3, ogg, m4a o wav) suenan una tras otra, en orden al azar y sin repetir
+// la misma dos veces seguidas. Si la carpeta está vacía, queda el groove sintético de arriba. Usan la barra de música. ----
+const SONG_URLS = import.meta.glob('../../assets/music/*.{mp3,ogg,m4a,wav}', { eager: true, query: '?url', import: 'default' });
+const SONGS = Object.entries(SONG_URLS).map(([path, url]) => ({
+  url,
+  name: decodeURIComponent(path.split('/').pop()).replace(/\.[^.]+$/, '').replace(/^\d+[\s._-]+/, '').replace(/[_]+/g, ' ').trim()
+}));
+export const hasSongs = SONGS.length > 0;
+const SONG_GAIN = 0.55;
+let songEl = null, songIdx = -1, songErrors = 0;
+let onSongChange = () => {};
+export const watchSong = fn => { onSongChange = fn; fn(songName()); };
+export const songName = () => (songIdx >= 0 && SONGS[songIdx] ? SONGS[songIdx].name : '');
+function pickNextSong() {
+  if (SONGS.length === 1) return 0;
+  let n;
+  do { n = Math.floor(Math.random() * SONGS.length); } while (n === songIdx);
+  return n;
+}
+function loadSong(i) {
+  songIdx = i;
+  songEl.src = SONGS[i].url;
+  onSongChange(songName());
+  songEl.play().catch(() => { /* el navegador pide un clic o tecla antes de sonar: se reintenta con el próximo */ });
+}
+export function nextSong() {
+  if (!hasSongs || !songEl) return;
+  loadSong(pickNextSong());
+}
+function startSongs() {
+  if (!songEl) {
+    songEl = new Audio();
+    songEl.preload = 'auto';
+    songEl.addEventListener('ended', () => { songErrors = 0; nextSong(); });
+    songEl.addEventListener('error', () => { if (++songErrors < SONGS.length) nextSong(); });   // un archivo dañado se salta
+  }
+  songEl.volume = SONG_GAIN * vol.music;
+  if (songIdx < 0) loadSong(pickNextSong());
+  else if (songEl.paused) songEl.play().catch(() => {});
+}
+function stopSongs() { if (songEl) songEl.pause(); }
+
 function startMusic() {
+  if (hasSongs) { startSongs(); return; }
   if (!audioCtx || musicTimer) return;
   if (!musicBus) {
     musicBus = audioCtx.createGain();
@@ -228,6 +272,7 @@ function startMusic() {
   musicTimer = setInterval(musicScheduler, 25);
 }
 function stopMusic() {
+  stopSongs();
   clearInterval(musicTimer);
   musicTimer = null;
 }

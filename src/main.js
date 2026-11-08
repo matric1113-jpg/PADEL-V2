@@ -1,6 +1,6 @@
 import './style.css';
 import './themes.css';
-import { getVolume, playSound, setVolume } from './audio/audio.js';
+import { getVolume, hasSongs, nextSong, playSound, setVolume, watchSong } from './audio/audio.js';
 import { watchTalk } from './audio/voice.js';
 import { hooks } from './core/events.js';
 import * as game from './core/game.js';
@@ -10,7 +10,6 @@ import { recordFrame } from './core/replay.js';
 import { localInput, menuSel, rt, state } from './core/state.js';
 import { sendStateTo } from './net/network.js';
 import { applyPrefs } from './storage/progress.js';
-import { initTheme } from './ui/theme.js';
 import { countStep, endFrame, timed } from './perf.js';
 import { renderer } from './renderer.js';
 import { syncHud, updateScoreUI } from './ui/hud.js';
@@ -23,6 +22,13 @@ import { applyInterp, snapshot } from './view/interp.js';
 hooks.sound = type => { playSound(type); onGameEvent(type); };
 hooks.scoreChanged = updateScoreUI;
 document.getElementById('menu-btn').addEventListener('click', openMenu);
+// Canciones de assets/music/: nombre de la que suena y botón para saltar a otra (solo aparecen si hay canciones)
+if (hasSongs) {
+  const next = document.getElementById('music-next'), title = document.getElementById('music-title');
+  next.hidden = false;
+  next.addEventListener('click', () => { nextSong(); next.blur(); });
+  watchSong(name => { title.textContent = name; title.hidden = !name; });
+}
 // Barras de volumen: al soltarlas pierden el foco, así las flechas y WASD vuelven a mover al jugador
 for (const k of ['music', 'sfx']) {
   const el = document.getElementById('vol-' + k);
@@ -83,7 +89,6 @@ function gameLoop(now) {
   }
 })();
 
-initTheme();
 renderer.init();
 applyPrefs(menuSel);   // lo último que elegiste en el menú
 chooseChar(menuSel.char);
