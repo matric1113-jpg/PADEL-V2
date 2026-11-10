@@ -15,6 +15,7 @@ export const rt = {
   localChargeFrames: 0,
   lastPlayedSoundSeq: 0,
   netMsg: '',                // mensaje de conexión visible en el menú
+  rtt: 0,                    // ping (ms) del invitado al anfitrión, medido cada 2 s
   tutorialPage: -1,          // página abierta del tutorial del menú (-1 = cerrado)
   uiMenuOpen: true,
   overlayKey: '',

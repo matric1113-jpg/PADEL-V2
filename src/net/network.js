@@ -44,10 +44,58 @@ const PEER_OPTIONS = {
 };
 const peerOptions = () => Object.assign({}, PEER_OPTIONS, window.PEER_OVERRIDE || {});
 
-export function sendStateTo(conn) {
-  if (conn && conn.open) {
-    try { conn.send({ type: 'state', state }); } catch (e) { /* conexión cerrándose */ }
+// ---------- Envío del estado del anfitrión ----------
+// El estado completo pesa ~5 KB y antes se mandaba 60 veces por segundo a cada invitado (unos 2,3 Mbit/s). Si la conexión
+// (sobre todo con el servidor TURN gratuito) rinde menos que eso, PeerJS deja acumular hasta 8 MB en la cola y todo se
+// atrasa cada vez más. Ahora: (1) cada cuadro solo viaja lo que cambió desde el último envío, y el estado completo una vez
+// por segundo para corregir cualquier diferencia; (2) si la cola de envío ya tiene datos sin salir, se salta ese envío (el
+// siguiente lleva lo último, porque los cambios se calculan contra lo que de verdad se mandó).
+const FULL_EVERY = 60;          // cada tantos envíos va el estado completo
+const MAX_QUEUE = 16 * 1024;    // bytes sin salir a partir de los cuales se salta un envío
+
+function snapshotOf(s) {
+  const top = {};
+  for (const k in s) if (k !== 'players') top[k] = JSON.stringify(s[k]);
+  return { top, pl: s.players.map(p => { const o = {}; for (const f in p) o[f] = JSON.stringify(p[f]); return o; }), uids: s.players.map(p => p.uid).join() };
+}
+// Cambios entre lo último enviado y el estado actual; null si hay que mandarlo completo (cambió la estructura)
+function deltaOf(prev, cur, s) {
+  if (prev.uids !== cur.uids) return null;
+  const d = {}, p = {};
+  for (const k in cur.top) {
+    if (!(k in prev.top)) return null;
+    if (cur.top[k] !== prev.top[k]) d[k] = s[k];
   }
+  for (const k in prev.top) if (!(k in cur.top)) return null;
+  for (let i = 0; i < cur.pl.length; i++) {
+    for (const f in cur.pl[i]) {
+      if (!(f in prev.pl[i])) return null;
+      if (cur.pl[i][f] !== prev.pl[i][f]) (p[i] || (p[i] = {}))[f] = s.players[i][f];
+    }
+  }
+  return { type: 'delta', d, p };
+}
+// Guarda de cada invitado lo último enviado
+const sentTo = new WeakMap();
+
+export function sendStateTo(conn) {
+  if (!conn || !conn.open) return;
+  const dc = conn.dataChannel;
+  if (dc && dc.bufferedAmount > MAX_QUEUE) return;
+  try {
+    const cur = snapshotOf(state);
+    const st = sentTo.get(conn) || { prev: null, n: 0 };
+    const delta = st.prev && st.n % FULL_EVERY !== 0 ? deltaOf(st.prev, cur, state) : null;
+    conn.send(delta || { type: 'state', state });
+    st.prev = cur; st.n++;
+    sentTo.set(conn, st);
+  } catch (e) { /* conexión cerrándose */ }
+}
+
+// Aplica en el invitado los cambios que manda el anfitrión
+function applyDelta(msg) {
+  for (const k in msg.d) state[k] = msg.d[k];
+  for (const i in msg.p) if (state.players[i]) Object.assign(state.players[i], msg.p[i]);
 }
 
 export function leaveNetwork() {
@@ -143,6 +191,9 @@ export function createRoom() {
         setVote(s, data.map);
       } else if (data.type === 'ready') {
         setReady(s);
+      } else if (data.type === 'ping') {
+        conn.send({ type: 'pong', t: data.t });
+        if (state.roomCode) setStatus('Sala ' + state.roomCode + ' · ping ' + (data.rtt || '…') + ' ms');
       }
     });
 
@@ -210,9 +261,13 @@ export function joinRoom() {
         fail(data.mode === 'run'
           ? 'La sala está llena: el torneo de jefes es para 2 jugadores. Para jugar 3 o 4, el anfitrión debe crear un partido amistoso.'
           : 'La sala está llena (4 jugadores).');
-      } else if (data.type === 'state') {
+      } else if (data.type === 'pong') {
+        rt.rtt = Math.round(performance.now() - data.t);
+        setStatus('Sala ' + code + ' · ' + rt.rtt + ' ms');
+      } else if (data.type === 'state' || data.type === 'delta') {
         rt.gotHostState = true;
-        Object.assign(state, data.state);
+        if (data.type === 'delta') applyDelta(data);
+        else Object.assign(state, data.state);
         syncMySlot();
         recordFrame();
         if (state.soundTrigger.seq !== rt.lastPlayedSoundSeq) {
@@ -242,6 +297,13 @@ export function joinRoom() {
 
 setInterval(() => {
   if (!rt.isHost && rt.hostConn && rt.hostConn.open) {
+    const dc = rt.hostConn.dataChannel;
+    if (dc && dc.bufferedAmount > 8 * 1024) return;   // la cola está atrasada: el próximo envío lleva lo último
     rt.hostConn.send({ type: 'input', input: localInput });
   }
 }, 20);
+
+// Ping cada 2 s: el invitado mide el tiempo de ida y vuelta y se lo cuenta al anfitrión; ambos lo ven junto al código de sala
+setInterval(() => {
+  if (!rt.isHost && rt.hostConn && rt.hostConn.open) rt.hostConn.send({ type: 'ping', t: performance.now(), rtt: rt.rtt });
+}, 2000);
