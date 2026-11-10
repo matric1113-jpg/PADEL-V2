@@ -16,9 +16,10 @@ export function setVolume(k, v) {
   vol[k] = Math.min(1, Math.max(0, v));
   try { localStorage.setItem('padel-vol-' + k, String(vol[k])); } catch (e) { /* sin almacenamiento */ }
   if (k === 'sfx' && sfxBus) sfxBus.gain.value = vol.sfx;
+  if (k === 'sfx' && introEl) introEl.volume = Math.min(1, INTRO_GAIN * vol.sfx);
   if (k === 'music') {
     if (musicBus) musicBus.gain.value = MUSIC_GAIN * vol.music;
-    if (songEl) songEl.volume = SONG_GAIN * vol.music;
+    if (songEl) songEl.volume = songVolume();
     const on = vol.music > 0;
     if (on !== musicPlaying) { musicPlaying = on; if (on) { ensureAudio(); startMusic(); } else stopMusic(); }
   }
@@ -35,6 +36,7 @@ export function ensureAudio() {
     audioCtx = new AudioContextClass();
   }
   if (audioCtx.state === 'suspended') audioCtx.resume();
+  startIntro();
   if (musicPlaying && !musicTimer && !(songEl && !songEl.paused)) startMusic();
 }
 
@@ -217,8 +219,9 @@ function musicScheduler() {
   }
 }
 // ---- Canciones: los archivos de assets/music/ (mp3, ogg, m4a o wav; el número del nombre fija el orden) ----
-// Al abrir el juego suena la primera. Cada vez que se cierra una tienda, se corta la que sonaba y entra otra al azar (nunca
-// la misma); si una canción termina sola, sigue otra al azar. Si la carpeta está vacía, queda el groove sintético de arriba.
+// Al abrir el juego suena la primera. Cada vez que se cierra una tienda, se corta la que sonaba y entra otra al azar; si una
+// canción termina sola, sigue otra al azar. No se repite ninguna hasta que hayan sonado todas. Si la carpeta está vacía,
+// queda el groove sintético de arriba.
 const SONG_URLS = import.meta.glob('../../assets/music/*.{mp3,ogg,m4a,wav}', { eager: true, query: '?url', import: 'default' });
 const SONGS = Object.entries(SONG_URLS).sort((a, b) => a[0].localeCompare(b[0], 'es', { numeric: true })).map(([path, url]) => ({
   url,
@@ -230,11 +233,21 @@ let songEl = null, songIdx = -1, songErrors = 0;
 let onSongChange = () => {};
 export const watchSong = fn => { onSongChange = fn; fn(songName()); };
 export const songName = () => (songIdx >= 0 && SONGS[songIdx] ? SONGS[songIdx].name : '');
+// Sin repetir: se sortean todas en orden al azar y no vuelve a sonar ninguna hasta que hayan sonado todas. En la vuelta
+// nueva se mezclan otra vez (la primera de esa vuelta nunca es la que acaba de sonar).
+let songQueue = [];
+function shuffled(indices) {
+  const a = indices.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
 function pickNextSong() {
   if (SONGS.length === 1) return 0;
-  let n;
-  do { n = Math.floor(Math.random() * SONGS.length); } while (n === songIdx);
-  return n;
+  if (songQueue.length === 0) {
+    songQueue = shuffled(SONGS.map((_, i) => i));
+    if (songQueue[0] === songIdx) songQueue.push(songQueue.shift());
+  }
+  return songQueue.shift();
 }
 function loadSong(i) {
   songIdx = i;
@@ -253,11 +266,39 @@ function startSongs() {
     songEl.addEventListener('ended', () => { songErrors = 0; nextSong(); });
     songEl.addEventListener('error', () => { if (++songErrors < SONGS.length) nextSong(); });   // un archivo dañado se salta
   }
-  songEl.volume = SONG_GAIN * vol.music;
-  if (songIdx < 0) loadSong(0);   // en el menú inicial suena la primera (la de número más bajo en assets/music)
+  songEl.volume = songVolume();
+  if (songIdx < 0) {
+    // en el menú inicial suena la primera (la de número más bajo en assets/music); las demás, en orden al azar
+    songQueue = shuffled(SONGS.map((_, i) => i).filter(i => i !== 0));
+    loadSong(0);
+  }
   else if (songEl.paused) songEl.play().catch(() => {});
 }
 function stopSongs() { if (songEl) songEl.pause(); }
+
+// ---- Audio de bienvenida: el archivo de assets/intro/ suena una vez al abrir el juego (con la barra de efectos y voces), y
+// mientras suena la música baja de volumen para que se escuche bien ----
+const INTRO_URLS = Object.values(import.meta.glob('../../assets/intro/*.{ogg,mp3,m4a,wav}', { eager: true, query: '?url', import: 'default' }));
+const INTRO_GAIN = 1;
+const INTRO_DUCK = 0.25;      // la música suena a este volumen (×) mientras habla el audio de bienvenida
+let introEl = null;
+let introState = 'idle';      // idle: aún no suena | playing | done
+const songVolume = () => SONG_GAIN * vol.music * (introState === 'playing' ? INTRO_DUCK : 1);
+function startIntro() {
+  if (!INTRO_URLS.length || introState !== 'idle' || vol.sfx <= 0) return;
+  if (!introEl) {
+    introEl = new Audio(INTRO_URLS[0]);
+    introEl.preload = 'auto';
+    const end = () => { introState = 'done'; if (songEl) songEl.volume = songVolume(); };
+    introEl.addEventListener('ended', end);
+    introEl.addEventListener('error', end);   // si el navegador no lee el archivo, se sigue sin él
+  }
+  introEl.volume = Math.min(1, INTRO_GAIN * vol.sfx);
+  introState = 'playing';
+  if (songEl) songEl.volume = songVolume();
+  // Si el navegador lo bloquea (pasa al abrir un link), vuelve a intentar con el primer clic, toque o tecla
+  introEl.play().catch(() => { introState = 'idle'; if (songEl) songEl.volume = songVolume(); });
+}
 
 function startMusic() {
   if (hasSongs) { startSongs(); return; }
@@ -281,5 +322,9 @@ function stopMusic() {
 
 // Al abrir el juego la primera canción se precarga y se intenta sonar de inmediato. Si el navegador lo bloquea (pasa casi
 // siempre al abrir un link), arranca con el primer clic, toque o tecla en cualquier parte de la página, sin esperar a otra carga.
+startIntro();
 if (hasSongs && musicPlaying) startSongs();
 for (const ev of ['pointerdown', 'keydown', 'touchstart']) window.addEventListener(ev, ensureAudio, { capture: true, passive: true });
+
+// Solo en `npm run dev`: estado del audio de bienvenida y de las canciones desde la consola (no va en el build)
+if (import.meta.env.DEV) window.__audio = { get intro() { return { state: introState, files: INTRO_URLS.length, vol: vol.sfx, paused: introEl ? introEl.paused : null, time: introEl ? +introEl.currentTime.toFixed(2) : null, dur: introEl ? introEl.duration : null, error: introEl && introEl.error ? introEl.error.message : null }; }, startIntro, ensureAudio };
