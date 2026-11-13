@@ -13,7 +13,7 @@ import { AXIS_X, Rig } from './rig.js';
 // Es independiente del juego: se alimenta con un "cuadro" (ver update) que arma render3d/players.js.
 
 export const MODEL_U = 76 / 1.82;                // unidades de mundo por metro del modelo (a escala 1): mide lo mismo que el esqueleto de palitos
-const FEMALE = new Set(['gladys', 'nena', 'capitana']);
+const FEMALE = new Set(['gladys', 'nena', 'capitana', 'jara', 'bachelet']);
 export const genderOf = lookId => (FEMALE.has(lookId) ? 'mujer' : 'hombre');
 
 // Peinado del LOOK -> pieza del pack (pelo.glb) y piezas propias

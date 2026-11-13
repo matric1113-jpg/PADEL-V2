@@ -188,6 +188,48 @@ Object.assign(LOOKS, {
   }
 });
 
+
+// ---- Jefes del torneo (beta 3): caricaturas de pádel, sin más intención que el parecido ----
+Object.assign(LOOKS, {
+  rubius: { name: 'elrubius', role: 'Jefe', speed: 0.35, desc: '', skin: '#f0cfb0', hair: 'spiky', hairColor: '#b98a4e',
+    body: { w: 0.9, h: 1.0, belly: 0.92, arm: 0.9, leg: 0.92 }, shirt: '#f2f2f2', shirtHi: '#ffffff', shirtLo: '#a9a9a9', shorts: '#1b1b1b', shoes: '#ffffff', band: '#39e07a',
+    extras: {}, paddle: { face: '#39e07a', rim: '#1b1b1b', shape: 'tear' } },
+  itown: { name: 'iTownGamePlay', role: 'Jefe', speed: 0.6, desc: '', skin: '#e2b792', hair: 'short', hairColor: '#1a1410',
+    body: { w: 1.04, h: 1.0, belly: 1.05, arm: 1.0, leg: 1.0 }, shirt: '#c62828', shirtHi: '#ff7a6e', shirtLo: '#7f1414', shorts: '#151515', shoes: '#e9e9e9', band: '#c62828',
+    extras: { beard: '#1a1410' }, paddle: { face: '#151515', rim: '#c62828', shape: 'round' } },
+  jara: { name: 'Jeannette Jara', role: 'Jefa', speed: 0.25, desc: '', skin: '#e3b592', hair: 'ponytail', hairColor: '#241812',
+    body: { w: 1.02, h: 0.94, belly: 1.05, arm: 0.95, leg: 0.95 }, shirt: '#d32f2f', shirtHi: '#ff8a80', shirtLo: '#8e1a1a', shorts: '#1c1c28', shoes: '#ffffff', band: '#ffffff',
+    extras: { glasses: '#2a1a1a' }, paddle: { face: '#d32f2f', rim: '#ffffff', shape: 'round' } },
+  otakin: { name: 'El Otakin', role: 'Jefe', speed: 0.6, desc: '', skin: '#e8c19c', hair: 'side', hairColor: '#101018',
+    body: { w: 0.92, h: 1.0, belly: 0.95, arm: 0.9, leg: 0.92 }, shirt: '#6a3df0', shirtHi: '#b39dff', shirtLo: '#38209a', shorts: '#14141c', shoes: '#ff5c8a', band: '#ff5c8a', socksHigh: true,
+    extras: { glasses: '#101018', headband: '#ff5c8a' }, paddle: { face: '#ff5c8a', rim: '#14141c', shape: 'diamond' } },
+  bachelet: { name: 'La Bachelet', role: 'Jefa', speed: 0.8, desc: '', skin: '#f0c9a8', hair: 'short', hairColor: '#d9bf7a',
+    body: { w: 1.0, h: 0.93, belly: 1.02, arm: 0.95, leg: 0.95 }, shirt: '#1e5fbf', shirtHi: '#8fb8f5', shirtLo: '#103a7a', shorts: '#f2f2f2', shoes: '#d32f2f', band: '#d32f2f',
+    extras: { glasses: '#6b4a2a' }, paddle: { face: '#ffffff', rim: '#d32f2f', shape: 'round' } },
+  xokas: { name: 'elXokas', role: 'Jefe', speed: 0.45, desc: '', skin: '#e0b08a', hair: 'bald', hairColor: '#1a1410',
+    body: { w: 1.14, h: 1.03, belly: 1.0, arm: 1.3, leg: 1.08 }, shirt: '#151515', shirtHi: '#4a4a4a', shirtLo: '#000000', tank: true, shorts: '#151515', shoes: '#f2f2f2', band: '#e53935',
+    extras: { beard: '#1a1410' }, paddle: { face: '#e53935', rim: '#151515', shape: 'diamond' } },
+  pinera: { name: 'Sebastián Piñera', role: 'Jefe', speed: 0.85, desc: '', skin: '#ecc7a6', hair: 'side', hairColor: '#cfcfcf',
+    body: { w: 0.9, h: 0.95, belly: 0.95, arm: 0.88, leg: 0.88 }, shirt: '#f4f4f4', shirtHi: '#ffffff', shirtLo: '#b0b6be', shorts: '#12305e', shoes: '#ffffff', band: '#12305e',
+    extras: {}, paddle: { face: '#12305e', rim: '#f4f4f4', shape: 'tear' } },
+  huevito: { name: 'Huevito Rey', role: 'Jefe', speed: 0.7, desc: '', skin: '#e6b890', hair: 'bald', hairColor: '#2a1a12',
+    body: { w: 0.96, h: 0.98, belly: 1.0, arm: 0.95, leg: 0.95 }, shirt: '#ffd23a', shirtHi: '#fff0a0', shirtLo: '#b08a00', shorts: '#1b1b1b', shoes: '#ffffff', band: '#1b1b1b',
+    extras: {}, paddle: { face: '#fff7d6', rim: '#ffd23a', shape: 'round' } },
+  bombo: { name: 'Bombo Fica', role: 'Jefe', speed: 0.5, desc: '', skin: '#dfb08a', hair: 'short', hairColor: '#bdbdbd',
+    body: { w: 1.26, h: 1.0, belly: 1.45, arm: 1.1, leg: 1.1 }, shirt: '#2e7d5b', shirtHi: '#8fd6b4', shirtLo: '#17452f', shorts: '#2a2a2a', shoes: '#3a2a20', band: '#2e7d5b',
+    extras: { mustache: '#9a9a9a' }, paddle: { face: '#8d5a2b', rim: '#f2e6c8', shape: 'round' } },
+  corxea: { name: 'Corxea', role: 'Jefe', speed: 0.7, desc: '', skin: '#e2b48e', hair: 'cap', hairColor: '#1a1410',
+    body: { w: 1.05, h: 1.05, belly: 0.98, arm: 1.15, leg: 1.05 }, shirt: '#2a1d4f', shirtHi: '#9a6be0', shirtLo: '#140c2a', shorts: '#0e0e14', shoes: '#b79cff', band: '#b79cff', socksDark: true,
+    extras: { beard: '#1a1410', cap: '#0e0e14', capBack: true }, paddle: { face: '#7a2cff', rim: '#e4ff3a', shape: 'diamond' } },
+  vardoc: { name: 'Vardoc', role: 'Jefe', speed: 0.45, desc: '', skin: '#e4b792', hair: 'mullet', hairColor: '#1c1410',
+    body: { w: 1.12, h: 1.04, belly: 1.08, arm: 1.2, leg: 1.08 }, shirt: '#101010', shirtHi: '#505050', shirtLo: '#000000', shorts: '#101010', shoes: '#e53935', band: '#e53935',
+    extras: { beard: '#1c1410', headband: '#e53935' }, paddle: { face: '#e53935', rim: '#101010', shape: 'diamond' } },
+  maradona: { name: 'Maradona', role: 'Jefe', speed: 0.8, desc: '', skin: '#d7a57c', hair: 'curly', hairColor: '#0e0b09',
+    body: { w: 1.08, h: 0.93, belly: 1.12, arm: 1.05, leg: 1.15 }, shirt: '#75aadb', shirtHi: '#ffffff', shirtLo: '#3f77ad', shorts: '#101010', shoes: '#101010', band: '#ffffff', socksHigh: true,
+    extras: { headband: '#ffffff' }, paddle: { face: '#75aadb', rim: '#ffffff', shape: 'round' } }
+});
+LOOKS.neira = { ...LOOKS.matias, name: 'Matías Neira', role: 'Jefe', desc: '' };
+
 // ---- Mapas: 3 vanilla y 3 raros ----
 export const MAPS = {
   chile:  { name: 'Chile', tag: 'Vanilla', desc: 'Cancha clásica frente a la cordillera. Física 100% normal.', bounceZ: 1, roll: 1,
@@ -200,7 +242,7 @@ export const MAPS = {
             swatch: 'linear-gradient(180deg, #8fa2b4 0%, #5b6b7d 50%, #2c4f7a 100%)' },
   atlas:  { name: 'Hombros de Atlas', tag: 'Raro', desc: 'La cancha se inclina por ratos y caen rayos que paralizan 4 s.', bounceZ: 1, roll: 1, tilt: true, bolts: true,
             swatch: 'linear-gradient(180deg, #2a3f8f 0%, #8fa7e0 50%, #f5d58a 100%)' },
-  crater: { name: 'Cráter volcánico', tag: 'Raro', desc: 'Los remates dejan brasas que queman los pies; los cristales calientes devuelven más rápido y queman al tocarlos.', bounceZ: 1, roll: 1, embers: true, hotGlass: true,
+  crater: { name: 'Cráter volcánico', tag: 'Raro', desc: 'Con techo: nadie saca la pelota por 3 ni por 4, rebota y sigue. Los remates dejan brasas que queman los pies; los cristales calientes devuelven más rápido y queman al tocarlos.', bounceZ: 1, roll: 1, embers: true, hotGlass: true, roof: 200,
             swatch: 'linear-gradient(180deg, #2a0a06 0%, #8a1f0a 55%, #ff6a1a 100%)' }
 };
 // Mapas del laboratorio (versión de prueba): no entran a la votación ni al azar del amistoso
@@ -212,8 +254,13 @@ Object.assign(MAPS, {
   gigante: { name: 'Estadio gigante', tag: 'Nuevo', lab: true, desc: 'La cancha es un 35% más grande: los jugadores y la pelota se ven más chicos, la pala alcanza menos y hay que correr mucho más.', bounceZ: 1, roll: 1, big: 0.74, bigSpeed: 0.9,
             swatch: 'linear-gradient(180deg, #050a18 0%, #1b3a6b 50%, #2a7a4a 100%)' }
 });
+// Mapa cambiante: no es una cancha, es una forma de jugar. Cada SHIFT_POINTS puntos la cancha se desarma y se arma
+// otra al azar (state.shift lleva la cuenta; state.map es siempre la cancha real del momento)
+MAPS.cambiante = { name: 'Mapa cambiante', tag: 'Raro', shift: true, desc: 'Cada 2 puntos la cancha se desarma y se arma otra al azar, con sus peligros: cualquiera de las otras 9.', bounceZ: 1, roll: 1,
+  swatch: 'conic-gradient(#e98a52, #45c3cf, #6b1b2b, #8fa2b4, #f5d58a, #ff6a1a, #4a2a7a, #b0306a, #2a7a4a, #e98a52)' };
 export const MAP_IDS = Object.keys(MAPS).filter(id => !MAPS[id].lab);
 export const ALL_MAP_IDS = Object.keys(MAPS);
+export const REAL_MAP_IDS = ALL_MAP_IDS.filter(id => !MAPS[id].shift);   // canchas de verdad (las que puede armar el mapa cambiante)
 // Mutadores del laboratorio: suman el peligro de otro mapa a la cancha elegida
 export const MUTATORS = {
   holes: { name: 'Piso que se cae', flags: { holes: true } },
@@ -225,25 +272,34 @@ export const MUTATORS = {
   lava: { name: 'Brasas y cristal caliente', flags: { embers: true, hotGlass: true } }
 };
 export const MUTATOR_IDS = Object.keys(MUTATORS);
-// Nivel de cada jefe (skill). Del 2.º en adelante se bajó 0,04 (antes 0,62 / 0,8 / 0,95 / 1,0 / 1,06).
+// Torneo de 8 jefes. El nivel (skill) de los 6 primeros es el de siempre aunque cambió el orden (Zeus pasó del 3.º al 5.º).
+// blink: cada tantos cuadros puede teletransportarse a la pelota (aparte de su activa); breaker: sus remates rompen el piso;
+// activeCd: recarga propia de su activa (cuadros).
 export const BOSSES = [
-  { team: 'Las tías del club', map: 'chile', skill: 0.45, gamesToWin: 1, players: [
-    { look: 'gladys', name: 'Tía Gladys', speed: 0.35, active: 'random' },
-    { look: 'nena', name: 'Tía Nena', speed: 0.6 }] },
-  { team: 'Los de la pega', map: 'brasil', skill: 0.58, gamesToWin: 1, players: [
-    { look: 'patricio', name: 'Don Patricio', speed: 0.25, active: 'random' },
-    { look: 'rodrigo', name: 'Rodrigo', speed: 0.6, active: 'random' }] },
-  { team: 'Zeus', map: 'atlas', skill: 0.76, gamesToWin: 2, solo: true, players: [
-    { look: 'zeus', name: 'Zeus', speed: 0.7, bodyScale: 1.3, speedMult: 1.32, powerMult: 1.15 }] },
-  { team: 'Los influencers', map: 'china', skill: 0.91, gamesToWin: 2, flash: true, players: [
-    { look: 'brayan', name: 'Brayan', speed: 0.8, active: 'clone' },
-    { look: 'kevin', name: 'Kevin', speed: 0.45, active: 'random' }] },
-  { team: 'Los colosos del cráter', map: 'crater', skill: 0.96, gamesToWin: 2, players: [
-    { look: 'coloso', name: 'El Coloso', speed: 0.2, bodyScale: 1.5, speedMult: 0.88, powerMult: 1.3, active: 'random', ups: 3 },
-    { look: 'chispa', name: 'Chispita', speed: 0.85, bodyScale: 0.74, speedMult: 1.3, backPref: true, active: 'random', ups: 3 }] },
-  { team: 'Los campeones del club', map: 'altura', skill: 1.02, gamesToWin: 2, players: [
-    { look: 'martinez', name: 'Profe Martínez', speed: 0.5, active: 'all', ups: 4 },
-    { look: 'capitana', name: 'La Capitana', speed: 0.7, active: 'all', ups: 4 }] }
+  { team: 'elrubius y iTownGamePlay', map: 'chile', skill: 0.45, gamesToWin: 1, players: [
+    { look: 'rubius', name: 'elrubius', speed: 0.35, active: 'random' },
+    { look: 'itown', name: 'iTownGamePlay', speed: 0.6 }] },
+  { team: 'Jeannette Jara y El Otakin', map: 'brasil', skill: 0.58, gamesToWin: 1, players: [
+    { look: 'jara', name: 'Jeannette Jara', speed: 0.25, active: 'random' },
+    { look: 'otakin', name: 'El Otakin', speed: 0.6, active: 'random' }] },
+  { team: 'La Bachelet y elXokas', map: 'china', skill: 0.91, gamesToWin: 2, flash: true, players: [
+    { look: 'bachelet', name: 'La Bachelet', speed: 0.8, active: 'clone' },
+    { look: 'xokas', name: 'elXokas', speed: 0.45, active: 'random' }] },
+  { team: 'Sebastián Piñera y Matías Neira', map: 'crater', skill: 0.96, gamesToWin: 2, players: [
+    { look: 'neira', name: 'Matías Neira', speed: 0.2, bodyScale: 1.5, speedMult: 0.88, powerMult: 1.3, active: 'random', ups: 3 },
+    { look: 'pinera', name: 'Sebastián Piñera', speed: 0.85, bodyScale: 0.74, speedMult: 1.3, backPref: true, active: 'random', ups: 3 }] },
+  { team: 'Zeus (ministro Quiroz)', map: 'atlas', skill: 0.76, gamesToWin: 2, solo: true, players: [
+    { look: 'zeus', name: 'Ministro Quiroz', speed: 0.7, bodyScale: 1.3, speedMult: 1.32, powerMult: 1.15 }] },
+  { team: 'Huevito Rey y Bombo Fica', map: 'altura', skill: 1.02, gamesToWin: 2, players: [
+    { look: 'bombo', name: 'Bombo Fica', speed: 0.5, active: 'all', ups: 4 },
+    { look: 'huevito', name: 'Huevito Rey', speed: 0.7, active: 'all', ups: 4 }] },
+  // 7.º: uno solo contra los dos, en el piso que se cae. Corxea se teletransporta a la pelota y su clon de sombra es el Tío Tito
+  { team: 'Corxea y Tío Tito', map: 'abismo', skill: 0.92, gamesToWin: 2, solo: true, players: [
+    { look: 'corxea', name: 'Corxea', speed: 0.7, bodyScale: 1.25, speedMult: 1.36, powerMult: 1.2, active: 'clone', blink: 300, ups: 3 }] },
+  // 8.º: la final, en el mapa cambiante
+  { team: 'Vardoc y Maradona', map: 'cambiante', skill: 1.12, gamesToWin: 2, breaker: true, players: [
+    { look: 'vardoc', name: 'Vardoc', speed: 0.45, bodyScale: 1.15, powerMult: 1.2, active: 'sismo', ups: 6 },
+    { look: 'maradona', name: 'Maradona', speed: 0.8, speedMult: 1.15, active: 'fantasma', blink: 420, ups: 6 }] }
 ];
 // ---- Laboratorio (versión de prueba) ----
 // Jefes nuevos. blink: cada tantos cuadros puede teletransportarse a la pelota (aparte de su activa);
@@ -363,6 +419,19 @@ export const TALK = {
     chispa: ['¡Más rápido que tú!', '¡Chispeza!'],
     martinez: ['Primera lección: no fallar', 'Eso se entrena'],
     capitana: ['Así se gana un club', 'Siguiente'],
+    rubius: ['¡Muy buenas, criaturitas!', 'Eso va para el vídeo'],
+    itown: ['¡Hola, chicos!', 'Partidazo, ¿eh?'],
+    jara: ['Con trabajo se gana', 'Punto para la gente'],
+    otakin: ['¡Nani!', 'El poder de la amistad'],
+    bachelet: ['Paso', 'Con calma, que llegamos'],
+    xokas: ['¡Qué golpe, chaval!', 'A entrenar, máquina'],
+    pinera: ['Tiempos mejores', 'Esto lo calculé antes'],
+    neira: ['Globito y a cobrar', 'Paciencia, puro cerebro'],
+    huevito: ['¡Buena, cabros!', 'Ese fue de rey'],
+    bombo: ['¿Y cómo estuvo?', 'Tranquilo el perro'],
+    corxea: ['Ahora me ves, ahora no', 'Tito, la tuya'],
+    vardoc: ['GG, fácil', 'Eso fue un combo'],
+    maradona: ['La pelota no se mancha', '¡Golazo!'],
     ilusionista: ['Nada por aquí, nada por allá', '¡Abracadabra!'],
     temblor: ['Grado 9, compadre', '¡Se movió el piso!'],
     replica: ['Y viene otra', 'Somos dos, por si acaso']

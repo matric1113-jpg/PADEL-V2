@@ -3,6 +3,7 @@ import {
   MeshBasicMaterial, MeshPhysicalMaterial, MeshStandardMaterial, PlaneGeometry, RepeatWrapping, SRGBColorSpace
 } from 'three';
 import { COURT, GLASS_H, GLASS_STEP_H, NET_H, TILE_H, TILE_W, WALL_H_LOW, WALL_H_TALL, ZS } from '../core/constants.js';
+import { MAPS } from '../core/data.js';
 import { state } from '../core/state.js';
 import { clamp } from '../core/util.js';
 import { DOORS } from '../core/walls.js';
@@ -240,6 +241,7 @@ export class Court {
 
     this.buildWalls();
     this.buildNet();
+    this.buildRoof();
   }
 
   // Texturas del suelo según el mapa (se generan una vez por mapa)
@@ -247,6 +249,7 @@ export class Court {
     if (mapId === this.mapId) return;
     this.mapId = mapId;
     const ST = styleOf();
+    this.roof.visible = !!(MAPS[mapId] && MAPS[mapId].roof);
     for (const m of [this.turfMat, this.outerMat, this.platMat]) {
       if (m.map) m.map.dispose();
       if (m.emissiveMap) m.emissiveMap.dispose();
@@ -366,6 +369,30 @@ export class Court {
     if (key === 'F') { hinge.position.set(DOOR[0] + 2, 0.5, Y0 - 3); hinge.rotation.y = ang; }
     else { hinge.position.set(DOOR[0] + 2, 0.5, Y1 + 3); hinge.rotation.y = -ang; }
     walls.add(hinge);
+  }
+
+  // Techo (cráter): malla desde el borde de las paredes hasta arriba y una parrilla de vigas con malla muy tenue encima,
+  // para que se vea que nada sale por 3 ni por 4 sin tapar el juego. La altura es la mayor de los mapas con techo.
+  buildRoof() {
+    const H = Math.max(...Object.values(MAPS).map(M => M.roof || 0));
+    const g = new Group();
+    const metal = new MeshStandardMaterial({ color: '#2a1c18', metalness: 0.6, roughness: 0.5 });
+    for (const key of ['F', 'N', 'L', 'R']) {
+      const side = key === 'F' || key === 'N';
+      const a0 = side ? X0 : Y0, a1 = side ? X1 : Y1;
+      g.add(wallPlane(key, a0, a1, WALL_H_LOW, H, this.wireMat, 8));
+      g.add(wallBox(key, a0, a1, H - 2.5, H, 3, metal));
+    }
+    for (let x = X0 + 100; x < X1 - 1; x += 100) { const b = new Mesh(new BoxGeometry(2.4, 2.4, COURT.h), metal); b.position.set(x, H - 1.2, COURT.midY); g.add(b); }
+    for (const y of [Y0 + COURT.h / 3, Y0 + COURT.h * 2 / 3]) { const b = new Mesh(new BoxGeometry(COURT.w, 2.4, 2.4), metal); b.position.set(COURT.netX, H - 1.2, y); g.add(b); }
+    const top = new Mesh(new PlaneGeometry(COURT.w, COURT.h), new MeshBasicMaterial({ color: '#ffb080', alphaMap: wireTexture(32, 2), transparent: true, opacity: 0.16, depthWrite: false, side: DoubleSide }));
+    top.material.alphaMap.repeat.set(COURT.w / 16, COURT.h / 16);
+    top.rotation.x = -Math.PI / 2;
+    top.position.set(COURT.netX, H, COURT.midY);
+    g.add(top);
+    g.visible = false;
+    this.roof = g;
+    this.group.add(g);
   }
 
   // Red: paño con alambre, faja blanca y postes. Se deforma cuando la golpea la pelota (fx.net)

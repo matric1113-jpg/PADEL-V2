@@ -1,6 +1,6 @@
 import { computeServeBox, nextServerSlot, showBanner } from './ballistics.js';
-import { AMERICANO_GAMES_TO_WIN, HOLE_FIRST_FRAMES, PAD_F, PAD_S, POINTS_LABELS, SETS_TO_WIN } from './constants.js';
-import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, LAB_RIVALS, LOOKS, MAPS, MAP_IDS, TALK, TEAMMATE_SKILL, UPG, UPGRADES, runReward, validLab } from './data.js';
+import { SHIFT_POINTS, AMERICANO_GAMES_TO_WIN, HOLE_FIRST_FRAMES, PAD_F, PAD_S, POINTS_LABELS, SETS_TO_WIN } from './constants.js';
+import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, LAB_RIVALS, LOOKS, MAPS, MAP_IDS, REAL_MAP_IDS, TALK, TEAMMATE_SKILL, UPG, UPGRADES, runReward, validLab } from './data.js';
 import { hooks } from './events.js';
 import { bossOf, isLab, mapOf, menuSel, rt, slotOfUid, state, syncMySlot } from './state.js';
 import { emptyUpgrades, upLvl } from './stats.js';
@@ -13,6 +13,14 @@ export function emitSound(type) {
   rt.lastPlayedSoundSeq = state.soundTrigger.seq;
 }
 export function setupServe(nextServerSlot) {
+  // Mapa cambiante: cada SHIFT_POINTS puntos la cancha se desarma y se arma otra al azar
+  let shifted = false;
+  if (state.shift && state.shift.due) {
+    const sh = state.shift;
+    setMap(pick(REAL_MAP_IDS.filter(m => m !== state.map)), true);
+    sh.due = false;
+    shifted = true;
+  }
   state.phase = 'SERVE';
   if (state.players[nextServerSlot] && state.players[nextServerSlot].out) nextServerSlot = 2;
   state.serverSlot = nextServerSlot;
@@ -62,6 +70,7 @@ export function setupServe(nextServerSlot) {
 
   // El texto lo ven todos en la sala, así que nombra a quien saca
   showBanner(server.isBot ? 'Al saque: ' + server.name : 'Saca ' + server.name + '\nApunta al cuadro iluminado, carga y suelta el clic', 9999);
+  if (shifted) showBanner(`¡Cambio de cancha: ${mapOf().name}!\n${server.isBot ? 'Al saque: ' : 'Saca '}${server.name}`, 9999);
 }
 
 // ---- Frases ----
@@ -86,6 +95,7 @@ export function awardPoint(winningTeam, reason, isFault = false) {
   state.phase = 'POINT_PAUSE';
   state.pauseTimer = 95;
   state.score[winningTeam]++;
+  if (state.shift && ++state.shift.n % SHIFT_POINTS === 0) state.shift.due = true;
 
   // Repetición para los puntos espectaculares
   const spectacular = /^Por [34]|^Al vacío/.test(reason) || reason.startsWith('Remate ganador') || state.rally.cp[winningTeam];
@@ -298,7 +308,10 @@ function resetPlayerExtras(p) {
   p.fell = false; p.blinkCd = 0; p.blinkMax = 0;
 }
 
-export function setMap(id) {
+// keepShift: cambio de cancha dentro del mapa cambiante (no reinicia su cuenta)
+export function setMap(id, keepShift = false) {
+  if (MAPS[id] && MAPS[id].shift) { state.shift = { n: 0, due: false }; id = pick(REAL_MAP_IDS); }
+  else if (!keepShift) state.shift = null;
   state.map = MAPS[id] ? id : 'chile';
   state.lights = [true, true];
   state.ice = null;
@@ -557,17 +570,32 @@ function endRunMatch(winner, finalScore) {
     showBanner(winner === 0 ? `¡Le ganaron a ${bossOf().team}!` : `Perdieron contra ${bossOf().team}`, 9999);
     return;
   }
-  const i = state.run.boss;
-  const reward = winner === 0 ? runReward(BOSSES[i], finalScore, state.games) : 0;
-  state.result = { winner, score: finalScore, games: [...state.games], boss: i, reward };
+  const i = state.run.boss, B = BOSSES[i];
+  const reward = winner === 0 ? runReward(B, finalScore, state.games) : 0;
+  // Dejar al rival en cero (40-0 en los jefes a un juego, 2-0 en los demás) salta al jefe siguiente; la final no se salta
+  const zero = winner === 0 && (B.gamesToWin > 1 ? state.games[1] === 0 : finalScore[1] === 0);
+  const skip = zero && i + 2 <= BOSSES.length - 1;
+  state.result = { winner, score: finalScore, games: [...state.games], boss: i, reward, skip };
+  // Ganar o perder el torneo termina con la cinemática del podio (result.final dice a qué pantalla se va después)
   if (winner === 0) {
     state.players.forEach(p => { if (p.team === 0 && !p.isBot) p.money += reward; });
-    state.afterPause = i >= BOSSES.length - 1 ? 'champion' : 'shop';
-    showBanner(`¡Le ganaron a ${BOSSES[i].team}!\n+$${reward.toLocaleString('es-CL')} para cada uno`, 9999);
+    const champion = i >= BOSSES.length - 1;
+    if (champion) state.result.final = 'champion';
+    state.afterPause = champion ? 'podium' : 'shop';
+    showBanner(`¡Le ganaron a ${B.team}!\n${skip ? `Los dejaron en cero: se saltan a ${BOSSES[i + 1].team}. ` : ''}+$${reward.toLocaleString('es-CL')} para cada uno`, 9999);
   } else {
-    state.afterPause = 'lost';
-    showBanner(`Perdieron contra ${BOSSES[i].team}\nEl torneo vuelve a empezar`, 9999);
+    state.result.final = 'lost';
+    state.afterPause = 'podium';
+    showBanner(`Perdieron contra ${B.team}\nEl torneo vuelve a empezar`, 9999);
   }
+}
+
+// Después de la tienda: al jefe siguiente (o al subsiguiente, si dejaron en cero al que acaban de ganar)
+export function advanceRun() {
+  state.run.boss = Math.min(BOSSES.length - 1, state.run.boss + (state.result && state.result.skip ? 2 : 1));
+  if (state.result) state.result.skip = false;
+  setMap(BOSSES[state.run.boss].map);
+  state.screen = 'route';
 }
 
 export function tryBuy(slot, id) {

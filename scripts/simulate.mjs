@@ -13,7 +13,7 @@ import { ACTIVE_COST, ALL_ACTIVE_IDS, ALL_MAP_IDS, BOSSES, FRIENDLY_START_MONEY,
 import { padsNow, tileOf } from '../src/core/floor.js';
 import { DOORS, insideCourt } from '../src/core/walls.js';
 import { PAD_JUMP_H, AMERICANO_GAMES_TO_WIN, JUMP_LAND_FRAMES, JUMP_LAND_STOP, JUMP_MAX_H, JUMP_MIN_H, MIN_SWING_CHARGE, SETS_TO_WIN } from '../src/core/constants.js';
-import { AMERICANO_PAIRS, americanoRanking, prepareRoster, resolveVoteAndPlay, setMap, setupServe, startBossMatch, startFriendly, startMatch, startRun, swapSeats } from '../src/core/game.js';
+import { AMERICANO_PAIRS, advanceRun, americanoRanking, prepareRoster, resolveVoteAndPlay, setMap, setupServe, startBossMatch, startFriendly, startMatch, startRun, swapSeats } from '../src/core/game.js';
 import { stepPhysics } from '../src/core/physics.js';
 
 const FRAMES = Number(process.argv[2] || 120000);
@@ -30,7 +30,7 @@ Math.random = () => {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 };
 
-let points = 0, shops = 0, matches = 0, newSets = 0, podiums = 0, americanos = 0, labs = 0, falls = 0;
+let points = 0, shops = 0, matches = 0, newSets = 0, podiums = 0, americanos = 0, labs = 0, falls = 0, skips = 0, runEnds = 0;
 const reasons = new Map();
 const fail = msg => { throw new Error('flujo de sets: ' + msg + ' | ' + JSON.stringify({ sets: state.sets, historial: state.setHistory, pantalla: state.screen })); };
 
@@ -94,7 +94,7 @@ function labSetup(n) {
   // en la simulación no hay humanos: la activa elegida la lleva el bot del puesto 0
   state.players[0].active = menuSel.lab.active;
   state.players[0].skill = 0.9;
-  if (state.screen !== 'play' || state.map !== menuSel.lab.map) fail('el laboratorio no empezó en la cancha elegida');
+  if (state.screen !== 'play' || (menuSel.lab.map === 'cambiante' ? !state.shift : state.map !== menuSel.lab.map)) fail('el laboratorio no empezó en la cancha elegida');
 }
 
 function setup(mode) {
@@ -196,6 +196,15 @@ function testJump() {
 // Pelota que sale por 4: el punto no se da al cruzar la pared, sino al tocar el suelo de afuera
 function testOutBall() {
   prepareRoster('friendly'); startFriendly(); resolveVoteAndPlay();
+  // Con techo (cráter) la misma pelota no sale: rebota adentro y el punto no es un por 4
+  setMap('crater');
+  state.players.forEach(p => { p.isBot = true; p.skill = 0.1; p.x = p.team === 0 ? 300 : 620; });
+  state.phase = 'PLAY';
+  Object.assign(state.ball, { x: 800, y: 260, z: 130, vx: 4, vy: 0, vz: 3, lastHitTeam: 0, bouncesInOpponentSide: 1, shotType: 'DRIVE', isServeShot: false, out: false });
+  for (let j = 0; j < 200 && state.phase === 'PLAY'; j++) { stepPhysics(); if (state.ball.out) fail('la pelota salió de una cancha con techo'); if (state.ball.z * 1.2 > 201) fail('la pelota atravesó el techo'); }
+  if (/^Por [34]/.test(state.bannerText)) fail('hubo un por 3 o por 4 en una cancha con techo');
+  setMap('chile');
+  setupServe(0);
   state.players.forEach(p => { p.isBot = true; p.skill = 0.1; p.x = p.team === 0 ? 300 : 620; });   // lejos, sin rescatar
   state.phase = 'PLAY';
   const b = state.ball;
@@ -403,7 +412,7 @@ for (const mode of MODES) {
       startMatch();
       checkNewSet([0, 0]);
     } else if (s === 'route') startBossMatch();
-    else if (s === 'shop') { state.run.boss++; setMap(BOSSES[state.run.boss].map); state.screen = 'route'; }
+    else if (s === 'shop') { const was = state.run.boss, skip = state.result.skip; advanceRun(); if (state.run.boss !== was + (skip ? 2 : 1)) fail('el torneo no avanzó al jefe que tocaba'); if (skip) skips++; }
     else if (s === 'lost' || s === 'champion') startRun();
     else if (s === 'labover') {
       if (!state.result || !state.result.lab || Math.max(...state.games) !== state.run.lab.games) fail('el laboratorio terminó sin llegar a los juegos pedidos');
@@ -413,7 +422,8 @@ for (const mode of MODES) {
     else stepPhysics();   // también durante 'podium': la cuenta de la cinemática la lleva la física
     if (state.screen === 'podium' && !inPodium) {
       podiums++;
-      if (state.mode === 'americano' ? state.amer.history.length !== AMERICANO_PAIRS.length : Math.max(...state.sets) !== SETS_TO_WIN) fail('podio antes de tiempo');
+      if (state.mode === 'run') { runEnds++; if (!state.result || !state.result.final) fail('podio del torneo sin resultado final'); }
+      else if (state.mode === 'americano' ? state.amer.history.length !== AMERICANO_PAIRS.length : Math.max(...state.sets) !== SETS_TO_WIN) fail('podio antes de tiempo');
     }
     inPodium = state.screen === 'podium';
     const key = state.score.join('-') + '|' + state.games.join('-');
@@ -425,7 +435,7 @@ for (const mode of MODES) {
   }
   console.log(`${mode}: ${FRAMES} cuadros sin errores`);
 }
-console.log({ semilla: SEED, puntos: points, tiendas: shops, 'partidos amistosos': matches, americanos, 'sets nuevos abiertos': newSets, podios: podiums, 'partidos de laboratorio': labs, 'caídas por un hoyo': falls, host: rt.isHost });
+console.log({ semilla: SEED, puntos: points, tiendas: shops, 'partidos amistosos': matches, americanos, 'sets nuevos abiertos': newSets, podios: podiums, 'partidos de laboratorio': labs, 'caídas por un hoyo': falls, 'jefes saltados': skips, 'finales de torneo con cinemática': runEnds, host: rt.isHost });
 const all = [...reasons].sort((a, b) => b[1] - a[1]);
 console.log('Motivos de punto:');
 for (const [r, n] of all) console.log(`  ${String(n).padStart(5)}  ${r}`);

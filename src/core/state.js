@@ -148,6 +148,7 @@ export const state = {
   hz: { bolt: 600, tilt: 420, gust: 360, hole: 150 },
   holes: [],                       // baldosas que avisan o ya cayeron: { i: baldosa, w: cuadros de aviso que le quedan (0 = hoyo abierto) }
   quake: null,                     // terremoto en camino: { team: lado sacudido, t: cuadros que faltan, id }
+  shift: null,                     // mapa cambiante: { n: puntos jugados, due: toca cambiar de cancha en el próximo saque }
   padT: 0,                         // reloj de las camas elásticas (su posición sale de él)
   blink: { seq: 0, x0: 0, y0: 0, x1: 0, y1: 0 },   // último teletransporte (para el efecto)
   rally: { cp: [false, false] },   // ¿algún equipo salvó con contrapared en este punto?

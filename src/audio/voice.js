@@ -15,7 +15,7 @@ const RECORDED = import.meta.glob('../../assets/voices/*/*.mp3', { eager: true, 
 const recordedUrl = (lookId, text) => RECORDED[`../../assets/voices/${lookId}/${phraseId(text)}.mp3`];
 let playing = null;
 
-const FEMALE_LOOKS = new Set(['gladys', 'nena', 'capitana']);
+const FEMALE_LOOKS = new Set(['gladys', 'nena', 'capitana', 'jara', 'bachelet']);
 // Acento preferido por personaje (el resto, chileno)
 const LANG_PREF = { marco: ['es-CU', 'es-DO', 'es-PR', 'es-VE', 'es-ES'], zeus: ['es-ES'] };
 // Variación leve de tono y velocidad para que dos personajes con la misma voz no suenen idénticos

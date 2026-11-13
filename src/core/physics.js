@@ -1,6 +1,6 @@
 import { computeLaunch, computeServeBox, getClampedTarget, launchBall, showBanner } from './ballistics.js';
 import { updateBotLogic } from './bots.js';
-import { HOLE_EDGE, PAD_BALL_K, PAD_BALL_MIN_VZ, PAD_JUMP_H, BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, GUST_PLAYER_PUSH, JUMP_CHARGE_FRAMES, JUMP_CHARGE_SLOW, JUMP_G, JUMP_LAND_FRAMES, JUMP_LAND_SLOW, JUMP_LAND_STOP, JUMP_MAX_H, JUMP_MIN_H, JUMP_REJUMP_FRAMES, JUMP_SMASH_BONUS, MATE_HIT_RADIUS, MATE_KO_CHARGE, MATE_KO_FRAMES, MATE_STUN_FRAMES, MATE_STUN_MAX_FRAMES, MIN_SWING_CHARGE, SMASH_FULL_Z, SMASH_LOW_BOUNCE, SMASH_LOW_SPEED, TILT_BALL_ACCEL, TILT_PLAYER_PUSH, LIGHTS, MAX_CHARGE_FRAMES, NET_H, PODIUM_FRAMES, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
+import { RUN_PODIUM_FRAMES, LIGHT_BREAK_R, LIGHT_BREAK_Z, ROOF_BOUNCE, HOLE_EDGE, PAD_BALL_K, PAD_BALL_MIN_VZ, PAD_JUMP_H, BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, GUST_PLAYER_PUSH, JUMP_CHARGE_FRAMES, JUMP_CHARGE_SLOW, JUMP_G, JUMP_LAND_FRAMES, JUMP_LAND_SLOW, JUMP_LAND_STOP, JUMP_MAX_H, JUMP_MIN_H, JUMP_REJUMP_FRAMES, JUMP_SMASH_BONUS, MATE_HIT_RADIUS, MATE_KO_CHARGE, MATE_KO_FRAMES, MATE_STUN_FRAMES, MATE_STUN_MAX_FRAMES, MIN_SWING_CHARGE, SMASH_FULL_Z, SMASH_LOW_BOUNCE, SMASH_LOW_SPEED, TILT_BALL_ACCEL, TILT_PLAYER_PUSH, LIGHTS, MAX_CHARGE_FRAMES, NET_H, PODIUM_FRAMES, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
 import { holeAt, padAt } from './floor.js';
 import { awardPoint, checkVoteReady, emitSound, goToScreen, setupServe } from './game.js';
 import { activate, breakFloorAt, updateHazards } from './hazards.js';
@@ -113,7 +113,12 @@ export function stepPhysics() {
   remoteInputs[rt.myUid] = { ...localInput };
   if (state.screen !== 'play' || state.phase === 'POINT_PAUSE') discardPendingSwings();
   if (state.screen === 'shop2') { checkVoteReady(); return; }
-  if (state.screen === 'podium') { if (++rt.podiumT >= PODIUM_FRAMES) state.screen = 'matchover'; return; }
+  if (state.screen === 'podium') {
+    // Fin de un amistoso o americano, o del torneo de jefes (más corta; después va a 'champion' o 'lost')
+    const fin = state.result && state.result.final;
+    if (++rt.podiumT >= (fin ? RUN_PODIUM_FRAMES : PODIUM_FRAMES)) state.screen = fin || 'matchover';
+    return;
+  }
   if (state.screen !== 'play') return;
 
   if (state.bannerTimer > 0 && state.phase === 'PLAY') state.bannerTimer--;
@@ -438,10 +443,17 @@ export function stepPhysics() {
     if (state.tilt.t > 0) { const e = tiltEase() * TILT_BALL_ACCEL; b.vx += state.tilt.x * e; b.vy += state.tilt.y * e; }
   }
 
+  // Techo (cráter): la pelota rebota hacia abajo y sigue en juego; con techo nadie la saca por 3 ni por 4
+  if (M.roof && b.z * ZS > M.roof && b.vz > 0) {
+    b.z = M.roof / ZS;
+    b.vz = -b.vz * ROOF_BOUNCE;
+    emitSound('glass');
+  }
+
   // Focos: un globo altísimo puede romper uno
   LIGHTS.forEach((L, i) => {
     if (!state.lights[i]) return;
-    if (Math.hypot(b.x - L.x, b.y - L.y) < 42 && Math.abs(b.z * ZS - L.z) < 36) {
+    if (Math.hypot(b.x - L.x, b.y - L.y) < LIGHT_BREAK_R && Math.abs(b.z * ZS - L.z) < LIGHT_BREAK_Z) {
       state.lights[i] = false;
       b.vz = -Math.abs(b.vz) * 0.3;
       b.vx *= 0.6;
@@ -572,7 +584,7 @@ export function stepPhysics() {
     let wallH = 0;
     if (hitLeft || hitRight) wallH = Math.max(wallH, WALL_H_TALL);
     if (hitTop || hitBottom) wallH = Math.max(wallH, sideWallHeight(b.x));
-    if (OVER_WALL_RULE && b.z * ZS > wallH) {
+    if (OVER_WALL_RULE && !M.roof && b.z * ZS > wallH) {
       // Sale por encima: el punto (para quien pegó) se decide cuando toque el suelo de afuera, salvo que la rescaten
       const overBack = (hitLeft || hitRight);
       b.out = true;

@@ -410,6 +410,10 @@ export function drawHud(me, built, S, setWorld) {
       drawCursor(me);
     }
   }
+  if (fx.mapFade > 0) {
+    ctx.fillStyle = `rgba(6, 4, 14, ${Math.min(1, fx.mapFade * 1.25)})`;
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  }
   if (fx.flash > 0) {
     ctx.fillStyle = `rgba(255, 255, 255, ${fx.flash * 0.55})`;
     ctx.fillRect(0, 0, VIEW_W, VIEW_H);

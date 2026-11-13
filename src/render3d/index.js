@@ -1,5 +1,6 @@
 import { ACESFilmicToneMapping, PCFSoftShadowMap, PerspectiveCamera, Scene, SRGBColorSpace, WebGLRenderer } from 'three';
 import { VIEW_H, VIEW_W } from '../core/constants.js';
+import { BOSSES } from '../core/data.js';
 import { localInput, state } from '../core/state.js';
 import { canvas, wrapper } from '../dom.js';
 import { mouseView } from '../input/input.js';
@@ -132,6 +133,23 @@ function renderStage(now, dt) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   const fade = 1 - stageT / FADE_FRAMES;
   if (fade > 0) { ctx.fillStyle = `rgba(0, 0, 0, ${fade})`; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+  // Fin del torneo de jefes: título sobre la cinemática
+  const fin = state.result && state.result.final;
+  if (fin && state.screen === 'podium') {
+    const S = canvas.width / VIEW_W, a = Math.max(0, Math.min(1, (stageT - 40) / 40));
+    ctx.save();
+    ctx.setTransform(S, 0, 0, S, 0, 0);
+    ctx.globalAlpha = a;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '700 64px "Barlow Condensed", sans-serif';
+    ctx.lineWidth = 8; ctx.strokeStyle = 'rgba(4, 10, 20, 0.85)'; ctx.lineJoin = 'round';
+    const title = fin === 'champion' ? '¡CAMPEONES DEL CLUB!' : 'ELIMINADOS';
+    ctx.strokeText(title, VIEW_W / 2, 92); ctx.fillStyle = fin === 'champion' ? '#ffd54a' : '#ff6a5c'; ctx.fillText(title, VIEW_W / 2, 92);
+    ctx.font = '600 26px "Barlow Condensed", sans-serif'; ctx.lineWidth = 5;
+    const sub = fin === 'champion' ? `Le ganaron a los ${BOSSES.length} jefes` : `Los dejó fuera ${(BOSSES[state.result.boss] || {}).team || ''} (jefe ${state.result.boss + 1} de ${BOSSES.length})`;
+    ctx.strokeText(sub, VIEW_W / 2, 142); ctx.fillStyle = '#f2f6fa'; ctx.fillText(sub, VIEW_W / 2, 142);
+    ctx.restore();
+  }
 }
 
 export function render(now) {

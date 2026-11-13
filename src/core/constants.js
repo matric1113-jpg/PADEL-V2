@@ -89,8 +89,8 @@ export const SMASH_LOW_BOUNCE = 0.79;        // rebote en el suelo de ese remate
 // salta más alto cuanto más rato lo cargó. Sirve sobre todo para alcanzar las pelotas que salen hacia la malla o el
 // fondo (por 3 / por 4). Al caer se queda un instante clavado y le cuesta volver a correr: abusar del salto se paga.
 export const JUMP_G = 0.3;                   // gravedad del salto (unidades de z por cuadro²)
-export const JUMP_MIN_H = 16;                // altura con un toque (16 de z = 48 cm)
-export const JUMP_MAX_H = 44;                // altura con la carga completa (44 de z = 1,3 m)
+export const JUMP_MIN_H = 19.2;              // altura con un toque (antes 16; ×1,2 = 58 cm)
+export const JUMP_MAX_H = 52.8;              // altura con la carga completa (antes 44; ×1,2 = 1,6 m)
 export const JUMP_CHARGE_FRAMES = 30;        // cuadros de carga para el salto más alto (0,5 s)
 export const JUMP_CHARGE_SLOW = 0.8;         // velocidad al moverse mientras carga el salto
 export const JUMP_LAND_STOP = 4;             // al caer de un salto completo queda clavado 4 cuadros (0,07 s; de uno corto, la mitad)
@@ -101,7 +101,13 @@ export const JUMP_SMASH_BONUS = 0.04;        // remate en el aire: hasta un 4 % 
 // Raquetazo al compañero: si la pala de un jugador golpea a su pareja mientras balancea, depende de la carga del golpe:
 // el más suave la deja aturdida 2 s, con la mitad de carga 4 s (en medio, proporcional) y con más de la mitad cae al
 // suelo y no vuelve hasta que termina el punto
-export const MATE_HIT_RADIUS = 18 * ENTITY_K; // distancia de la pala al cuerpo del compañero para golpearlo
+export const MATE_HIT_RADIUS = 18 * 1.2 * ENTITY_K;   // (×1,2: antes 18)
+export const LIGHT_BREAK_R = 84;             // distancia horizontal de la pelota al foco para romperlo (antes 42)
+export const LIGHT_BREAK_Z = 72;             // y diferencia de altura (antes 36)
+export const ROOF_BOUNCE = 0.6;              // mapas con techo (cráter): velocidad vertical que conserva la pelota al pegar en el techo
+export const SHIFT_POINTS = 2;               // mapa cambiante: cada cuántos puntos cambia la cancha
+export const RUN_PODIUM_FRAMES = 420;        // cinemática al ganar o perder el torneo (7 s)
+
 export const MIN_SWING_CHARGE = 0.15;        // carga mínima de un golpe (aunque se suelte el clic al instante)
 export const MATE_STUN_FRAMES = 120;         // 2 s a 60 cuadros por segundo (golpe más suave)
 export const MATE_STUN_MAX_FRAMES = 240;     // 4 s (golpe con la mitad de carga)

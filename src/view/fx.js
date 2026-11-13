@@ -50,6 +50,7 @@ export const fx = {
   prevBolts: [],
   prevOpen: [],          // baldosas que ya eran hoyo en el cuadro anterior
   blinkSeq: -1,
+  mapSeen: '', mapFade: 0,   // mapa cambiante: fundido cuando la cancha se desarma y se arma otra
   view: { rot: 0, oy: 0, k: 1 },
   inited: false
 };
@@ -61,7 +62,12 @@ export function detectStateEvents() {
     fx.replaySeq = state.replay.seq; fx.celebSeq = state.celebrate.seq; fx.talkSeq = state.talk.seq;
     fx.prevLights = [...state.lights];
     fx.blinkSeq = state.blink.seq;
+    fx.mapSeen = state.map;
     return;
+  }
+  if (state.map !== fx.mapSeen) {
+    if (state.shift && state.screen === 'play') { fx.mapFade = 1; fx.shake = Math.max(fx.shake, 9); }
+    fx.mapSeen = state.map;
   }
   // Laboratorio: baldosas que acaban de caer (polvo en el borde y sacudida) y teletransportes (chispas en los dos puntos)
   const open = state.holes.filter(h => h.w <= 0).map(h => h.i);
@@ -179,6 +185,7 @@ export function updateFx(dt) {
   // Terremoto en camino: el suelo vibra cada vez más
   if (state.quake && state.screen === 'play') fx.shake = Math.max(fx.shake, 1.5 + 4 * (1 - state.quake.t / QUAKE_WARN_FRAMES));
   fx.flash = Math.max(0, fx.flash - 0.06 * dt);
+  fx.mapFade = Math.max(0, fx.mapFade - 0.022 * dt);
   for (const s of fx.sparks) { s.t += dt; s.x += s.vx * dt; s.y += s.vy * dt; s.z += s.vz * dt; s.vz -= 0.2 * dt; }
   fx.sparks = fx.sparks.filter(s => s.t < s.max && s.z > 0);
   for (const s of fx.strikes) s.t += dt;

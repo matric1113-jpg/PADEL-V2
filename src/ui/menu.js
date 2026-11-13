@@ -2,7 +2,7 @@ import { ensureAudio, nextSong, playJingle } from '../audio/audio.js';
 import { sayHello } from '../audio/voice.js';
 import { AMERICANO_GAMES_TO_WIN } from '../core/constants.js';
 import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, ALL_ACTIVE_IDS, ALL_MAP_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, HELLO, LAB_RIVALS, LOOKS, MAPS, MAP_IDS, MUTATORS, MUTATOR_IDS, RUN_REWARD, UPGRADES, validLab } from '../core/data.js';
-import { AMERICANO_PAIRS, prepareRoster, setLook, setMap, setReady, setVote, startBossMatch, startMatch, startRun, swapSeats, tryBuy } from '../core/game.js';
+import { AMERICANO_PAIRS, advanceRun, prepareRoster, setLook, setMap, setReady, setVote, startBossMatch, startMatch, startRun, swapSeats, tryBuy } from '../core/game.js';
 import { bossOf, localInput, menuSel, rt, state } from '../core/state.js';
 import { upLvl } from '../core/stats.js';
 import { createRoom, joinRoom, leaveNetwork } from '../net/network.js';
@@ -190,12 +190,12 @@ function viewMenu() {
   const diffs = DIFFICULTIES.map((d, i) =>
     `<button data-act="diff" data-v="${i}" class="${menuSel.diff === i ? 'sel' : ''}">${d.name}</button>`).join('');
   return `<div class="ov-panel">
-    <div class="hero"><span class="hero-ball"></span><div><div class="hero-t">Padel Club</div><div class="hero-s">Elige a tu jugador y el modo de juego. Todos están parejos: cambia el estilo, no la fuerza.</div></div><button class="big" data-act="tutorial" style="margin-left:auto">Tutorial</button></div>
+    <div class="hero"><span class="hero-ball"></span><div><div class="hero-t">Padel Club <span class="beta">beta 3</span></div><div class="hero-s">Elige a tu jugador y el modo de juego. Todos están parejos: cambia el estilo, no la fuerza.</div></div><button class="big" data-act="tutorial" style="margin-left:auto">Tutorial</button></div>
     <div class="ov-h">Tu jugador</div>
     <div class="cards">${cards}</div>
     <div class="ov-h">Modo de juego</div>
     <div class="modes">
-      ${mode('run', 'Torneo de jefes', `${BOSSES.length} jefes, cada uno en su cancha: los 2 primeros a un juego y del 3 en adelante al mejor de 3. Más plata mientras más claro les ganen. Si pierden, vuelven al inicio.`, [`${BOSSES.length} jefes`, `Hasta $${fmt(RUN_REWARD)}`, '1 o 2 jugadores'])}
+      ${mode('run', 'Torneo de jefes', `${BOSSES.length} jefes, cada uno en su cancha: los 2 primeros a un juego y del 3 en adelante al mejor de 3. Más plata mientras más claro les ganen, y si dejan a un jefe en cero se saltan al siguiente. Si pierden, vuelven al inicio.`, [`${BOSSES.length} jefes`, `Hasta $${fmt(RUN_REWARD)}`, '1 o 2 jugadores'])}
       ${mode('friendly', 'Partido amistoso', 'Gana quien llegue primero a 2 sets (cada set, a 6 juegos), contra bots o con hasta 4 personas online. El anfitrión arma los equipos. Tienda y votación de mapa en cada set. Al final, podio.', ['2 sets', 'Azul contra rojo', 'Hasta 4 online'])}
       ${mode('americano', 'Americano', `${AMERICANO_PAIRS.length} sets con una pareja distinta en cada uno (al primero en llegar a ${AMERICANO_GAMES_TO_WIN} juegos). Cada uno suma los juegos que gana. Al final, podio con oro, plata y bronce.`, [`${AMERICANO_PAIRS.length} sets`, 'Parejas rotativas', 'Medallas'])}
       ${mode('lab', 'Laboratorio', 'Versión de prueba: eliges directo la cancha, el rival y tus poderes, sin pasar por el torneo ni juntar plata. Con 3 canchas, 2 jefes y 4 activas nuevas.', ['Versión de prueba', 'Todo desbloqueado', 'Lo nuevo'])}
@@ -293,7 +293,7 @@ function viewShop() {
   const r = state.result || { score: [4, 0], games: [1, 0] };
   return `<div class="ov-panel">
     <div class="ov-title">¡Le ganaron a ${esc(beaten.team)}!</div>
-    <div class="ov-sub">${beaten.gamesToWin > 1 ? `Ganaron ${r.games[0]} juegos a ${r.games[1]}.` : `Ganaron el juego ${r.score[0]} puntos a ${r.score[1]}.`} Cada jugador recibe $${fmt(r.reward || 0)} (40-0: $1.500, 40-15: $1.100, 40-30: $900, punto de oro: $700; al mejor de 3, 2-0: $1.500 y 2-1: $1.000); la plata que no gasten se guarda.</div>
+    <div class="ov-sub">${r.skip ? `<b>Los dejaron en cero: se saltan a ${esc(BOSSES[i + 1].team)}.</b> ` : ''}${beaten.gamesToWin > 1 ? `Ganaron ${r.games[0]} juegos a ${r.games[1]}.` : `Ganaron el juego ${r.score[0]} puntos a ${r.score[1]}.`} Cada jugador recibe $${fmt(r.reward || 0)} (40-0: $1.500, 40-15: $1.100, 40-30: $900, punto de oro: $700; al mejor de 3, 2-0: $1.500 y 2-1: $1.000); la plata que no gasten se guarda.</div>
     <div class="wallets">${walletsHtml()}</div>
     ${shopItemsHtml()}
     <div class="row">${hostButtons('route', 'Ver el camino')}</div>
@@ -320,7 +320,7 @@ function viewShop2() {
   const cards = opts.map(id => {
     const M = MAPS[id];
     const label = id === 'random' ? 'Mapa al azar' : id === 'keep' ? 'Seguir en ' + MAPS[state.map].name : M.name;
-    const desc = id === 'random' ? 'Cualquiera de los 6.' : id === 'keep' ? 'Sin cambios.' : M.desc;
+    const desc = id === 'random' ? 'Cualquiera de los 7.' : id === 'keep' ? 'Sin cambios.' : M.desc;
     const sw = M ? M.swatch : (id === 'random' ? 'conic-gradient(#e98a52, #45c3cf, #6b1b2b, #8fa2b4, #f5d58a, #ff6a1a, #e98a52)' : MAPS[state.map].swatch);
     return `<button class="mapcard${me && me.vote === id ? ' sel' : ''}" data-act="vote" data-v="${id}" ${me && !me.isBot ? '' : 'disabled'}>
       <i style="background:${sw}"></i><b>${esc(label)}</b>${M ? `<span class="tag">${M.tag}</span>` : ''}<span>${esc(desc)}</span>${votes[id] ? `<em>${votes[id]} voto${votes[id] > 1 ? 's' : ''}</em>` : ''}</button>`;
@@ -409,7 +409,7 @@ function trackProgress(s, myTeam) {
   if (s === 'shop' && r && Number.isInteger(r.boss)) recordBossBeaten(r.boss);
   else if (s === 'champion') { if (r && Number.isInteger(r.boss)) recordBossBeaten(r.boss); recordRunWon(); }
   else if (s === 'lost') recordRunLost();
-  else if (s === 'podium' && r) {
+  else if (s === 'podium' && r && !r.final) {
     if (r.americano) recordAmericano(myAmericanoPlace());
     else recordFriendly(r.winner === myTeam);
   }
@@ -419,7 +419,7 @@ function persistRun() {
   const me = state.players[rt.mySlot];
   if (state.mode !== 'run' || !rt.isHost || !me || Object.keys(rt.connections).length) return;
   if (state.screen !== 'shop' && state.screen !== 'route') return;
-  const boss = state.screen === 'shop' ? state.run.boss + 1 : state.run.boss;
+  const boss = state.screen === 'shop' ? Math.min(BOSSES.length - 1, state.run.boss + (state.result && state.result.skip ? 2 : 1)) : state.run.boss;
   if (boss > 0) saveRun({ boss, char: me.lookId, money: me.money, up: { ...me.up }, active: me.active });
 }
 
@@ -428,8 +428,8 @@ export function syncOverlay() {
   if (!rt.uiMenuOpen && state.screen !== lastScreenSeen) {
     const s = state.screen;
     const myTeam = (state.players[rt.mySlot] || {}).team || 0;
-    if (s === 'shop' || s === 'champion') playJingle(true);
-    else if (s === 'lost') playJingle(false);
+    if (s === 'shop' || (s === 'champion' && lastScreenSeen !== 'podium')) playJingle(true);
+    else if (s === 'lost' && lastScreenSeen !== 'podium') playJingle(false);
     else if (s === 'labover' && state.result) playJingle(state.result.winner === myTeam);
     else if (s === 'podium' && state.result) playJingle(state.result.americano ? myAmericanoPlace() === 1 : state.result.winner === myTeam);
     trackProgress(s, myTeam);
@@ -509,7 +509,7 @@ overlayEl.addEventListener('click', e => {
       if (rt.isHost) tryBuy(rt.mySlot, v);
       else if (rt.hostConn && rt.hostConn.open) rt.hostConn.send({ type: 'buy', id: v });
       break;
-    case 'route': if (rt.isHost) { state.run.boss++; setMap(BOSSES[state.run.boss].map); state.screen = 'route'; } break;
+    case 'route': if (rt.isHost) advanceRun(); break;
     case 'go': if (rt.isHost) startBossMatch(); break;
     case 'vote':
       if (rt.isHost) setVote(rt.mySlot, v);
