@@ -230,6 +230,13 @@ Object.assign(LOOKS, {
 });
 LOOKS.neira = { ...LOOKS.matias, name: 'Matías Neira', role: 'Jefe', desc: '' };
 
+// "Otros personajes" del menú: se puede jugar con el aspecto y el nombre de un jefe, pero con estadísticas normales
+// (velocidad y fuerza parejas, tamaño normal, sin poderes)
+export const EXTRA_CHARACTERS = ['rubius', 'itown', 'jara', 'otakin', 'bachelet', 'xokas', 'pinera', 'zeus', 'huevito', 'bombo', 'corxea', 'vardoc', 'maradona'];
+export const PLAYABLE = [...CHARACTERS, ...EXTRA_CHARACTERS];
+export const EXTRA_SPEED = 0.5;
+export const playSpeed = id => (CHARACTERS.includes(id) ? LOOKS[id].speed : EXTRA_SPEED);
+
 // ---- Mapas: 3 vanilla y 3 raros ----
 export const MAPS = {
   chile:  { name: 'Chile', tag: 'Vanilla', desc: 'Cancha clásica frente a la cordillera. Física 100% normal.', bounceZ: 1, roll: 1,
@@ -282,7 +289,7 @@ export const BOSSES = [
   { team: 'Jeannette Jara y El Otakin', map: 'brasil', skill: 0.58, gamesToWin: 1, players: [
     { look: 'jara', name: 'Jeannette Jara', speed: 0.25, active: 'random' },
     { look: 'otakin', name: 'El Otakin', speed: 0.6, active: 'random' }] },
-  { team: 'La Bachelet y elXokas', map: 'china', skill: 0.91, gamesToWin: 2, flash: true, players: [
+  { team: 'La Bachelet y elXokas', map: 'china', skill: 0.91, gamesToWin: 1, flash: true, players: [
     { look: 'bachelet', name: 'La Bachelet', speed: 0.8, active: 'clone' },
     { look: 'xokas', name: 'elXokas', speed: 0.45, active: 'random' }] },
   { team: 'Sebastián Piñera y Matías Neira', map: 'crater', skill: 0.96, gamesToWin: 2, players: [

@@ -1,6 +1,6 @@
 import { computeServeBox, nextServerSlot, showBanner } from './ballistics.js';
 import { SHIFT_POINTS, AMERICANO_GAMES_TO_WIN, HOLE_FIRST_FRAMES, PAD_F, PAD_S, POINTS_LABELS, SETS_TO_WIN } from './constants.js';
-import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, LAB_RIVALS, LOOKS, MAPS, MAP_IDS, REAL_MAP_IDS, TALK, TEAMMATE_SKILL, UPG, UPGRADES, runReward, validLab } from './data.js';
+import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, LAB_RIVALS, LOOKS, MAPS, MAP_IDS, REAL_MAP_IDS, TALK, TEAMMATE_SKILL, UPG, UPGRADES, playSpeed, runReward, validLab } from './data.js';
 import { hooks } from './events.js';
 import { bossOf, isLab, mapOf, menuSel, rt, slotOfUid, state, syncMySlot } from './state.js';
 import { emptyUpgrades, upLvl } from './stats.js';
@@ -293,7 +293,7 @@ export function setLook(p, id, speed) {
   if (!L) return;
   p.lookId = id;
   p.name = L.name;
-  p.speedStat = speed != null ? speed : L.speed;
+  p.speedStat = speed != null ? speed : playSpeed(id);   // un jefe elegido como personaje juega con estadísticas normales
   p.powerStat = 1 - p.speedStat;
 }
 

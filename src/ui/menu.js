@@ -1,7 +1,7 @@
 import { ensureAudio, nextSong, playJingle } from '../audio/audio.js';
 import { sayHello } from '../audio/voice.js';
 import { AMERICANO_GAMES_TO_WIN } from '../core/constants.js';
-import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, ALL_ACTIVE_IDS, ALL_MAP_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, HELLO, LAB_RIVALS, LOOKS, MAPS, MAP_IDS, MUTATORS, MUTATOR_IDS, RUN_REWARD, UPGRADES, validLab } from '../core/data.js';
+import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, ALL_ACTIVE_IDS, ALL_MAP_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, HELLO, LAB_RIVALS, LOOKS, MAPS, MAP_IDS, EXTRA_CHARACTERS, PLAYABLE, playSpeed, MUTATORS, MUTATOR_IDS, RUN_REWARD, UPGRADES, validLab } from '../core/data.js';
 import { AMERICANO_PAIRS, advanceRun, prepareRoster, setLook, setMap, setReady, setVote, startBossMatch, startMatch, startRun, swapSeats, tryBuy } from '../core/game.js';
 import { bossOf, localInput, menuSel, rt, state } from '../core/state.js';
 import { upLvl } from '../core/stats.js';
@@ -21,7 +21,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 export function chooseChar(id) {
   menuSel.char = id;
   localInput.charId = id;
-  localInput.speedPref = LOOKS[id].speed;
+  localInput.speedPref = playSpeed(id);
   if (rt.isHost && state.screen === 'menu') {
     setLook(state.players[0], id);
     state.players[0].isBot = false;
@@ -48,7 +48,7 @@ function playSolo() {
 function continueRun() {
   const r = savedRun();
   if (!r) return;
-  if (CHARACTERS.includes(r.char)) menuSel.char = r.char;
+  if (PLAYABLE.includes(r.char)) menuSel.char = r.char;
   menuSel.mode = 'run';
   playSolo();
   const me = state.players[rt.mySlot];
@@ -173,8 +173,20 @@ function viewLabOver() {
   </div>`;
 }
 
+// El laboratorio no se publica: solo aparece corriendo el juego en local (npm run dev)
+const LAB_ON = !!import.meta.env.DEV;
+let showOthers = false;   // fila de "otros personajes" abierta
+
 function viewMenu() {
+  if (!LAB_ON && menuSel.mode === 'lab') menuSel.mode = 'run';
+  if (EXTRA_CHARACTERS.includes(menuSel.char)) showOthers = true;
   const run = menuSel.mode === 'run', lab = menuSel.mode === 'lab';
+  const others = !showOthers ? '' : `<div class="cards others">${EXTRA_CHARACTERS.map(id => {
+    const L = LOOKS[id];
+    return `<button class="card${menuSel.char === id ? ' sel' : ''}" data-act="char" data-v="${id}">
+      <canvas class="portrait" data-look="${id}"></canvas>
+      <span class="nm">${esc(L.name)}</span><span class="rl">Parejo</span></button>`;
+  }).join('')}</div>`;
   const saved = run ? savedRun() : null;
   const cards = CHARACTERS.map(id => {
     const L = LOOKS[id];
@@ -193,12 +205,14 @@ function viewMenu() {
     <div class="hero"><span class="hero-ball"></span><div><div class="hero-t">Padel Club <span class="beta">beta 3</span></div><div class="hero-s">Elige a tu jugador y el modo de juego. Todos están parejos: cambia el estilo, no la fuerza.</div></div><button class="big" data-act="tutorial" style="margin-left:auto">Tutorial</button></div>
     <div class="ov-h">Tu jugador</div>
     <div class="cards">${cards}</div>
+    <div class="row tight"><button data-act="others">${showOthers ? 'Ocultar otros personajes' : 'Otros personajes (los jefes)'}</button>${showOthers ? '<span class="lbl">Solo cambia el nombre y el aspecto: juegan con velocidad y fuerza parejas, tamaño normal y sin poderes.</span>' : ''}</div>
+    ${others}
     <div class="ov-h">Modo de juego</div>
-    <div class="modes">
-      ${mode('run', 'Torneo de jefes', `${BOSSES.length} jefes, cada uno en su cancha: los 2 primeros a un juego y del 3 en adelante al mejor de 3. Más plata mientras más claro les ganen, y si dejan a un jefe en cero se saltan al siguiente. Si pierden, vuelven al inicio.`, [`${BOSSES.length} jefes`, `Hasta $${fmt(RUN_REWARD)}`, '1 o 2 jugadores'])}
+    <div class="modes${LAB_ON ? '' : ' three'}">
+      ${mode('run', 'Torneo de jefes', `${BOSSES.length} jefes, cada uno en su cancha: los 3 primeros a un juego y del 4 en adelante al mejor de 3. Más plata mientras más claro les ganen, y si dejan a un jefe en cero se saltan al siguiente. Si pierden, vuelven al inicio.`, [`${BOSSES.length} jefes`, `Hasta $${fmt(RUN_REWARD)}`, '1 o 2 jugadores'])}
       ${mode('friendly', 'Partido amistoso', 'Gana quien llegue primero a 2 sets (cada set, a 6 juegos), contra bots o con hasta 4 personas online. El anfitrión arma los equipos. Tienda y votación de mapa en cada set. Al final, podio.', ['2 sets', 'Azul contra rojo', 'Hasta 4 online'])}
       ${mode('americano', 'Americano', `${AMERICANO_PAIRS.length} sets con una pareja distinta en cada uno (al primero en llegar a ${AMERICANO_GAMES_TO_WIN} juegos). Cada uno suma los juegos que gana. Al final, podio con oro, plata y bronce.`, [`${AMERICANO_PAIRS.length} sets`, 'Parejas rotativas', 'Medallas'])}
-      ${mode('lab', 'Laboratorio', 'Versión de prueba: eliges directo la cancha, el rival y tus poderes, sin pasar por el torneo ni juntar plata. Con 3 canchas, 2 jefes y 4 activas nuevas.', ['Versión de prueba', 'Todo desbloqueado', 'Lo nuevo'])}
+      ${!LAB_ON ? '' : mode('lab', 'Laboratorio', 'Versión de prueba: eliges directo la cancha, el rival y tus poderes, sin pasar por el torneo ni juntar plata. Con 3 canchas, 2 jefes y 4 activas nuevas.', ['Versión de prueba', 'Todo desbloqueado', 'Lo nuevo'])}
     </div>
     ${lab ? labHtml() : progressHtml()}
     ${run || lab ? '' : `<div class="row"><span class="lbl">Nivel de los bots</span><div class="seg">${diffs}</div></div>`}
@@ -448,7 +462,7 @@ export function syncOverlay() {
     return;
   }
   const data = view === 'tutorial' ? [rt.tutorialPage]
-    : view === 'menu' ? [menuSel.char, menuSel.mode, menuSel.diff, rt.netMsg, progressRev.n, menuSel.lab]
+    : view === 'menu' ? [menuSel.char, menuSel.mode, menuSel.diff, rt.netMsg, progressRev.n, menuSel.lab, showOthers]
     : [state.roomCode, state.mode, state.run, state.result, state.sets, rt.mySlot, rt.isHost, state.map, state.vote, seatPick,
        state.amer && state.amer.history,
        state.players.map(p => [p.uid, p.name, p.isBot, p.money, p.up, p.team, p.active, p.ready, p.vote, p.out])];
@@ -471,6 +485,7 @@ overlayEl.addEventListener('click', e => {
   switch (t.dataset.act) {
     case 'char': chooseChar(v); break;
     case 'mode': menuSel.mode = v; break;
+    case 'others': showOthers = !showOthers; if (!showOthers && EXTRA_CHARACTERS.includes(menuSel.char)) chooseChar(CHARACTERS[0]); break;
     case 'diff': menuSel.diff = Number(v); break;
     case 'labmap': menuSel.lab.map = v; break;
     case 'labrival': menuSel.lab.rival = Number(v); break;

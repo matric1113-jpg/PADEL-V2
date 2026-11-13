@@ -1,6 +1,7 @@
 # Publica en GitHub Pages:
 #   /        el index.html de la rama main, tal cual (el link de siempre no cambia)
-#   /beta/   el build de esta rama (versión 3D, Vite + Three.js)
+#   /beta3/  el build de esta rama (versión 3D, Vite + Three.js)
+#   /beta/   redirige a /beta3/ (el link anterior sigue sirviendo)
 # Se ejecuta con cada push a threejs y también a mano (Actions -> "Publicar en Pages" -> Run workflow).
 # Requiere Settings -> Pages -> Source: GitHub Actions.
 name: Publicar en Pages
@@ -40,12 +41,14 @@ jobs:
       - run: npm ci
 
       - name: Build de la beta
-        run: npm run build -- --base=/PADEL-V2/beta/
+        run: npm run build -- --base=/PADEL-V2/beta3/
 
       - name: Armar el sitio
         run: |
           mkdir -p _site
-          cp -r dist _site/beta
+          cp -r dist _site/beta3
+          mkdir -p _site/beta
+          echo '<!doctype html><meta charset="utf-8"><title>Padel beta 3</title><meta http-equiv="refresh" content="0; url=../beta3/"><a href="../beta3/">Padel beta 3</a>' > _site/beta/index.html
           git fetch --depth=1 origin main
           git show origin/main:index.html > _site/index.html
           touch _site/.nojekyll

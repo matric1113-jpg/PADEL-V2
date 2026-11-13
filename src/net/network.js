@@ -2,7 +2,7 @@ import Peer from 'peerjs';
 import { ensureAudio } from '../audio/audio.js';
 import { hooks } from '../core/events.js';
 import { showBanner } from '../core/ballistics.js';
-import { CHARACTERS, TEAMMATE_SKILL } from '../core/data.js';
+import { PLAYABLE, TEAMMATE_SKILL } from '../core/data.js';
 import { fixBotLooks, prepareRoster, resetSeats, setLook, setReady, setVote, tryBuy } from '../core/game.js';
 import { recordFrame } from '../core/replay.js';
 import { bossOf, localInput, menuSel, remoteInputs, rt, slotOfUid, state, syncMySlot } from '../core/state.js';
@@ -184,7 +184,7 @@ export function createRoom() {
       if (data.type === 'input') {
         remoteInputs[uid] = data.input;
         const cid = data.input && data.input.charId;
-        if (cid && CHARACTERS.includes(cid) && state.players[s].lookId !== cid) { setLook(state.players[s], cid); fixBotLooks(); }
+        if (cid && PLAYABLE.includes(cid) && state.players[s].lookId !== cid) { setLook(state.players[s], cid); fixBotLooks(); }
       } else if (data.type === 'buy') {
         tryBuy(s, data.id);
       } else if (data.type === 'vote') {

@@ -1,4 +1,4 @@
-import { CHARACTERS, DIFFICULTIES, validLab } from '../core/data.js';
+import { DIFFICULTIES, PLAYABLE, validLab } from '../core/data.js';
 
 // ---------- Progreso guardado en el navegador (localStorage) ----------
 // Se guardan: lo último que elegiste en el menú (jugador, modo y nivel), los récords (torneo, amistosos y americanos) y el
@@ -37,7 +37,7 @@ function commit() {
 // Lo último que elegiste en el menú, validado (por si un personaje o nivel ya no existe)
 export function applyPrefs(sel) {
   const p = progress.prefs;
-  if (CHARACTERS.includes(p.char)) sel.char = p.char;
+  if (PLAYABLE.includes(p.char)) sel.char = p.char;
   if (MODES.includes(p.mode)) sel.mode = p.mode;
   if (Number.isInteger(p.diff) && p.diff >= 0 && p.diff < DIFFICULTIES.length) sel.diff = p.diff;
   if (p.lab) { try { sel.lab = validLab(JSON.parse(p.lab)); } catch (e) { /* se queda con la de fábrica */ } }
