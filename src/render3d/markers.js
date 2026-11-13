@@ -21,7 +21,18 @@ const FRAG = /* glsl */`
   void main() {
     float a = 0.0;
     vec3 col = uColor;
-    if (uMode > 0.5) {
+    if (uMode > 1.5) {
+      // Hoyo del piso: negro, con la pared del fondo (la más lejana a la cámara) iluminada para que se lea la profundidad
+      vec2 q = abs(vP) - uHalf;
+      float outside = max(q.x, q.y);
+      float aa = fwidth(outside) + 1e-4;
+      float t = clamp((vP.y + uHalf.y) / (uHalf.y * 2.0), 0.0, 1.0);
+      float wall = 1.0 - smoothstep(0.0, 0.42, t);
+      float side = 1.0 - smoothstep(0.0, 0.16, 1.0 - abs(vP.x) / uHalf.x);
+      col = mix(vec3(0.004, 0.005, 0.012), uColor, max(wall * wall, side * 0.35 * (1.0 - t)));
+      col = mix(col, uColor2, uLine * band(outside + 1.2, 2.2));
+      a = uFill * (1.0 - smoothstep(-aa, aa, outside));
+    } else if (uMode > 0.5) {
       // Rectángulo: relleno y borde interior (cuadro de saque, hielo)
       vec2 q = abs(vP) - uHalf;
       float outside = max(q.x, q.y);
@@ -154,5 +165,13 @@ export class Markers {
     u.uW.value = o.w ?? 1.6;
     u.uHalf.value = [hw, hh];
     u.uMode.value = 1;
+  }
+
+  // Hoyo del piso entre (x0, y0) y (x1, y1). color: pared interior; color2: canto del borde; line: cuánto se ve el canto
+  hole(o) {
+    this.rect({ ...o, fill: o.fill ?? 0.97 });
+    const u = this.list[this.n - 1].material.uniforms;
+    setColor(u.uColor2.value, o.color2 || '150, 150, 170');
+    u.uMode.value = 2;
   }
 }

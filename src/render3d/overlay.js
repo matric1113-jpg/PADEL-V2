@@ -20,7 +20,7 @@ export function drawVignette() {
 // Estrellitas que giran sobre la cabeza del jugador paralizado por un rayo
 export function drawStunStars(built, now) {
   state.players.forEach((p, idx) => {
-    if (p.out || !(p.stun > 0) || !built[idx]) return;
+    if (p.out || p.fell || !(p.stun > 0) || !built[idx]) return;
     const Kz = scaleOf(p) * lookOf(p).body.h * (1 + 0.03 * upLvl(p, 'estiron')) * (actOn(p, 'gordo') ? 1.2 : 1);
     const top = P(p.x, p.y, 92 * Kz + (built[idx].jumpZ || 0));
     for (let k = 0; k < 3; k++) {

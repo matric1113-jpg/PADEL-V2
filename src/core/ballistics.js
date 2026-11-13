@@ -76,6 +76,7 @@ export function launchBall(targetX, targetY, speedX, shotLabel, team, isServeSho
   b.shotType = shotLabel;
   b.hitSeq = (b.hitSeq || 0) + 1;
   b.wallBounced = false;
+  b.ghost = false; b.breaker = false;   // poderes del laboratorio: los vuelve a poner quien pega, si corresponde
 }
 
 export function nextServerSlot(s) {

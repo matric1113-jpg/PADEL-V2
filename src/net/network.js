@@ -2,10 +2,10 @@ import Peer from 'peerjs';
 import { ensureAudio } from '../audio/audio.js';
 import { hooks } from '../core/events.js';
 import { showBanner } from '../core/ballistics.js';
-import { BOSSES, CHARACTERS, TEAMMATE_SKILL } from '../core/data.js';
+import { CHARACTERS, TEAMMATE_SKILL } from '../core/data.js';
 import { fixBotLooks, prepareRoster, resetSeats, setLook, setReady, setVote, tryBuy } from '../core/game.js';
 import { recordFrame } from '../core/replay.js';
-import { localInput, menuSel, remoteInputs, rt, slotOfUid, state, syncMySlot } from '../core/state.js';
+import { bossOf, localInput, menuSel, remoteInputs, rt, slotOfUid, state, syncMySlot } from '../core/state.js';
 import { openMenu, setNetMsg, setStatus } from '../ui/menu.js';
 
 // Prefijo de las salas de PeerJS. La versión 3D (beta) usa uno distinto al de la versión de main ('padel2v2-pro-'):
@@ -206,7 +206,7 @@ export function createRoom() {
       if (!p) return;
       p.isBot = true;
       const hostTeam = state.players[rt.mySlot].team;
-      p.skill = state.mode === 'run' ? Math.max(0.3, BOSSES[state.run.boss].skill - 0.05) : (p.team === hostTeam ? Math.max(TEAMMATE_SKILL, state.difficulty) : state.difficulty);
+      p.skill = state.mode === 'run' ? Math.max(0.3, (bossOf().sparring ? state.difficulty : bossOf().skill) - 0.05) : (p.team === hostTeam ? Math.max(TEAMMATE_SKILL, state.difficulty) : state.difficulty);
       showBanner('Un jugador salió; lo reemplaza un bot', 120);
     });
   });

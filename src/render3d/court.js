@@ -2,7 +2,7 @@ import {
   AdditiveBlending, BoxGeometry, BufferAttribute, BufferGeometry, CanvasTexture, CylinderGeometry, DoubleSide, Group, Mesh,
   MeshBasicMaterial, MeshPhysicalMaterial, MeshStandardMaterial, PlaneGeometry, RepeatWrapping, SRGBColorSpace
 } from 'three';
-import { COURT, GLASS_H, GLASS_STEP_H, NET_H, WALL_H_LOW, WALL_H_TALL, ZS } from '../core/constants.js';
+import { COURT, GLASS_H, GLASS_STEP_H, NET_H, TILE_H, TILE_W, WALL_H_LOW, WALL_H_TALL, ZS } from '../core/constants.js';
 import { state } from '../core/state.js';
 import { clamp } from '../core/util.js';
 import { DOORS } from '../core/walls.js';
@@ -76,6 +76,12 @@ function turfCanvas(ST, mapId) {
       R += (150 - R) * w; G += (146 - G) * w; B += (138 - B) * w;
       if (hash2(Math.floor(X * 2.3) + 7, Math.floor(Y * 2.3) + 3) > sandCut) {
         R += (196 - R) * 0.4; G += (184 - G) * 0.4; B += (150 - B) * 0.4;
+      }
+      if (ST.tiles) {
+        // El Abismo: juntas de las baldosas que se caen
+        const tx = (X - X0) % TILE_W, ty = (Y - Y0) % TILE_H;
+        const dj = Math.min(tx, TILE_W - tx, ty, TILE_H - ty);
+        if (dj < 1.4) { R *= 0.45; G *= 0.45; B *= 0.5; } else if (dj < 3) { R *= 1.18; G *= 1.18; B *= 1.12; }
       }
       const dw = Math.min(X - X0, X1 - X, Y - Y0, Y1 - Y);
       if (ST.border && dw < 7) { R += (ST.border[0] - R) * 0.85; G += (ST.border[1] - G) * 0.85; B += (ST.border[2] - B) * 0.85; }

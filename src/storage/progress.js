@@ -1,14 +1,14 @@
-import { CHARACTERS, DIFFICULTIES } from '../core/data.js';
+import { CHARACTERS, DIFFICULTIES, validLab } from '../core/data.js';
 
 // ---------- Progreso guardado en el navegador (localStorage) ----------
 // Se guardan: lo último que elegiste en el menú (jugador, modo y nivel), los récords (torneo, amistosos y americanos) y el
 // torneo en curso para poder continuarlo desde el jefe en que quedaste. Si el navegador no deja guardar (ventana privada,
 // datos bloqueados), todo sigue funcionando en memoria y simplemente no queda nada para la próxima vez.
 const KEY = 'padel-progress-v1';
-const MODES = ['run', 'friendly', 'americano'];
+const MODES = ['run', 'friendly', 'americano', 'lab'];
 
 const blank = () => ({
-  prefs: { char: null, mode: null, diff: null },
+  prefs: { char: null, mode: null, diff: null, lab: null },   // lab: configuración del laboratorio (JSON)
   stats: { runsWon: 0, runsLost: 0, bestBoss: 0, bossWins: {}, friendlyPlayed: 0, friendlyWon: 0, americanoPlayed: 0, americanoGold: 0 },
   run: null   // torneo en curso: { boss, char, money, up, active }
 });
@@ -40,11 +40,13 @@ export function applyPrefs(sel) {
   if (CHARACTERS.includes(p.char)) sel.char = p.char;
   if (MODES.includes(p.mode)) sel.mode = p.mode;
   if (Number.isInteger(p.diff) && p.diff >= 0 && p.diff < DIFFICULTIES.length) sel.diff = p.diff;
+  if (p.lab) { try { sel.lab = validLab(JSON.parse(p.lab)); } catch (e) { /* se queda con la de fábrica */ } }
 }
 export function savePrefs(sel) {
   const p = progress.prefs;
-  if (p.char === sel.char && p.mode === sel.mode && p.diff === sel.diff) return;
-  p.char = sel.char; p.mode = sel.mode; p.diff = sel.diff;
+  const lab = JSON.stringify(sel.lab || null);
+  if (p.char === sel.char && p.mode === sel.mode && p.diff === sel.diff && p.lab === lab) return;
+  p.char = sel.char; p.mode = sel.mode; p.diff = sel.diff; p.lab = lab;
   commit();
 }
 

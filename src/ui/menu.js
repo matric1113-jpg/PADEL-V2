@@ -1,9 +1,9 @@
 import { ensureAudio, nextSong, playJingle } from '../audio/audio.js';
 import { sayHello } from '../audio/voice.js';
 import { AMERICANO_GAMES_TO_WIN } from '../core/constants.js';
-import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, HELLO, LOOKS, MAPS, MAP_IDS, RUN_REWARD, UPGRADES } from '../core/data.js';
+import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, ALL_ACTIVE_IDS, ALL_MAP_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, HELLO, LAB_RIVALS, LOOKS, MAPS, MAP_IDS, MUTATORS, MUTATOR_IDS, RUN_REWARD, UPGRADES, validLab } from '../core/data.js';
 import { AMERICANO_PAIRS, prepareRoster, setLook, setMap, setReady, setVote, startBossMatch, startMatch, startRun, swapSeats, tryBuy } from '../core/game.js';
-import { localInput, menuSel, rt, state } from '../core/state.js';
+import { bossOf, localInput, menuSel, rt, state } from '../core/state.js';
 import { upLvl } from '../core/stats.js';
 import { createRoom, joinRoom, leaveNetwork } from '../net/network.js';
 import { renderer } from '../renderer.js';
@@ -114,8 +114,67 @@ function progressHtml() {
     <div class="chips">${chips.map(c => `<span class="mapchip">${c}</span>`).join('')}<button data-act="resetprogress">Borrar progreso</button></div>`;
 }
 
+// ---- Laboratorio (versión de prueba): se elige todo directo, sin torneo ni plata ----
+const seg = (act, opts, cur) => `<div class="seg">${opts.map(([v, label]) =>
+  `<button data-act="${act}" data-v="${v}" class="${cur === v ? 'sel' : ''}">${label}</button>`).join('')}</div>`;
+
+function rivalDesc(B) {
+  if (B.desc) return B.desc;
+  return `${B.solo ? 'Juega solo contra los dos. ' : ''}${skillWord(B.skill)} Su cancha en el torneo: ${MAPS[B.map].name}.`;
+}
+
+function labHtml() {
+  const L = menuSel.lab = validLab(menuSel.lab);
+  const maps = [...ALL_MAP_IDS].sort((a, b) => (MAPS[b].lab ? 1 : 0) - (MAPS[a].lab ? 1 : 0)).map(id => {
+    const M = MAPS[id];
+    return `<button class="mapcard${L.map === id ? ' sel' : ''}${M.lab ? ' new' : ''}" data-act="labmap" data-v="${id}">
+      <i style="background:${M.swatch}"></i><b>${esc(M.name)}</b><span class="tag">${M.tag}</span><span>${esc(M.desc)}</span></button>`;
+  }).join('');
+  const rivals = LAB_RIVALS.map((B, k) => {
+    const faces = B.sparring ? '<span class="spar">?</span><span class="spar">?</span>'
+      : B.players.map(bp => `<canvas class="portrait mini" data-look="${bp.look}"></canvas>`).join('');
+    return `<button class="mapcard rival${L.rival === k ? ' sel' : ''}${B.isNew ? ' new' : ''}" data-act="labrival" data-v="${k}">
+      <span class="stop-faces">${faces}</span><b>${esc(B.team)}</b><span class="tag">${B.isNew ? 'Nuevo' : B.sparring ? 'Práctica' : 'Del torneo'}</span><span>${esc(rivalDesc(B))}</span></button>`;
+  }).join('');
+  const actives = ['', ...ALL_ACTIVE_IDS].map(id => {
+    const A = id ? ACTIVES[id] : { name: 'Sprint', desc: 'Sin activa: Shift es el sprint de siempre.' };
+    return `<button class="mapcard act${L.active === id ? ' sel' : ''}${A.lab ? ' new' : ''}" data-act="labactive" data-v="${id}">
+      <b>${esc(A.name)}</b>${A.lab ? '<span class="tag">Nuevo</span>' : ''}<span>${esc(A.desc)}</span></button>`;
+  }).join('');
+  const mods = MUTATOR_IDS.map(id =>
+    `<button data-act="labmod" data-v="${id}" class="${L.mods.includes(id) ? 'sel' : ''}">${MUTATORS[id].name}</button>`).join('');
+  const diffs = DIFFICULTIES.map((d, i) =>
+    `<button data-act="diff" data-v="${i}" class="${menuSel.diff === i ? 'sel' : ''}">${d.name}</button>`).join('');
+  return `<div class="lab">
+    <div class="ov-h">Cancha <span class="lbl">(las 3 nuevas y las 6 de siempre)</span></div>
+    <div class="maps lab-maps">${maps}</div>
+    <div class="ov-h">Mutadores <span class="lbl">(suman a la cancha elegida los peligros de otras; se pueden combinar)</span></div>
+    <div class="row tight"><div class="seg wrap">${mods}</div></div>
+    <div class="ov-h">Rival</div>
+    <div class="maps lab-rivals">${rivals}</div>
+    ${LAB_RIVALS[L.rival].sparring ? `<div class="row tight"><span class="lbl">Nivel del sparring</span><div class="seg">${diffs}</div></div>` : ''}
+    <div class="ov-h">Tu activa <span class="lbl">(Shift; gratis)</span></div>
+    <div class="maps lab-actives">${actives}</div>
+    <div class="row">
+      <span class="lbl">Tus mejoras</span>${seg('labups', [[0, 'Ninguna'], [1, 'Un nivel de cada una'], [2, 'Todas al máximo']], L.ups)}
+      <span class="lbl">Juegos para ganar</span>${seg('labgames', [[1, '1'], [2, '2'], [3, '3']], L.games)}
+    </div>
+  </div>`;
+}
+
+function viewLabOver() {
+  const r = state.result || { winner: 0, games: [0, 0], score: [0, 0] };
+  const B = bossOf();
+  const mods = (state.run.lab ? state.run.lab.mods : []).map(m => MUTATORS[m].name);
+  return `<div class="ov-panel">
+    <div class="ov-title">${r.winner === 0 ? '¡Le ganaron a ' + esc(B.team) + '!' : 'Perdieron contra ' + esc(B.team)}</div>
+    <div class="ov-sub">Laboratorio en ${esc(MAPS[state.map].name)}${mods.length ? ' con ' + mods.join(', ').toLowerCase() : ''}. ${B.gamesToWin > 1 ? `Quedaron ${r.games[0]} juegos a ${r.games[1]}.` : `Quedaron ${r.score[0]} puntos a ${r.score[1]}.`} Para cambiar la cancha, el rival o los poderes, vuelve al menú.</div>
+    <div class="row">${hostButtons('again', 'Jugar otra vez')}</div>
+  </div>`;
+}
+
 function viewMenu() {
-  const run = menuSel.mode === 'run';
+  const run = menuSel.mode === 'run', lab = menuSel.mode === 'lab';
   const saved = run ? savedRun() : null;
   const cards = CHARACTERS.map(id => {
     const L = LOOKS[id];
@@ -139,13 +198,14 @@ function viewMenu() {
       ${mode('run', 'Torneo de jefes', `${BOSSES.length} jefes, cada uno en su cancha: los 2 primeros a un juego y del 3 en adelante al mejor de 3. Más plata mientras más claro les ganen. Si pierden, vuelven al inicio.`, [`${BOSSES.length} jefes`, `Hasta $${fmt(RUN_REWARD)}`, '1 o 2 jugadores'])}
       ${mode('friendly', 'Partido amistoso', 'Gana quien llegue primero a 2 sets (cada set, a 6 juegos), contra bots o con hasta 4 personas online. El anfitrión arma los equipos. Tienda y votación de mapa en cada set. Al final, podio.', ['2 sets', 'Azul contra rojo', 'Hasta 4 online'])}
       ${mode('americano', 'Americano', `${AMERICANO_PAIRS.length} sets con una pareja distinta en cada uno (al primero en llegar a ${AMERICANO_GAMES_TO_WIN} juegos). Cada uno suma los juegos que gana. Al final, podio con oro, plata y bronce.`, [`${AMERICANO_PAIRS.length} sets`, 'Parejas rotativas', 'Medallas'])}
+      ${mode('lab', 'Laboratorio', 'Versión de prueba: eliges directo la cancha, el rival y tus poderes, sin pasar por el torneo ni juntar plata. Con 3 canchas, 2 jefes y 4 activas nuevas.', ['Versión de prueba', 'Todo desbloqueado', 'Lo nuevo'])}
     </div>
-    ${progressHtml()}
-    ${run ? '' : `<div class="row"><span class="lbl">Nivel de los bots</span><div class="seg">${diffs}</div></div>`}
-    <div class="row">
+    ${lab ? labHtml() : progressHtml()}
+    ${run || lab ? '' : `<div class="row"><span class="lbl">Nivel de los bots</span><div class="seg">${diffs}</div></div>`}
+    <div class="row${lab ? ' sticky' : ''}">
       ${saved ? `<button class="primary big" data-act="continue">Continuar torneo (jefe ${saved.boss + 1} de ${BOSSES.length})</button>` : ''}
-      <button class="${saved ? '' : 'primary '}big" data-act="solo">${run ? (saved ? 'Torneo nuevo con un bot' : 'Jugar con un bot de compañero') : 'Jugar contra bots'}</button>
-      <button class="big" data-act="host">${run ? 'Crear sala para tu compañero' : 'Crear sala online'}</button>
+      <button class="${saved ? '' : 'primary '}big" data-act="solo">${lab ? 'Jugar en el laboratorio' : run ? (saved ? 'Torneo nuevo con un bot' : 'Jugar con un bot de compañero') : 'Jugar contra bots'}</button>
+      <button class="big" data-act="host">${run || lab ? 'Crear sala para tu compañero' : 'Crear sala online'}</button>
       <span class="spacer"></span>
       <input type="text" id="room-code-input" placeholder="Código" maxlength="6" value="${esc(menuSel.code)}" style="width: 96px; text-transform: uppercase;" aria-label="Código de sala">
       <button data-act="join">Unirse a una sala</button>
@@ -158,6 +218,7 @@ function viewMenu() {
 const MODE_ICONS = {
   run: '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 5h14v6a7 7 0 0 1-14 0z" fill="#ffd54a"/><path d="M9 7H5a4 4 0 0 0 4 6M23 7h4a4 4 0 0 1-4 6" fill="none" stroke="#ffd54a" stroke-width="2"/><path d="M14 18h4v4h-4z" fill="#e6b83a"/><rect x="10" y="22" width="12" height="4" rx="1" fill="#b8862a"/><path d="M16 7l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6-1.9-1.8 2.6-.4z" fill="#fff6c8"/></svg>',
   friendly: '<svg viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="11" cy="11" rx="6" ry="7" fill="#45a8ff" transform="rotate(-30 11 11)"/><path d="M14 16l7 9" stroke="#45a8ff" stroke-width="3" stroke-linecap="round"/><ellipse cx="21" cy="11" rx="6" ry="7" fill="#ff5c50" transform="rotate(30 21 11)"/><path d="M18 16l-7 9" stroke="#ff5c50" stroke-width="3" stroke-linecap="round"/><circle cx="16" cy="5" r="2.6" fill="#e4ff3a"/></svg>',
+  lab: '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M12 4h8M13 4v8L6 25a2.5 2.5 0 0 0 2.2 3.7h15.6A2.5 2.5 0 0 0 26 25l-7-13V4" fill="none" stroke="#d9c8ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.6 21h12.8l2 3.8a1.2 1.2 0 0 1-1 1.8H8.6a1.2 1.2 0 0 1-1-1.8z" fill="#a07bff"/><circle cx="14" cy="23.5" r="1.3" fill="#e4ff3a"/><circle cx="18.5" cy="22" r="0.9" fill="#fff"/><circle cx="22.5" cy="7" r="1.6" fill="#e4ff3a"/></svg>',
   americano: '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="10" cy="10" r="5" fill="#45a8ff"/><circle cx="22" cy="10" r="5" fill="#ff5c50"/><circle cx="10" cy="22" r="5" fill="#ffd54a"/><circle cx="22" cy="22" r="5" fill="#39e07a"/><path d="M16 3a13 13 0 0 1 12 9" fill="none" stroke="#e8f0f7" stroke-width="1.8" stroke-linecap="round"/><path d="M28 12l.4-3.6-3.3 1.4" fill="none" stroke="#e8f0f7" stroke-width="1.8" stroke-linecap="round"/><path d="M16 29A13 13 0 0 1 4 20" fill="none" stroke="#e8f0f7" stroke-width="1.8" stroke-linecap="round"/><path d="M4 20l-.4 3.6 3.3-1.4" fill="none" stroke="#e8f0f7" stroke-width="1.8" stroke-linecap="round"/></svg>'
 };
 
@@ -340,7 +401,7 @@ function viewMatchover() {
   </div>`;
 }
 
-const VIEWS = { connecting: viewConnecting, menu: viewMenu, tutorial: () => viewTutorial(rt.tutorialPage), lobby: viewLobby, route: viewRoute, shop: viewShop, shop2: viewShop2, lost: viewLost, champion: viewChampion, matchover: viewMatchover };
+const VIEWS = { connecting: viewConnecting, menu: viewMenu, tutorial: () => viewTutorial(rt.tutorialPage), lobby: viewLobby, route: viewRoute, shop: viewShop, shop2: viewShop2, lost: viewLost, champion: viewChampion, matchover: viewMatchover, labover: viewLabOver };
 
 // Récords y torneo en curso. Se llama una vez por cada cambio de pantalla (y el torneo, también al comprar).
 function trackProgress(s, myTeam) {
@@ -369,6 +430,7 @@ export function syncOverlay() {
     const myTeam = (state.players[rt.mySlot] || {}).team || 0;
     if (s === 'shop' || s === 'champion') playJingle(true);
     else if (s === 'lost') playJingle(false);
+    else if (s === 'labover' && state.result) playJingle(state.result.winner === myTeam);
     else if (s === 'podium' && state.result) playJingle(state.result.americano ? myAmericanoPlace() === 1 : state.result.winner === myTeam);
     trackProgress(s, myTeam);
     // Al cerrar una tienda (la del torneo o la de antes y durante el partido) cambia la canción, cortando la anterior
@@ -386,7 +448,7 @@ export function syncOverlay() {
     return;
   }
   const data = view === 'tutorial' ? [rt.tutorialPage]
-    : view === 'menu' ? [menuSel.char, menuSel.mode, menuSel.diff, rt.netMsg, progressRev.n]
+    : view === 'menu' ? [menuSel.char, menuSel.mode, menuSel.diff, rt.netMsg, progressRev.n, menuSel.lab]
     : [state.roomCode, state.mode, state.run, state.result, state.sets, rt.mySlot, rt.isHost, state.map, state.vote, seatPick,
        state.amer && state.amer.history,
        state.players.map(p => [p.uid, p.name, p.isBot, p.money, p.up, p.team, p.active, p.ready, p.vote, p.out])];
@@ -410,6 +472,16 @@ overlayEl.addEventListener('click', e => {
     case 'char': chooseChar(v); break;
     case 'mode': menuSel.mode = v; break;
     case 'diff': menuSel.diff = Number(v); break;
+    case 'labmap': menuSel.lab.map = v; break;
+    case 'labrival': menuSel.lab.rival = Number(v); break;
+    case 'labactive': menuSel.lab.active = v || ''; break;
+    case 'labups': menuSel.lab.ups = Number(v); break;
+    case 'labgames': menuSel.lab.games = Number(v); break;
+    case 'labmod': {
+      const m = menuSel.lab.mods, k = m.indexOf(v);
+      if (k >= 0) m.splice(k, 1); else m.push(v);
+      break;
+    }
     case 'solo':
       if (menuSel.mode === 'run' && savedRun() && !confirm('Empezar un torneo nuevo borra el torneo guardado. ¿Seguir?')) break;
       if (menuSel.mode === 'run') clearRun();

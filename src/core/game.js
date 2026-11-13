@@ -1,8 +1,8 @@
 import { computeServeBox, nextServerSlot, showBanner } from './ballistics.js';
-import { AMERICANO_GAMES_TO_WIN, PAD_F, PAD_S, POINTS_LABELS, SETS_TO_WIN } from './constants.js';
-import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, LOOKS, MAPS, MAP_IDS, TALK, TEAMMATE_SKILL, UPG, UPGRADES, runReward } from './data.js';
+import { AMERICANO_GAMES_TO_WIN, HOLE_FIRST_FRAMES, PAD_F, PAD_S, POINTS_LABELS, SETS_TO_WIN } from './constants.js';
+import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, LAB_RIVALS, LOOKS, MAPS, MAP_IDS, TALK, TEAMMATE_SKILL, UPG, UPGRADES, runReward, validLab } from './data.js';
 import { hooks } from './events.js';
-import { mapOf, menuSel, rt, slotOfUid, state, syncMySlot } from './state.js';
+import { bossOf, isLab, mapOf, menuSel, rt, slotOfUid, state, syncMySlot } from './state.js';
 import { emptyUpgrades, upLvl } from './stats.js';
 import { pick, shuffle } from './util.js';
 
@@ -19,6 +19,9 @@ export function setupServe(nextServerSlot) {
   state.serveBotTimer = 75;
   state.rally = { cp: [false, false] };
   state.bolts = [];
+  state.holes = [];                       // el piso se rearma entre punto y punto
+  state.quake = null;
+  state.hz.hole = HOLE_FIRST_FRAMES;
 
   const solo1 = state.players[3].out;
   const pos = [
@@ -34,6 +37,7 @@ export function setupServe(nextServerSlot) {
     p.stun = 0; p.down = false; p.slow = 0; p.burn = 0;
     p.jz = 0; p.jvz = 0; p.jumpCharge = 0; p.landStop = 0; p.landSlow = 0;
     p.outside = false;
+    p.fell = false;
   });
   // Zeus saca desde un lado y luego cubre toda su mitad
   if (solo1 && nextServerSlot === 2) state.players[2].y = 155;
@@ -54,6 +58,7 @@ export function setupServe(nextServerSlot) {
   b.shotType = 'SAQUE';
   b.cpTarget = null;
   b.out = false; b.outTeam = -1; b.outReason = '';
+  b.ghost = false; b.breaker = false;
 
   // El texto lo ven todos en la sala, así que nombra a quien saca
   showBanner(server.isBot ? 'Al saque: ' + server.name : 'Saca ' + server.name + '\nApunta al cuadro iluminado, carga y suelta el clic', 9999);
@@ -83,9 +88,9 @@ export function awardPoint(winningTeam, reason, isFault = false) {
   state.score[winningTeam]++;
 
   // Repetición para los puntos espectaculares
-  const spectacular = /^Por [34]/.test(reason) || reason.startsWith('Remate ganador') || state.rally.cp[winningTeam];
+  const spectacular = /^Por [34]|^Al vacío/.test(reason) || reason.startsWith('Remate ganador') || state.rally.cp[winningTeam];
   if (spectacular) {
-    state.replay = { seq: state.replay.seq + 1, reason: state.rally.cp[winningTeam] && !/^Por|^Remate/.test(reason) ? 'Salvada con contrapared' : reason };
+    state.replay = { seq: state.replay.seq + 1, reason: state.rally.cp[winningTeam] && !/^Por|^Remate|^Al vacío/.test(reason) ? 'Salvada con contrapared' : reason };
     state.pauseTimer += 150;
   }
   maybeTalkAfterPoint(winningTeam, isFault);
@@ -104,7 +109,7 @@ export function awardPoint(winningTeam, reason, isFault = false) {
     state.pauseTimer += 80;
     const g = state.games;
     if (state.mode === 'run') {
-      const B = BOSSES[state.run.boss];
+      const B = bossOf();
       if (g[winningTeam] >= B.gamesToWin) endRunMatch(winningTeam, finalScore);
       else showBanner(`Juego para ${winningTeam === 0 ? 'ustedes' : B.team}\n${g[0]}-${g[1]} en juegos: gana el primero en llegar a ${B.gamesToWin}`, 140);
     } else if (state.mode === 'americano') {
@@ -290,6 +295,7 @@ function resetPlayerExtras(p) {
   p.stun = 0; p.down = false; p.slow = 0; p.burn = 0; p.burnCd = 0;
   p.sprintCooldown = 0; p.sprintActiveTimer = 0;
   p.ready = false; p.vote = '';
+  p.fell = false; p.blinkCd = 0; p.blinkMax = 0;
 }
 
 export function setMap(id) {
@@ -300,12 +306,19 @@ export function setMap(id) {
   state.bolts = [];
   state.tilt = { x: 0, y: 0, t: 0 };
   state.gust = { w: 0, t: 0 };
-  state.hz = { bolt: 600 + Math.random() * 300, tilt: 420, gust: 360 };
+  state.hz = { bolt: 600 + Math.random() * 300, tilt: 420, gust: 360, hole: HOLE_FIRST_FRAMES };
+  state.holes = [];
+  state.quake = null;
+  state.padT = 0;
 }
 
 // Arma las parejas según el modo (lo llama el anfitrión antes de empezar)
 export function prepareRoster(mode) {
+  // El laboratorio es un partido contra un jefe (modo 'run') con la configuración elegida en state.run.lab
+  const lab = mode === 'lab' ? validLab(menuSel.lab) : null;
+  if (lab) mode = 'run';
   state.mode = mode;
+  state.run = { boss: 0 };
   state.difficulty = DIFFICULTIES[menuSel.diff].skill;
   const pool = shuffle(CHARACTERS.filter(c => c !== menuSel.char));
   state.amer = null;
@@ -321,8 +334,11 @@ export function prepareRoster(mode) {
       p.skill = p.team === 0 ? Math.max(TEAMMATE_SKILL, state.difficulty) : state.difficulty;
     }
   });
-  if (mode === 'run') {
-    state.run = { boss: 0 };
+  if (lab) {
+    state.run = { boss: lab.rival, lab };
+    setMap(lab.map);
+    applyBoss(lab.rival);
+  } else if (mode === 'run') {
     applyBoss(0);
   }
   state.sets = [0, 0];
@@ -343,16 +359,22 @@ function giveRandomUpgrades(p, n) {
 }
 
 function applyBoss(i) {
-  const B = BOSSES[i];
+  const lab = isLab();
+  const B = lab ? LAB_RIVALS[i] : BOSSES[i];
+  // Sparring del laboratorio: dos personajes normales que no esté usando el equipo azul, con el nivel del menú
+  const spar = B.sparring ? shuffle(CHARACTERS.filter(c => !state.players.slice(0, 2).some(q => q.lookId === c))) : null;
+  const skill = B.sparring ? state.difficulty : B.skill;
   [2, 3].forEach((slot, k) => {
     const p = state.players[slot];
     resetPlayerExtras(p);
-    const bp = B.players[k];
+    const bp = spar ? { look: spar[k] } : B.players[k];
     if (!bp) { p.out = true; p.isBot = true; p.x = 2000; p.y = 2000; p.name = ''; return; }
     setLook(p, bp.look, bp.speed);
     if (bp.name) p.name = bp.name;
     p.isBot = true;
-    p.skill = B.skill;
+    p.skill = skill;
+    p.blinkMax = bp.blink || 0;
+    if (bp.hats) p.up.sombrero = bp.hats;
     p.bodyScale = bp.bodyScale || 1;
     p.speedMult = bp.speedMult || 1;
     p.powerMult = bp.powerMult || 1;
@@ -369,8 +391,40 @@ function applyBoss(i) {
     const keepLook = mate.lookId;
     resetPlayerExtras(mate);
     setLook(mate, keepLook);
-    mate.skill = Math.max(0.3, B.skill - 0.05);
+    mate.skill = Math.max(0.3, skill - 0.05);
   }
+}
+
+// ---- Laboratorio (versión de prueba) ----
+// Partido directo contra el rival elegido, en la cancha elegida, con la activa y las mejoras elegidas: sin torneo,
+// sin plata y sin tienda. Al terminar se puede repetir o volver al menú a cambiar la configuración.
+export function startLab() {
+  const L = state.run.lab;
+  const B = bossOf();
+  setMap(L.map);
+  applyBoss(state.run.boss);
+  state.players.forEach(p => {
+    if (p.team !== 0) return;
+    const keep = { lookId: p.lookId, name: p.name, isBot: p.isBot, skill: p.skill, speedStat: p.speedStat };
+    resetPlayerExtras(p);
+    Object.assign(p, keep);
+    p.powerStat = 1 - p.speedStat;
+    // Mejoras: ninguna, un nivel de cada una o todas al máximo (el bot compañero recibe las mismas, pero no la activa)
+    if (L.ups) UPGRADES.forEach(u => { if (!u.cosmetic) p.up[u.id] = L.ups === 2 ? u.max : 1; });
+    if (!p.isBot) p.active = L.active || '';
+  });
+  state.score = [0, 0];
+  state.games = [0, 0];
+  state.sets = [0, 0];
+  state.setHistory = [];
+  state.tiebreak = false;
+  state.result = null;
+  state.afterPause = null;
+  state.screen = 'play';
+  setupServe(0);
+  const serveLine = state.bannerText.split('\n').pop();
+  showBanner(`Laboratorio: ${B.team} en ${mapOf().name}\n${B.gamesToWin > 1 ? `Gana quien llegue a ${B.gamesToWin} juegos. ` : ''}${serveLine}`, 9999);
+  hooks.scoreChanged();
 }
 
 // Partido amistoso nuevo (a SETS_TO_WIN sets)
@@ -496,6 +550,13 @@ export function startBossMatch() {
 }
 
 function endRunMatch(winner, finalScore) {
+  if (isLab()) {
+    // Laboratorio: sin premio ni torneo; después del punto se muestra el resultado y se puede repetir
+    state.result = { winner, score: finalScore, games: [...state.games], lab: true };
+    state.afterPause = 'labover';
+    showBanner(winner === 0 ? `¡Le ganaron a ${bossOf().team}!` : `Perdieron contra ${bossOf().team}`, 9999);
+    return;
+  }
   const i = state.run.boss;
   const reward = winner === 0 ? runReward(BOSSES[i], finalScore, state.games) : 0;
   state.result = { winner, score: finalScore, games: [...state.games], boss: i, reward };
@@ -529,7 +590,8 @@ export function tryBuy(slot, id) {
 
 // Empieza el partido del modo actual (botón "Empezar" de la sala, jugar solo, "Jugar otra vez")
 export function startMatch() {
-  if (state.mode === 'run') startRun();
+  if (isLab()) startLab();
+  else if (state.mode === 'run') startRun();
   else if (state.mode === 'americano') startAmericano();
   else startFriendly();
 }

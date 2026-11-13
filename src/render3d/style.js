@@ -9,6 +9,10 @@ export const MAP_STYLE = {
   china:  { turf: [30, 42, 66], apron: [56, 58, 66], outer: 'roof', amb: 0.4, wear: 0.18, border: [176, 28, 40], sky: ['#0b1030', '#3b1530'], light: 1.1 },
   altura: { turf: [30, 80, 146], apron: [62, 68, 74], outer: 'rock', amb: 0.5, wear: 0.2, sky: ['#55657a', '#aab8c6'], light: 0.9 },
   atlas:  { turf: [48, 104, 190], apron: [214, 206, 188], outer: 'sky', amb: 0.72, wear: 0.15, sky: ['#25407f', '#f3d79a'], light: 0.8, sun: true },
-  crater: { turf: [34, 60, 112], apron: [42, 34, 32], outer: 'lava', amb: 0.4, wear: 0.22, sky: ['#120606', '#6a1a0a'], light: 1 }
+  crater: { turf: [34, 60, 112], apron: [42, 34, 32], outer: 'lava', amb: 0.4, wear: 0.22, sky: ['#120606', '#6a1a0a'], light: 1 },
+  // Mapas del laboratorio. crowd: de qué mapa toman el público; tiles: juntas de las baldosas dibujadas en el césped
+  abismo: { turf: [58, 46, 128], apron: [74, 70, 96], outer: 'sky', amb: 0.58, wear: 0.08, sky: ['#07061a', '#4a2a7a'], light: 1.1, crowd: 'atlas', tiles: true },
+  circo: { turf: [150, 34, 52], apron: [58, 30, 64], outer: 'roof', amb: 0.52, wear: 0.14, border: [242, 193, 78], sky: ['#1a0b2e', '#b0306a'], light: 1.1, crowd: 'china' },
+  gigante: { turf: [36, 118, 66], apron: [44, 52, 60], outer: 'floor', amb: 0.5, wear: 0.2, sky: ['#050a18', '#1b3a6b'], light: 1.2, crowd: 'chile' }
 };
 export const styleOf = () => MAP_STYLE[state.map] || MAP_STYLE.chile;

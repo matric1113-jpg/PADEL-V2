@@ -107,3 +107,31 @@ export const MATE_STUN_FRAMES = 120;         // 2 s a 60 cuadros por segundo (go
 export const MATE_STUN_MAX_FRAMES = 240;     // 4 s (golpe con la mitad de carga)
 export const MATE_KO_CHARGE = 0.5;           // por encima de esta carga el compañero cae al suelo
 export const MATE_KO_FRAMES = 1000000;       // "hasta que termine el punto": setupServe lo deja en 0
+
+// ---------- Laboratorio (versión de prueba): canchas, jefes y poderes nuevos ----------
+// Piso que se cae (mapa El Abismo, mutador y poder Rompesuelos): la cancha se divide en baldosas de 80 x 88 unidades.
+// Cada cierto rato una baldosa de cada lado avisa (parpadea) y se cae; el hoyo queda hasta que termina el punto.
+// Quien pisa un hoyo cae y queda fuera hasta el punto siguiente (se puede saltar por encima); si la pelota bota en un
+// hoyo del lado rival, el punto es para quien pegó.
+export const TILE_COLS = 10;                 // 5 columnas por lado
+export const TILE_ROWS = 5;
+export const TILE_W = COURT.w / TILE_COLS;
+export const TILE_H = COURT.h / TILE_ROWS;
+export const HOLE_WARN_FRAMES = 80;          // aviso antes de caer (1,3 s)
+export const HOLE_FAST_WARN_FRAMES = 36;     // aviso corto del piso roto por un golpe (Rompesuelos, hermanos Terremoto)
+export const HOLE_FIRST_FRAMES = 150;        // el primer aviso llega 2,5 s después de empezar el punto
+export const HOLE_GAP_MAX = 150;             // pausa entre avisos al principio del punto...
+export const HOLE_GAP_MIN = 65;              // ...y la mínima cuando el punto se alarga
+export const HOLE_GAP_STEP = 12;             // cuánto se acorta por cada par de hoyos abiertos
+export const HOLE_MAX_PER_SIDE = 12;         // de 25 baldosas por lado
+export const HOLE_EDGE = 5;                  // margen de perdón: hay que meter el pie 5 unidades dentro del hoyo
+// Camas elásticas (mapa El Circo y mutador): 2 por lado, se pasean por la cancha
+export const PAD_R = 30;                     // radio
+export const PAD_JUMP_H = 80;                // altura del salto de quien la pisa (2,4 m)
+export const PAD_BALL_K = 1.7;               // la pelota que bota en una sale con este múltiplo de su bote normal
+export const PAD_BALL_MIN_VZ = 7;            // y al menos con esta velocidad vertical
+// Poder Terremoto
+export const QUAKE_WARN_FRAMES = 60;         // aviso (1 s): hay que estar en el aire cuando termina
+export const QUAKE_STUN_FRAMES = 100;        // aturdimiento de quien estaba pisando el suelo (1,7 s)
+// Poder Parpadeo
+export const BLINK_LEAD_FRAMES = 16;         // aparece donde la pelota va a estar a su alcance dentro de al menos estos cuadros

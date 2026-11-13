@@ -160,6 +160,31 @@ Object.assign(LOOKS, {
     shirt: '#ffca28', shirtHi: '#ffe58a', shirtLo: '#b88a00', shorts: '#3a120c', shoes: '#ff3d00', band: '#ff3d00',
     extras: { glasses: '#222222' },
     paddle: { face: '#ffca28', rim: '#3a120c', shape: 'diamond' }
+  },
+  // ---- Jefes del laboratorio ----
+  ilusionista: {
+    name: 'El Ilusionista', role: 'Jefe', speed: 0.65, desc: '',
+    skin: '#ead0b6', hair: 'slick', hairColor: '#0e0e12',
+    body: { w: 0.92, h: 1.07, belly: 0.9, arm: 0.95, leg: 1.0 },
+    shirt: '#3b1466', shirtHi: '#9a6be0', shirtLo: '#1c0833', shorts: '#101014', shoes: '#f4f4f4', band: '#ffd54a', socksDark: true, socksHigh: true,
+    extras: { mustache: '#0e0e12' },
+    paddle: { face: '#7a2cff', rim: '#ffd54a', shape: 'diamond' }
+  },
+  temblor: {
+    name: 'Temblor', role: 'Jefe', speed: 0.3, desc: '',
+    skin: '#a9764e', hair: 'cap', hairColor: '#2a1a12',
+    body: { w: 1.36, h: 1.04, belly: 1.25, arm: 1.5, leg: 1.35 },
+    shirt: '#5a4632', shirtHi: '#ffb300', shirtLo: '#2e2318', tank: true, shorts: '#2b2b2b', shoes: '#ffb300', band: '#ffb300',
+    extras: { beard: '#2a1a12', cap: '#ffb300' },
+    paddle: { face: '#6d4c41', rim: '#ffb300', shape: 'round' }
+  },
+  replica: {
+    name: 'Réplica', role: 'Jefe', speed: 0.8, desc: '',
+    skin: '#b98660', hair: 'cap', hairColor: '#2a1a12',
+    body: { w: 0.86, h: 0.95, belly: 0.9, arm: 0.88, leg: 0.88 },
+    shirt: '#ffb300', shirtHi: '#ffe082', shirtLo: '#a87400', shorts: '#2b2b2b', shoes: '#5a4632', band: '#5a4632',
+    extras: { cap: '#ffb300', capBack: true, glasses: '#2b2b2b' },
+    paddle: { face: '#ffb300', rim: '#2b2b2b', shape: 'tear' }
   }
 });
 
@@ -178,7 +203,28 @@ export const MAPS = {
   crater: { name: 'Cráter volcánico', tag: 'Raro', desc: 'Los remates dejan brasas que queman los pies; los cristales calientes devuelven más rápido y queman al tocarlos.', bounceZ: 1, roll: 1, embers: true, hotGlass: true,
             swatch: 'linear-gradient(180deg, #2a0a06 0%, #8a1f0a 55%, #ff6a1a 100%)' }
 };
-export const MAP_IDS = Object.keys(MAPS);
+// Mapas del laboratorio (versión de prueba): no entran a la votación ni al azar del amistoso
+Object.assign(MAPS, {
+  abismo: { name: 'El Abismo', tag: 'Nuevo', lab: true, desc: 'El piso se cae por baldosas: avisan, se abren y quedan así hasta el fin del punto. Si pisas un hoyo quedas fuera ese punto (se saltan); si la pelota bota en un hoyo rival, el punto es tuyo.', bounceZ: 1, roll: 1, holes: true,
+            swatch: 'linear-gradient(180deg, #07061a 0%, #3a1d5e 55%, #2a2d6e 100%)' },
+  circo:  { name: 'El Circo', tag: 'Nuevo', lab: true, desc: 'Cuatro camas elásticas se pasean por la cancha: si las pisas sales volando 2,4 m y rematas desde arriba; si la pelota bota en una, sale disparada.', bounceZ: 1, roll: 1, pads: true,
+            swatch: 'linear-gradient(180deg, #1a0b2e 0%, #b0306a 55%, #f2c14e 100%)' },
+  gigante: { name: 'Estadio gigante', tag: 'Nuevo', lab: true, desc: 'La cancha es un 35% más grande: los jugadores y la pelota se ven más chicos, la pala alcanza menos y hay que correr mucho más.', bounceZ: 1, roll: 1, big: 0.74, bigSpeed: 0.9,
+            swatch: 'linear-gradient(180deg, #050a18 0%, #1b3a6b 50%, #2a7a4a 100%)' }
+});
+export const MAP_IDS = Object.keys(MAPS).filter(id => !MAPS[id].lab);
+export const ALL_MAP_IDS = Object.keys(MAPS);
+// Mutadores del laboratorio: suman el peligro de otro mapa a la cancha elegida
+export const MUTATORS = {
+  holes: { name: 'Piso que se cae', flags: { holes: true } },
+  pads: { name: 'Camas elásticas', flags: { pads: true } },
+  big: { name: 'Cancha gigante', flags: { big: 0.74, bigSpeed: 0.9 } },
+  bolts: { name: 'Rayos', flags: { bolts: true } },
+  gusts: { name: 'Viento', flags: { gusts: true } },
+  tilt: { name: 'Inclinación', flags: { tilt: true } },
+  lava: { name: 'Brasas y cristal caliente', flags: { embers: true, hotGlass: true } }
+};
+export const MUTATOR_IDS = Object.keys(MUTATORS);
 // Nivel de cada jefe (skill). Del 2.º en adelante se bajó 0,04 (antes 0,62 / 0,8 / 0,95 / 1,0 / 1,06).
 export const BOSSES = [
   { team: 'Las tías del club', map: 'chile', skill: 0.45, gamesToWin: 1, players: [
@@ -199,6 +245,41 @@ export const BOSSES = [
     { look: 'martinez', name: 'Profe Martínez', speed: 0.5, active: 'all', ups: 4 },
     { look: 'capitana', name: 'La Capitana', speed: 0.7, active: 'all', ups: 4 }] }
 ];
+// ---- Laboratorio (versión de prueba) ----
+// Jefes nuevos. blink: cada tantos cuadros puede teletransportarse a la pelota (aparte de su activa);
+// breaker: sus remates rompen el piso donde botan; hats: sombreros apilados.
+export const LAB_BOSSES = [
+  { team: 'El Gran Ilusionista', map: 'circo', skill: 0.9, gamesToWin: 2, solo: true, isNew: true,
+    desc: 'Juega solo contra los dos. Se teletransporta a la pelota cada 5 s y, cada tanto, su golpe sale invisible hasta que bota.', players: [
+    { look: 'ilusionista', name: 'El Ilusionista', speed: 0.65, bodyScale: 1.12, speedMult: 1.2, powerMult: 1.1, active: 'fantasma', blink: 300, hats: 2 }] },
+  { team: 'Los hermanos Terremoto', map: 'abismo', skill: 0.85, gamesToWin: 2, breaker: true, isNew: true,
+    desc: 'Temblor sacude tu lado (salta para esquivarlo), Réplica se duplica, y los remates de los dos rompen el piso.', players: [
+    { look: 'temblor', name: 'Temblor', speed: 0.3, bodyScale: 1.35, speedMult: 0.95, powerMult: 1.25, active: 'sismo', ups: 2 },
+    { look: 'replica', name: 'Réplica', speed: 0.8, bodyScale: 0.8, speedMult: 1.2, backPref: true, active: 'clone', ups: 2 }] }
+];
+// Rivales del laboratorio: los nuevos, los 6 del torneo y una pareja de bots normales (con el nivel elegido en el menú)
+export const LAB_RIVALS = [
+  ...LAB_BOSSES,
+  ...BOSSES,
+  { team: 'Sparring', map: 'chile', skill: 0.5, gamesToWin: 1, sparring: true, desc: 'Dos bots normales, sin poderes, con el nivel que elijas.', players: [{ look: 'maxi' }, { look: 'german' }] }
+];
+// Configuración del laboratorio: cancha, rival (índice de LAB_RIVALS), activa ('' = sprint), mejoras (0 ninguna, 1 un nivel
+// de cada una, 2 todas al máximo), juegos para ganar y mutadores
+export const LAB_DEFAULT = { map: 'abismo', rival: 1, active: 'teleport', ups: 2, games: 2, mods: [] };
+// La misma, validada (el menú la recuerda entre sesiones y puede venir de una versión anterior)
+export function validLab(c) {
+  c = c || {};
+  const d = LAB_DEFAULT;
+  return {
+    map: MAPS[c.map] ? c.map : d.map,
+    rival: Number.isInteger(c.rival) && LAB_RIVALS[c.rival] ? c.rival : d.rival,
+    active: c.active === '' || ACTIVES[c.active] ? c.active : d.active,
+    ups: [0, 1, 2].includes(c.ups) ? c.ups : d.ups,
+    games: [1, 2, 3].includes(c.games) ? c.games : d.games,
+    mods: Array.isArray(c.mods) ? c.mods.filter(m => MUTATORS[m]) : []
+  };
+}
+
 // Premio por jefe ganado (para cada jugador), según qué tan claro fue. Jefes a un juego: por los puntos que les
 // hicieron en ese juego (40-0, 40-15, 40-30, punto de oro). Jefes al mejor de 3: por los juegos que perdieron.
 export const RUN_REWARD_BY_POINTS = [1500, 1100, 900, 700];
@@ -231,7 +312,16 @@ export const ACTIVES = {
   palaxl: { name: 'Pala enorme', desc: 'Tu pala se vuelve gigantesca por 5 s: muchísimo más alcance.' },
   hielo: { name: 'Cancha de hielo', desc: 'Congelas la mitad rival 5 s: los rivales resbalan y la pelota patina.' }
 };
-export const ACTIVE_IDS = Object.keys(ACTIVES);
+// Activas del laboratorio (versión de prueba): no salen en la tienda ni se las dan al azar a bots y jefes.
+// dur y cd (cuadros) reemplazan a los 5 s y 45 s de las demás.
+Object.assign(ACTIVES, {
+  teleport: { name: 'Parpadeo', lab: true, dur: 18, cd: 480, desc: 'Apareces justo donde la pelota va a quedar a tu alcance (si no viene hacia ti, donde apuntas). Recarga 8 s.' },
+  sismo: { name: 'Terremoto', lab: true, dur: 60, cd: 1500, desc: 'Sacudes el lado rival: 1 s después, los rivales que estén pisando el suelo quedan aturdidos 1,7 s. Se esquiva saltando. Recarga 25 s.' },
+  fantasma: { name: 'Pelota fantasma', lab: true, dur: 300, cd: 1200, desc: 'Tu próximo golpe (tienes 5 s) sale invisible para los rivales desde que cruza la red hasta que bota. Recarga 20 s.' },
+  martillo: { name: 'Rompesuelos', lab: true, dur: 360, cd: 1500, desc: 'Durante 6 s, donde boten tus golpes se rompe el piso: queda un hoyo hasta el fin del punto. Recarga 25 s.' }
+});
+export const ACTIVE_IDS = Object.keys(ACTIVES).filter(id => !ACTIVES[id].lab);
+export const ALL_ACTIVE_IDS = Object.keys(ACTIVES);
 export const ACTIVE_COST = 1000;
 export const DIFFICULTIES = [
   { name: 'Fácil', skill: 0.25 },
@@ -248,7 +338,11 @@ export const TALK = {
     clone: ['¡Kage Bunshin no Jutsu!', '¡Clones de sombra!'],
     gordo: ['¡Modo guatón!', '¡Abran cancha!'],
     palaxl: ['¡Mira mi pala!', 'Pala de concreto'],
-    hielo: ['¡Patinen, patinen!', 'Hace frío por allá, ¿no?']
+    hielo: ['¡Patinen, patinen!', 'Hace frío por allá, ¿no?'],
+    teleport: ['¡Ahora me ves!', '¡Puf!'],
+    sismo: ['¡Agárrense!', '¡Terremoto!'],
+    fantasma: ['¿Dónde está la pelotita?', 'Nada por aquí…'],
+    martillo: ['¡Cuidado con el piso!', 'Se viene abajo']
   },
   byLook: {
     german: ['Con la guata, mijo', 'Ni me moví'],
@@ -268,7 +362,10 @@ export const TALK = {
     coloso: ['¡APLASTAR!', 'Pequeño humano'],
     chispa: ['¡Más rápido que tú!', '¡Chispeza!'],
     martinez: ['Primera lección: no fallar', 'Eso se entrena'],
-    capitana: ['Así se gana un club', 'Siguiente']
+    capitana: ['Así se gana un club', 'Siguiente'],
+    ilusionista: ['Nada por aquí, nada por allá', '¡Abracadabra!'],
+    temblor: ['Grado 9, compadre', '¡Se movió el piso!'],
+    replica: ['Y viene otra', 'Somos dos, por si acaso']
   }
 };
 

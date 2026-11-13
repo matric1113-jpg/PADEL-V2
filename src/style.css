@@ -417,3 +417,22 @@ button:disabled:hover { background: transparent; }
 .tut-body .key { margin-right: 4px; }
 
 .music-title { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-style: italic; }
+
+/* ---------- Laboratorio (versión de prueba) ---------- */
+.modes { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.mode.m-lab { background: radial-gradient(120% 120% at 0% 0%, rgba(160, 123, 255, 0.28), transparent 60%), linear-gradient(160deg, #1d1436 0%, #17202c 75%); border-color: rgba(160, 123, 255, 0.4); }
+.mode.m-lab h3, .mode.m-lab .m-tags span { color: #d9c8ff; }
+.mode.m-lab.sel { border-color: #a07bff; box-shadow: inset 0 0 0 1px #a07bff, 0 0 22px rgba(160, 123, 255, 0.3); }
+.lab .lbl { font-family: var(--body); font-weight: 400; font-size: 13px; color: var(--ink-dim); }
+.lab .lab-maps { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.lab .lab-rivals, .lab .lab-actives { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mapcard.new { border-color: rgba(160, 123, 255, 0.5); }
+.mapcard.new .tag { color: #b79cff; }
+.mapcard.rival .stop-faces { min-height: 46px; }
+.mapcard .spar { width: 46px; height: 46px; border-radius: 6px; display: grid; place-items: center; background: var(--portrait-bg); font-family: var(--cond); font-weight: 700; font-size: 22px; color: var(--ink-dim); }
+.row.tight { margin-top: 8px; }
+.seg.wrap { flex-wrap: wrap; }
+@media (max-width: 1000px) {
+  .modes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lab .lab-maps, .lab .lab-rivals, .lab .lab-actives { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -1,5 +1,5 @@
 import { GUST_FRAMES, GUST_RAMP, SPRINT_COOLDOWN, SPRINT_DURATION, TILT_FRAMES, TILT_RAMP } from './constants.js';
-import { MAPS } from './data.js';
+import { BOSSES, LAB_DEFAULT, LAB_RIVALS, MAPS, MUTATORS } from './data.js';
 import { emptyUpgrades } from './stats.js';
 
 // Estado de ejecución compartido (antes eran variables sueltas del script).
@@ -22,7 +22,35 @@ export const rt = {
   podiumT: 0                 // cuadros transcurridos de la cinemática del podio (lo cuenta el anfitrión)
 };
 
-export const mapOf = () => MAPS[state.map] || MAPS.chile;
+// ¿Se está jugando un partido del laboratorio? (un partido contra un jefe con la configuración de state.run.lab)
+export const isLab = () => state.mode === 'run' && !!(state.run && state.run.lab);
+// Mapa actual. En el laboratorio se le suman los mutadores elegidos (peligros de otros mapas).
+let mapKey = '', mapMerged = null;
+export function mapOf() {
+  const base = MAPS[state.map] || MAPS.chile;
+  const mods = isLab() ? state.run.lab.mods : null;
+  if (!mods || !mods.length) return base;
+  const key = state.map + '|' + mods.join();
+  if (key !== mapKey) {
+    mapKey = key;
+    mapMerged = { ...base };
+    for (const m of mods) if (MUTATORS[m]) Object.assign(mapMerged, MUTATORS[m].flags);
+  }
+  return mapMerged;
+}
+// Jefe actual: el del torneo o, en el laboratorio, el rival elegido con los juegos y la cancha elegidos
+let bossKey = '', bossMerged = null;
+export function bossOf() {
+  if (!isLab()) return BOSSES[state.run.boss] || BOSSES[0];
+  const L = state.run.lab, key = state.run.boss + '|' + L.games + '|' + L.map;
+  if (key !== bossKey) {
+    bossKey = key;
+    bossMerged = { ...(LAB_RIVALS[state.run.boss] || LAB_RIVALS[0]), gamesToWin: L.games, map: L.map };
+  }
+  return bossMerged;
+}
+// Tamaño de jugadores y pelota respecto a la cancha (mapa Estadio gigante: menos de 1)
+export const entK = () => mapOf().big || 1;
 // Fuerza del viento (aceleración lateral por cuadro) dentro de `ahead` cuadros: sube y baja suave dentro de la ráfaga.
 // La usan la física y las guías de tiro (así predicen el mismo desvío que sufre la pelota).
 export function gustForce(ahead = 0) {
@@ -65,6 +93,9 @@ export function createPlayer(uid, x, y, team, name, isBot, speedPref = 0.5, look
     activePool: '',                // 'all' = jefe que alterna todas las activas
     activeKind: '', activeT: 0, activeCd: 0,
     clone: null,
+    fell: false,                   // cayó por un hoyo del piso: fuera hasta el punto siguiente
+    blinkCd: 0, blinkMax: 0,       // jefes que se teletransportan solos: recarga actual y recarga total (0 = no lo hace)
+    botQk: 0, botQkDodge: false, botCareless: false,   // bots: terremoto que ya vieron, si lo van a saltar, y si andan distraídos con los hoyos
     stun: 0, down: false, slow: 0, burn: 0, burnCd: 0,   // down: noqueado por un raquetazo de su compañero (en el suelo hasta que termine el punto)
     bodyScale: 1, speedMult: 1, powerMult: 1, backPref: false, out: false,
     ready: false, vote: '',
@@ -114,7 +145,11 @@ export const state = {
   bolts: [],                       // rayos con aviso
   tilt: { x: 0, y: 0, t: 0 },
   gust: { w: 0, t: 0 },
-  hz: { bolt: 600, tilt: 420, gust: 360 },
+  hz: { bolt: 600, tilt: 420, gust: 360, hole: 150 },
+  holes: [],                       // baldosas que avisan o ya cayeron: { i: baldosa, w: cuadros de aviso que le quedan (0 = hoyo abierto) }
+  quake: null,                     // terremoto en camino: { team: lado sacudido, t: cuadros que faltan, id }
+  padT: 0,                         // reloj de las camas elásticas (su posición sale de él)
+  blink: { seq: 0, x0: 0, y0: 0, x1: 0, y1: 0 },   // último teletransporte (para el efecto)
   rally: { cp: [false, false] },   // ¿algún equipo salvó con contrapared en este punto?
   replay: { seq: 0 },
   celebrate: { seq: 0, team: 0 },
@@ -136,6 +171,7 @@ export const state = {
     isServeShot: true,
     shotType: 'SAQUE',
     smashK: 1,
+    ghost: false, breaker: false,             // pelota fantasma (invisible para el rival hasta que bota) y golpe que rompe el piso donde bota
     out: false, outTeam: -1, outReason: '',   // salió por 3 o por 4 y sigue volando afuera (punto para outTeam al tocar el suelo)          // remate: 0 = pegado justo en la altura mínima, 1 = bien arriba (fuerza y bote completos)
     hitSeq: 0,
     cut: 0,
@@ -157,4 +193,5 @@ export function syncMySlot() {
   const i = slotOfUid(rt.myUid);
   if (i >= 0) rt.mySlot = i;
 }
-export const menuSel = { char: 'fernando', mode: 'run', diff: 1, code: '' };   // mode: 'run' | 'friendly' | 'americano'
+// mode: 'run' | 'friendly' | 'americano' | 'lab' (laboratorio: partido directo con la configuración de lab)
+export const menuSel = { char: 'fernando', mode: 'run', diff: 1, code: '', lab: { ...LAB_DEFAULT, mods: [] } };

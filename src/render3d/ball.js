@@ -3,8 +3,8 @@ import {
   MeshStandardMaterial, SphereGeometry, TorusGeometry, Vector3
 } from 'three';
 import { BALL_R, ZS } from '../core/constants.js';
-import { state } from '../core/state.js';
-import { fx } from '../view/fx.js';
+import { entK, state } from '../core/state.js';
+import { fx, ghostView } from '../view/fx.js';
 
 // ---------- Pelota: esfera con costura que gira, estela y guía de altura ----------
 const TRAIL_MAX = 40;
@@ -43,14 +43,19 @@ export class Ball {
     const b = state.ball;
     const h = b.z * ZS + BALL_R;
     const hot = b.shotType === '¡REMATE!';
+    // Pelota fantasma: morada mientras se ve; invisible para el rival desde que cruza la red hasta que bota
+    const ghost = inReplay ? Math.min(1, ghostView()) : ghostView();
+    this.ghost = ghost;
+    this.mesh.visible = ghost < 2;
+    this.mesh.scale.setScalar(entK());   // Estadio gigante: pelota más chica
     this.mesh.position.set(b.x, h, b.y);
-    this.mat.color.set(hot ? '#ffe34a' : '#e4ff3a');
-    this.mat.emissive.set(hot ? '#ff9a20' : '#c8e020');
+    this.mat.color.set(ghost ? '#cdb0ff' : hot ? '#ffe34a' : '#e4ff3a');
+    this.mat.emissive.set(ghost ? '#7a2cff' : hot ? '#ff9a20' : '#c8e020');
     // La costura gira según la velocidad (fx.ballSpin), alrededor del eje perpendicular al avance
     this.seam.rotation.set(Math.PI / 2 + 0.5, fx.ballSpin, Math.atan2(b.vy, b.vx));
 
     const bh = b.z * ZS;
-    this.guide.visible = bh > 30 && (state.phase === 'PLAY' || inReplay);
+    this.guide.visible = bh > 30 && ghost < 2 && (state.phase === 'PLAY' || inReplay);
     if (this.guide.visible) {
       this.guide.position.set(b.x, 0, b.y);
       this.guide.scale.set(1, bh, 1);
@@ -61,14 +66,14 @@ export class Ball {
 
   updateTrail(camera, hot) {
     const b = state.ball, tr = b.trail;
-    if (state.phase !== 'PLAY' || tr.length < 2) { this.trail.visible = false; return; }
+    if (state.phase !== 'PLAY' || tr.length < 2 || this.ghost === 2) { this.trail.visible = false; return; }
     this.trail.visible = true;
     const pts = tr.slice(-(TRAIL_MAX - 1)).map(t => new Vector3(t.x, t.z * ZS + BALL_R, t.y));
     pts.push(this.mesh.position.clone());
     const view = camera.userData.forward;
     const pos = this.trail.geometry.attributes.position, col = this.trail.geometry.attributes.color;
     const n = pts.length;
-    const [r, g, bl] = hot ? [1, 0.75, 0.24] : [0.89, 1, 0.23];
+    const [r, g, bl] = this.ghost ? [0.75, 0.55, 1] : hot ? [1, 0.75, 0.24] : [0.89, 1, 0.23];
     for (let i = 0; i < TRAIL_MAX; i++) {
       const j = Math.min(i, n - 1);
       _a.copy(pts[Math.max(0, j - 1)]); _b.copy(pts[Math.min(n - 1, j + 1)]);

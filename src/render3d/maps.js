@@ -189,7 +189,7 @@ export class MapScene {
     tex.colorSpace = SRGBColorSpace;
     this.backdropMat.map = tex;
     this.backdropMat.needsUpdate = true;
-    this.crowd.setMap(id);
+    this.crowd.setMap(ST.crowd || id);
 
     // Utilería: se descarta la del mapa anterior
     this.props.traverse(o => { if (o.geometry) o.geometry.dispose(); });
@@ -198,8 +198,8 @@ export class MapScene {
     if (id === 'brasil') {
       for (const [x, y] of [[-40, -70], [960, -50], [-90, 230], [1010, 330], [300, -200], [700, -190]]) props.add(palm(x, y));
       props.add(bunting());
-    } else if (id === 'china') {
-      props.add(lanterns());
+    } else if (id === 'china' || id === 'circo') {
+      props.add(lanterns());   // en el circo, la guirnalda de luces
     } else if (id === 'crater') {
       props.add(rocks([[-60, -60, 1.2], [990, -40, 1], [-70, 520, 0.9], [990, 560, 1.1], [420, -210, 1.4]], 'crater'));
     } else if (id === 'altura') {

@@ -124,7 +124,8 @@ export class Players {
     const cloudM = new Matrix4();
     players.forEach((p, idx) => {
       const c = this.slots[idx], cc = this.cloneSlots[idx];
-      if (p.out) { if (c) c.root.visible = false; if (cc) cc.root.visible = false; return; }
+      // (quien cayó por un hoyo deja de dibujarse cuando ya va bien abajo)
+      if (p.out || (p.fell && p.jz < -110)) { if (c) c.root.visible = false; if (cc) cc.root.visible = false; return; }
       const gender = genderOf(p.lookId);
       const ch = this.char(this.slots, idx, gender, false);
       ch.root.visible = true;
@@ -189,7 +190,7 @@ export function frameFor(p, b, dtSec, x, y) {
     charging: b.charging, cr: b.cr, kind: pf.pose.kind,
     swinging: b.swinging, swingKind: pf.swingKind, swingU: R.swingU,
     celeb: R.celeb ? { kind: R.celeb } : null,
-    stun: p.stun, down: !!p.down, burn: p.burn, slow: p.slow, air: p.jz > 0 ? Math.min(1, p.jz / 6) : 0, crouch: p.jumpCharge > 0 ? Math.min(1, p.jumpCharge / 20) : (p.landStop > 0 ? 0.7 : 0), crouch: p.jumpCharge > 0 ? Math.min(1, p.jumpCharge / 20) : (p.landStop > 0 ? 0.7 : 0),
+    stun: p.stun, down: !!p.down, burn: p.burn, slow: p.slow, air: p.fell ? 1 : p.jz > 0 ? Math.min(1, p.jz / 6) : 0, crouch: p.jumpCharge > 0 ? Math.min(1, p.jumpCharge / 20) : (p.landStop > 0 ? 0.7 : 0), crouch: p.jumpCharge > 0 ? Math.min(1, p.jumpCharge / 20) : (p.landStop > 0 ? 0.7 : 0),
     twist: R.twist,
     handR: v(R.handR), poleR: v(R.elbowR), handL: v(R.handL), poleL: v(R.elbowL),
     paddle: { show: pd.show, dir, normal, halfLen: tip.distanceTo(center), halfWid: half.length(), handleLen: pd.handleLen * K, scale: K },

@@ -71,3 +71,6 @@
 :root[data-theme="estadio"] :is(button.card, button.mode, button.mapcard) { clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%); }
 :root[data-theme="estadio"] :is(button.card, button.mode, button.mapcard):hover { background: var(--surface-hover); }
 :root[data-theme="estadio"] button.card.sel, :root[data-theme="estadio"] button.mode.sel, :root[data-theme="estadio"] button.mapcard.sel { background: var(--surface-hover); }
+:root[data-theme="estadio"] .mode.m-lab { --mc: #b79cff; }
+:root[data-theme="estadio"] .mode.m-lab .m-tags span { color: var(--mc); }
+:root[data-theme="estadio"] .mapcard.new { border-color: rgba(183, 156, 255, 0.55); }

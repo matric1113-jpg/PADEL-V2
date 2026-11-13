@@ -1,8 +1,8 @@
 import { computeLaunch, getClampedTarget } from '../core/ballistics.js';
-import { ACTIVE_COOLDOWN, ACTIVE_DURATION, BALL_R, COURT, GRAVITY, JUMP_CHARGE_FRAMES, MAX_CHARGE_FRAMES, NET_H, PAD_F, PAD_S, SPRINT_COOLDOWN, SPRINT_DURATION, TILT_BALL_ACCEL, VIEW_H, VIEW_W, ZS } from '../core/constants.js';
+import { BALL_R, COURT, GRAVITY, JUMP_CHARGE_FRAMES, MAX_CHARGE_FRAMES, NET_H, PAD_F, PAD_S, SPRINT_COOLDOWN, SPRINT_DURATION, TILT_BALL_ACCEL, VIEW_H, VIEW_W, ZS } from '../core/constants.js';
 import { contraTarget, isContraAim } from '../core/physics.js';
 import { gustForce, tiltEase, localInput, rt, state } from '../core/state.js';
-import { smashMinOf, upLvl } from '../core/stats.js';
+import { activeCdOf, activeDurOf, smashMinOf, upLvl } from '../core/stats.js';
 import { clamp } from '../core/util.js';
 import { mouseView } from '../input/input.js';
 import { P, cam, pathPts } from './camera.js';
@@ -175,7 +175,7 @@ function drawNameplate(p, idx, built) {
   // Barra de sprint o de la activa (siempre visible, como la vida en un MOBA)
   let sprintRatio, fillCol;
   if (p.active) {
-    sprintRatio = p.activeT > 0 ? p.activeT / ACTIVE_DURATION : 1 - p.activeCd / ACTIVE_COOLDOWN;
+    sprintRatio = p.activeT > 0 ? p.activeT / activeDurOf(p.activeKind || p.active) : 1 - p.activeCd / activeCdOf(p.active);
     fillCol = p.activeT > 0 ? '#e1d4ff' : (p.activeCd === 0 ? '#a07bff' : '#5a5076');
   } else {
     sprintRatio = p.sprintActiveTimer > 0 ? (p.sprintActiveTimer / (p.sprintDurMax || SPRINT_DURATION)) : (1 - p.sprintCooldown / (p.sprintCdMax || SPRINT_COOLDOWN));
@@ -278,6 +278,22 @@ function drawAbilityGlyph(kind, cx, cy, col) {
     ctx.beginPath(); ctx.moveTo(cx - 4, cy + 4); ctx.lineTo(cx - 11, cy + 13); ctx.stroke();
   } else if (kind === 'hielo') {
     for (let k = 0; k < 3; k++) { const a = k * Math.PI / 3; ctx.beginPath(); ctx.moveTo(cx - Math.cos(a) * 12, cy - Math.sin(a) * 12); ctx.lineTo(cx + Math.cos(a) * 12, cy + Math.sin(a) * 12); ctx.stroke(); }
+  } else if (kind === 'teleport') {
+    // Parpadeo: dos siluetas unidas por una flecha punteada
+    ctx.globalAlpha = 0.45; ctx.beginPath(); ctx.arc(cx - 9, cy + 4, 5, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(cx + 8, cy - 5, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(cx - 5, cy + 1); ctx.lineTo(cx + 3, cy - 3); ctx.stroke(); ctx.setLineDash([]);
+  } else if (kind === 'sismo') {
+    // Terremoto: línea de sismógrafo
+    ctx.beginPath(); ctx.moveTo(cx - 13, cy); ctx.lineTo(cx - 8, cy); ctx.lineTo(cx - 5, cy - 11); ctx.lineTo(cx - 1, cy + 11); ctx.lineTo(cx + 3, cy - 7); ctx.lineTo(cx + 6, cy + 4); ctx.lineTo(cx + 8, cy); ctx.lineTo(cx + 13, cy); ctx.lineJoin = 'round'; ctx.stroke();
+  } else if (kind === 'fantasma') {
+    // Pelota fantasma: pelota a medio borrar
+    ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.globalAlpha = 0.4; ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+  } else if (kind === 'martillo') {
+    // Rompesuelos: baldosa partida
+    ctx.strokeRect(cx - 11, cy - 9, 22, 18);
+    ctx.beginPath(); ctx.moveTo(cx - 3, cy - 9); ctx.lineTo(cx + 2, cy - 2); ctx.lineTo(cx - 2, cy + 3); ctx.lineTo(cx + 4, cy + 9); ctx.stroke();
   } else {
     ctx.beginPath();
     ctx.moveTo(cx + 3, cy - 15); ctx.lineTo(cx - 8, cy + 2); ctx.lineTo(cx - 1, cy + 2);
@@ -292,7 +308,7 @@ function drawSprintAbility(me) {
   const isAct = !!me.active;
   const active = isAct ? me.activeT > 0 : me.sprintActiveTimer > 0;
   const cd = isAct ? me.activeCd : me.sprintCooldown;
-  const cdMax = isAct ? ACTIVE_COOLDOWN : (me.sprintCdMax || SPRINT_COOLDOWN);
+  const cdMax = isAct ? activeCdOf(me.active) : (me.sprintCdMax || SPRINT_COOLDOWN);
   const ready = cd === 0;
   const tint = isAct ? '#b79cff' : COLORS.ball;
   ctx.beginPath(); ctx.arc(cx, cy, r + 3, 0, Math.PI * 2);
@@ -314,7 +330,7 @@ function drawSprintAbility(me) {
   ctx.lineWidth = 2.5;
   ctx.strokeStyle = active ? tint : (ready ? (isAct ? 'rgba(183, 156, 255, 0.8)' : 'rgba(228, 255, 58, 0.7)') : 'rgba(150, 190, 225, 0.3)');
   ctx.beginPath();
-  const dur = isAct ? me.activeT / ACTIVE_DURATION : me.sprintActiveTimer / (me.sprintDurMax || SPRINT_DURATION);
+  const dur = isAct ? me.activeT / activeDurOf(me.activeKind || me.active) : me.sprintActiveTimer / (me.sprintDurMax || SPRINT_DURATION);
   if (active) ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * dur);
   else ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.stroke();
@@ -349,7 +365,7 @@ function drawTalk(built) {
   const t = fx.talk;
   if (!t) return;
   const p = state.players[t.slot];
-  if (!p || p.out || !built[t.slot]) return;
+  if (!p || p.out || p.fell || !built[t.slot]) return;
   const anchorZ = Math.max(98, built[t.slot].pf.pose.z + 58) + upLvl(p, 'sombrero') * 7;
   const top = P(p.x, p.y, anchorZ * scaleOf(p) * lookOf(p).body.h + 16);
   const a = clamp(Math.min(t.t / 6, (140 - t.t) / 16), 0, 1);
@@ -385,7 +401,7 @@ export function drawHud(me, built, S, setWorld) {
     drawReplayBars();
   } else {
     setWorld();
-    state.players.forEach((p, idx) => { if (!p.out && built[idx]) drawNameplate(p, idx, built[idx]); });
+    state.players.forEach((p, idx) => { if (!p.out && !p.fell && built[idx]) drawNameplate(p, idx, built[idx]); });
     drawTalk(built);
     ctx.setTransform(S, 0, 0, S, 0, 0);
     if (state.screen === 'play') {

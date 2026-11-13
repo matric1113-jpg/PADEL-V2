@@ -1,8 +1,21 @@
-import { ACTIVE_DURATION, BALL_R, COURT, GUST_STRENGTH_MIN, GUST_STRENGTH_RANGE, LIGHTS, ZS } from '../core/constants.js';
+import { BALL_R, COURT, GUST_STRENGTH_MIN, GUST_STRENGTH_RANGE, LIGHTS, QUAKE_WARN_FRAMES, ZS } from '../core/constants.js';
 
 export const RAIN_WIND = 160;   // velocidad lateral de la lluvia (unidades por cuadro) por unidad de fuerza del viento; antes 900 * 0,06 = 54
+import { padAt, tileRect } from '../core/floor.js';
 import { replayBuf } from '../core/replay.js';
-import { gustForce, mapOf, state } from '../core/state.js';
+import { gustForce, mapOf, rt, state } from '../core/state.js';
+import { activeDurOf } from '../core/stats.js';
+
+// Pelota fantasma (laboratorio): 0 = pelota normal, 1 = fantasma que se ve (morada), 2 = invisible para quien mira
+// (el equipo rival de quien pegó, desde que cruza la red hasta que bota)
+export function ghostView() {
+  const b = state.ball;
+  if (!b.ghost || state.phase !== 'PLAY') return 0;
+  const crossed = (b.x > COURT.netX) === (b.lastHitTeam === 0);
+  if (!crossed || b.bouncesInOpponentSide > 0) return 1;
+  const me = state.players[rt.mySlot];
+  return me && me.team === b.lastHitTeam ? 1 : 2;
+}
 
 // ---------- Efectos (solo visuales, viven en cada cliente) ----------
 export function newPf() {
@@ -35,6 +48,8 @@ export const fx = {
   talk: null, talkSeq: -1,
   prevLights: [true, true],
   prevBolts: [],
+  prevOpen: [],          // baldosas que ya eran hoyo en el cuadro anterior
+  blinkSeq: -1,
   view: { rot: 0, oy: 0, k: 1 },
   inited: false
 };
@@ -45,7 +60,29 @@ export function detectStateEvents() {
     fx.inited = true;
     fx.replaySeq = state.replay.seq; fx.celebSeq = state.celebrate.seq; fx.talkSeq = state.talk.seq;
     fx.prevLights = [...state.lights];
+    fx.blinkSeq = state.blink.seq;
     return;
+  }
+  // Laboratorio: baldosas que acaban de caer (polvo en el borde y sacudida) y teletransportes (chispas en los dos puntos)
+  const open = state.holes.filter(h => h.w <= 0).map(h => h.i);
+  for (const i of open) {
+    if (fx.prevOpen.includes(i)) continue;
+    const r = tileRect(i);
+    for (let k = 0; k < 4; k++) spawnSand(k % 2 ? r.x1 : r.x0, k < 2 ? r.y0 : r.y1, 7, 1.5);
+    spawnSand((r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2, 10, 1.9);
+    fx.shake = Math.max(fx.shake, 3.5);
+  }
+  fx.prevOpen = open;
+  if (state.blink.seq !== fx.blinkSeq) {
+    fx.blinkSeq = state.blink.seq;
+    const bl = state.blink;
+    for (const [x, y] of [[bl.x0, bl.y0], [bl.x1, bl.y1]]) {
+      for (let k = 0; k < 22; k++) {
+        const a = Math.random() * Math.PI * 2, sp = 0.4 + Math.random() * 1.6;
+        fx.sparks.push({ x: x + Math.cos(a) * 6, y: y + Math.sin(a) * 6, z: 8 + Math.random() * 80, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: 0.6 + Math.random() * 1.6, t: 0, max: 14 + Math.random() * 12, elec: true });
+      }
+      fx.rings.push({ x, y, t: 0, power: true });
+    }
   }
   if (state.replay.seq !== fx.replaySeq) {
     fx.replaySeq = state.replay.seq;
@@ -97,7 +134,15 @@ export function onGameEvent(type) {
     fx.flash = 0.6;
     fx.impacts.push({ x: b.x, y: b.y, z: b.z * ZS + BALL_R, t: 0, big: true });
   } else if (type === 'power') {
-    state.players.forEach(p => { if (p.activeT >= ACTIVE_DURATION - 2) fx.rings.push({ x: p.x, y: p.y, t: 0, power: true }); });
+    state.players.forEach(p => { if (p.activeT > 0 && p.activeT >= activeDurOf(p.activeKind) - 2) fx.rings.push({ x: p.x, y: p.y, t: 0, power: true }); });
+  } else if (type === 'quake') {
+    fx.shake = 13;
+    fx.flash = Math.max(fx.flash, 0.18);
+    state.players.forEach(p => { if (!p.out && p.stun > 0) spawnSand(p.x, p.y, 10, 1.4); });
+  } else if (type === 'boing') {
+    // Cama elástica: aro en la que rebotó (la pelota o un jugador)
+    const hit = padAt(b.x, b.y) || state.players.map(p => !p.out && padAt(p.x, p.y)).find(Boolean);
+    if (hit) fx.rings.push({ x: hit.x, y: hit.y, t: 0, power: true });
   } else if (type === 'bounce') {
     spawnSand(b.x, b.y, Math.round(9 * (mapOf().sand || 1)));
     fx.rings.push({ x: b.x, y: b.y, t: 0 });
@@ -131,6 +176,8 @@ export function updateFx(dt) {
   fx.ripples = fx.ripples.filter(e => e.t < 30);
   fx.impacts = fx.impacts.filter(e => e.t < 14);
   fx.shake = Math.max(0, fx.shake - 0.6 * dt);
+  // Terremoto en camino: el suelo vibra cada vez más
+  if (state.quake && state.screen === 'play') fx.shake = Math.max(fx.shake, 1.5 + 4 * (1 - state.quake.t / QUAKE_WARN_FRAMES));
   fx.flash = Math.max(0, fx.flash - 0.06 * dt);
   for (const s of fx.sparks) { s.t += dt; s.x += s.vx * dt; s.y += s.vy * dt; s.z += s.vz * dt; s.vz -= 0.2 * dt; }
   fx.sparks = fx.sparks.filter(s => s.t < s.max && s.z > 0);

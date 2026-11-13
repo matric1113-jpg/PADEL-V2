@@ -1,6 +1,6 @@
 import { COURT, MAX_CHARGE_FRAMES, SMASH_MIN_Z, ENTITY_K, ZS } from '../core/constants.js';
 import { LOOKS } from '../core/data.js';
-import { localInput, rt, state } from '../core/state.js';
+import { entK, localInput, rt, state } from '../core/state.js';
 import { actOn, sizeOf, upLvl } from '../core/stats.js';
 import { angleDiff, clamp, easeOut, lerp } from '../core/util.js';
 import { cam } from './camera.js';
@@ -11,9 +11,10 @@ import { spawnSand } from './fx.js';
 export const TEAM_COLORS = ['#45a8ff', '#ff5c50'];
 export const PLAYER_SCALE = 1.14;  // un poco más grandes que la escala real para que se lean bien
 export const lookOf = p => LOOKS[p.lookId] || LOOKS.fernando;
-export const scaleOf = p => PLAYER_SCALE * ENTITY_K * sizeOf(p) * (actOn(p, 'gordo') ? 1.5 : 1);
+// (entK: en el Estadio gigante los jugadores se ven más chicos respecto a la cancha)
+export const scaleOf = p => PLAYER_SCALE * ENTITY_K * sizeOf(p) * (actOn(p, 'gordo') ? 1.5 : 1) * entK();
 export const SHADOW_LOOK_COLORS = { skin: '#4a3a78', hairColor: '#1b1430', shirt: '#4b3a7a', shirtHi: '#8a76c8', shirtLo: '#241a40', shorts: '#1b1430', shoes: '#2a2048', band: '#9d7bff' };
-export const CELEB_KIND = { german: 'belly', maxi: 'mullet', alvaro: 'flex', fernando: 'cap', matias: 'jump', joaquin: 'peace', zeus: 'bolt' };
+export const CELEB_KIND = { german: 'belly', maxi: 'mullet', alvaro: 'flex', fernando: 'cap', matias: 'jump', joaquin: 'peace', zeus: 'bolt', ilusionista: 'peace', temblor: 'flex', replica: 'jump' };
 
 function targetPose(p, idx, charging, cr, lob) {
   const b = state.ball;

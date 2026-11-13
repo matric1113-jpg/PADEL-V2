@@ -1,7 +1,7 @@
 import { POINTS_LABELS } from '../core/constants.js';
 import { BOSSES } from '../core/data.js';
 import { AMERICANO_PAIRS, americanoRanking } from '../core/game.js';
-import { mapOf, rt, state } from '../core/state.js';
+import { bossOf, isLab, mapOf, rt, state } from '../core/state.js';
 
 const hudState = { servingTeam: -1 };
 
@@ -12,6 +12,7 @@ function setText(id, v) {
 
 function hazardLabel() {
   if (state.screen !== 'play') return '';
+  if (state.quake) return '¡Terremoto! Salta';
   if (state.gust.t > 0) return 'Ráfaga de viento';
   if (state.tilt.t > 0) return 'La cancha se inclina';
   if (state.ice) return 'Cancha de hielo';
@@ -30,12 +31,12 @@ export function updateScoreUI() {
   // En el americano cada equipo se nombra por su pareja del set
   const pair = t => state.players.filter(p => p.team === t).map(p => p.name).join(' / ');
   setText('name-blue', run ? 'Ustedes' : amer ? pair(0) : 'Azul');
-  setText('name-red', run ? BOSSES[state.run.boss].team : amer ? pair(1) : 'Rojo');
+  setText('name-red', run ? bossOf().team : amer ? pair(1) : 'Rojo');
   // Sets ganados (modo amistoso): un punto dorado por set junto al nombre
   const pips = t => (run || amer ? '' : '●'.repeat(state.sets[t]));
   for (const [id, t] of [['name-blue', 0], ['name-red', 1]]) document.getElementById(id).dataset.sets = pips(t);
   const inGame = state.screen !== 'menu';
-  setText('sb-sub', !inGame ? '' : run ? `Jefe ${state.run.boss + 1} de ${BOSSES.length}, ${mapOf().name}`
+  setText('sb-sub', !inGame ? '' : isLab() ? `Laboratorio, ${mapOf().name}` : run ? `Jefe ${state.run.boss + 1} de ${BOSSES.length}, ${mapOf().name}`
     : amer ? `Americano, set ${Math.min(state.amer.set + 1, AMERICANO_PAIRS.length)} de ${AMERICANO_PAIRS.length}, ${mapOf().name}`
     : `Set ${state.sets[0] + state.sets[1] + 1}, ${mapOf().name}`);
   amerTable(inGame && amer);
@@ -45,7 +46,7 @@ export function updateScoreUI() {
   document.getElementById('sb-tag').classList.toggle('show', tb || golden);
   const sb = document.getElementById('scorebug');
   // En el torneo se ven los juegos solo cuando es al mejor de 3
-  sb.classList.toggle('run', run && BOSSES[state.run.boss].gamesToWin === 1);
+  sb.classList.toggle('run', run && bossOf().gamesToWin === 1);
   const longest = Math.max(document.getElementById('name-blue').textContent.length + pips(0).length, document.getElementById('name-red').textContent.length + pips(1).length);
   const nw = Math.max(92, Math.round(longest * 8.6 + 16)) + 'px';
   if (sb.style.getPropertyValue('--namew') !== nw) sb.style.setProperty('--namew', nw);

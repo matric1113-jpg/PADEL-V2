@@ -114,6 +114,26 @@ export function playSound(type) {
     noiseHit(now, 0.045, 1900, 1.3, 0.55);
     toneHit(now, 'sine', 340, 120, 0.07, 0.3);
     noiseHit(now + 0.02, 0.05, 6000, 2, 0.35, 'highpass');
+  } else if (type === 'crack') {
+    // Laboratorio: una baldosa del piso se desprende
+    noiseHit(now, 0.22, 420, 0.6, 0.5, 'lowpass');
+    noiseHit(now + 0.03, 0.09, 2600, 2, 0.22);
+    toneHit(now, 'triangle', 120, 38, 0.3, 0.3);
+  } else if (type === 'fall') {
+    // alguien se va por un hoyo: silbido que baja
+    toneHit(now, 'sine', 900, 110, 0.55, 0.16);
+  } else if (type === 'quake') {
+    noiseHit(now, 0.7, 180, 0.5, 0.75, 'lowpass');
+    toneHit(now, 'sawtooth', 70, 30, 0.6, 0.22);
+  } else if (type === 'blink') {
+    toneHit(now, 'sine', 500, 1800, 0.12, 0.12);
+    noiseHit(now + 0.02, 0.12, 5200, 3, 0.14, 'highpass');
+  } else if (type === 'ghost') {
+    toneHit(now, 'sine', 620, 240, 0.4, 0.1);
+    toneHit(now + 0.03, 'sine', 930, 360, 0.4, 0.06);
+  } else if (type === 'boing') {
+    toneHit(now, 'sine', 160, 520, 0.2, 0.2);
+    toneHit(now + 0.02, 'triangle', 320, 900, 0.14, 0.06);
   } else if (type === 'jump') {
     // Impulso del salto: roce de zapatilla
     noiseHit(now, 0.06, 1200, 0.8, 0.12);

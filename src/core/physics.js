@@ -1,11 +1,11 @@
 import { computeLaunch, computeServeBox, getClampedTarget, launchBall, showBanner } from './ballistics.js';
 import { updateBotLogic } from './bots.js';
-import { BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, GUST_PLAYER_PUSH, JUMP_CHARGE_FRAMES, JUMP_CHARGE_SLOW, JUMP_G, JUMP_LAND_FRAMES, JUMP_LAND_SLOW, JUMP_LAND_STOP, JUMP_MAX_H, JUMP_MIN_H, JUMP_REJUMP_FRAMES, JUMP_SMASH_BONUS, MATE_HIT_RADIUS, MATE_KO_CHARGE, MATE_KO_FRAMES, MATE_STUN_FRAMES, MATE_STUN_MAX_FRAMES, MIN_SWING_CHARGE, SMASH_FULL_Z, SMASH_LOW_BOUNCE, SMASH_LOW_SPEED, TILT_BALL_ACCEL, TILT_PLAYER_PUSH, LIGHTS, MAX_CHARGE_FRAMES, NET_H, PODIUM_FRAMES, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
-import { BOSSES } from './data.js';
+import { HOLE_EDGE, PAD_BALL_K, PAD_BALL_MIN_VZ, PAD_JUMP_H, BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, GUST_PLAYER_PUSH, JUMP_CHARGE_FRAMES, JUMP_CHARGE_SLOW, JUMP_G, JUMP_LAND_FRAMES, JUMP_LAND_SLOW, JUMP_LAND_STOP, JUMP_MAX_H, JUMP_MIN_H, JUMP_REJUMP_FRAMES, JUMP_SMASH_BONUS, MATE_HIT_RADIUS, MATE_KO_CHARGE, MATE_KO_FRAMES, MATE_STUN_FRAMES, MATE_STUN_MAX_FRAMES, MIN_SWING_CHARGE, SMASH_FULL_Z, SMASH_LOW_BOUNCE, SMASH_LOW_SPEED, TILT_BALL_ACCEL, TILT_PLAYER_PUSH, LIGHTS, MAX_CHARGE_FRAMES, NET_H, PODIUM_FRAMES, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
+import { holeAt, padAt } from './floor.js';
 import { awardPoint, checkVoteReady, emitSound, goToScreen, setupServe } from './game.js';
-import { activate, updateHazards } from './hazards.js';
+import { activate, breakFloorAt, updateHazards } from './hazards.js';
 import { insideCourt, moveWithWalls, nearOwnDoor } from './walls.js';
-import { gustForce, tiltEase, inputOf, localInput, mapOf, remoteInputs, rt, state } from './state.js';
+import { bossOf, gustForce, tiltEase, inputOf, localInput, mapOf, remoteInputs, rt, state } from './state.js';
 import { actOn, chargeRateOf, reachOf, reachZOf, smashMinOf, upLvl } from './stats.js';
 import { clamp } from './util.js';
 
@@ -89,6 +89,18 @@ function outBallWalls(prevX, prevY) {
   emitSound('glass');
 }
 
+// Piso que se cae: pisar un hoyo es caer y quedar fuera hasta el punto siguiente (en el aire se pasa por encima)
+function tryFall(p) {
+  if (state.phase !== 'PLAY' || !state.holes.length || p.jz > 0 || p.jvz > 0 || p.outside || !holeAt(p.x, p.y, HOLE_EDGE)) return false;
+  p.fell = true;
+  p.jz = 0; p.jvz = 0; p.vx = 0; p.vy = 0;
+  p.stun = 0; p.charging = false; p.chargeFrames = 0; p.swingTimer = 0; p.jumpCharge = 0;
+  p.clone = null;
+  emitSound('fall');
+  showBanner(`¡${p.name} se fue por un hoyo!\nQueda fuera hasta el próximo punto`, 80);
+  return true;
+}
+
 export function stepPhysics() {
   if (localInput.charging) {
     rt.localChargeFrames = Math.min(MAX_CHARGE_FRAMES, rt.localChargeFrames + chargeRateOf(state.players[rt.mySlot]));
@@ -132,6 +144,9 @@ export function stepPhysics() {
     if (p.burnCd > 0) p.burnCd--;
     if (p.landStop > 0) p.landStop--;
     else if (p.landSlow > 0) p.landSlow--;
+    if (p.blinkCd > 0) p.blinkCd--;
+    // Cayó por un hoyo: sigue cayendo (jz negativo) y no juega hasta el punto siguiente
+    if (p.fell) { p.jvz -= 0.45; p.jz = Math.max(-500, p.jz + p.jvz); return; }
 
     const inp = p.isBot ? updateBotLogic(p, idx) : inputOf(p);
 
@@ -162,6 +177,7 @@ export function stepPhysics() {
       p.lastReleaseSeq = inp.releaseSeq;
       p.vx = 0; p.vy = 0;
       p.jumpCharge = 0;
+      tryFall(p);   // aturdido sobre una baldosa que cae: se va igual
       return;
     }
 
@@ -221,6 +237,7 @@ export function stepPhysics() {
     moveSpeed *= 1 + 0.07 * upLvl(p, 'zapas');
     if (p.isBot) moveSpeed *= 0.8 + 0.2 * (p.skill == null ? 1 : p.skill);
     if (actOn(p, 'gordo')) moveSpeed *= 0.45;
+    if (M.bigSpeed) moveSpeed *= M.bigSpeed;                   // Estadio gigante: más cancha que correr
     if (p.slow > 0) moveSpeed *= 0.5;
     if (p.burn > 0) moveSpeed *= 0.6;
     if (p.jumpCharge > 0) moveSpeed *= JUMP_CHARGE_SLOW;                                         // agachado cargando el salto
@@ -279,6 +296,16 @@ export function stepPhysics() {
       p.clone.x = clamp(p.clone.x + p.vx, minX, maxX);
       p.clone.y = clamp(p.clone.y + p.vy, minY, maxY);
     }
+    if (tryFall(p)) return;
+    if (state.phase === 'PLAY' && p.jz <= 0 && p.jvz <= 0) {
+      // Cama elástica: quien la pisa sale volando (y puede rematar desde arriba)
+      if (M.pads && padAt(p.x, p.y)) {
+        p.jumpK = 1;
+        p.jvz = (JUMP_G + Math.sqrt(JUMP_G * JUMP_G + 8 * JUMP_G * PAD_JUMP_H)) / 2;
+        p.landStop = 0; p.jumpCharge = 0;
+        emitSound('boing');
+      }
+    }
 
     const dir = p.team === 0 ? 1 : -1;
     const paddleX = p.x + dir * PAD_F;
@@ -308,7 +335,7 @@ export function stepPhysics() {
     // FASE DE JUEGO: impacto con la pala (o con la del clon)
     if (state.phase === 'PLAY' && p.swingTimer > 0) {
       // Raquetazo al compañero: lo aturde (no es falta ni pierde el punto)
-      const mate = state.players.find((q, j) => j !== idx && !q.out && q.team === p.team);
+      const mate = state.players.find((q, j) => j !== idx && !q.out && !q.fell && q.team === p.team);
       if (mate && mate.stun === 0 && Math.hypot(mate.x - paddleX, mate.y - paddleY) <= MATE_HIT_RADIUS) {
         mate.charging = false; mate.chargeFrames = 0;
         emitSound('hit');
@@ -384,6 +411,14 @@ export function stepPhysics() {
           launchBall(tx, ty, driveSpeed, 'DRIVE', p.team, false, upLvl(p, 'cortado'));
           emitSound(isFlashShot(p) ? 'flash' : 'hit');
         }
+        // Poderes del laboratorio sobre el golpe que acaba de salir
+        if (actOn(p, 'fantasma')) {
+          b.ghost = true;                       // invisible para el rival desde la red hasta que bota
+          p.activeT = 0; p.activeKind = '';
+          emitSound('ghost');
+        }
+        // Rompesuelos (activa) o remate de un jefe que rompe el piso: se abre un hoyo donde bote
+        b.breaker = actOn(p, 'martillo') || (b.shotType === '¡REMATE!' && p.team === 1 && state.mode === 'run' && !!bossOf().breaker);
       }
     }
   });
@@ -450,7 +485,12 @@ export function stepPhysics() {
     b.vx *= roll;
     b.vy *= roll;
     if (M.embers && b.shotType === '¡REMATE!') state.embers.push({ x: b.x, y: b.y, t: 240 });
-    emitSound('bounce');
+    // Laboratorio: la pelota cae en un hoyo del piso (no bota) o en una cama elástica (sale disparada)
+    const inHole = state.holes.length > 0 && !!holeAt(b.x, b.y);
+    const onPad = !inHole && M.pads && !!padAt(b.x, b.y);
+    if (onPad) b.vz = Math.max(b.vz * PAD_BALL_K, PAD_BALL_MIN_VZ);
+    if (inHole) { b.z = -40; b.vz = 0; b.vx = 0; b.vy = 0; }
+    else emitSound(onPad ? 'boing' : 'bounce');
 
     // CASO 1: la pelota bota en el lado del mismo equipo que golpeó
     if (currentSide === b.lastHitTeam) {
@@ -473,7 +513,12 @@ export function stepPhysics() {
       }
     }
 
+    if (inHole) {
+      awardPoint(b.lastHitTeam, 'Al vacío: la pelota cayó por un hoyo');
+      return;
+    }
     b.bouncesInOpponentSide++;
+    if (b.breaker) { b.breaker = false; breakFloorAt(b.x, b.y); }
 
     if (b.bouncesInOpponentSide >= 2) {
       awardPoint(b.lastHitTeam, 'Doble bote');
@@ -558,5 +603,5 @@ export function stepPhysics() {
 
 // Los influencers sacan una foto con flash cuando le pegan cargado
 function isFlashShot(p) {
-  return p.team === 1 && state.mode === 'run' && BOSSES[state.run.boss].flash && p.swingCharge >= 0.65;
+  return p.team === 1 && state.mode === 'run' && bossOf().flash && p.swingCharge >= 0.65;
 }

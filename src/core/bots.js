@@ -1,4 +1,7 @@
-import { COURT, GRAVITY, JUMP_CHARGE_FRAMES, JUMP_MAX_H, JUMP_MIN_H, MAX_CHARGE_FRAMES, PAD_F, PAD_S, WALL_PLAY } from './constants.js';
+import { BODY_MARGIN, COURT, GRAVITY, JUMP_CHARGE_FRAMES, JUMP_MAX_H, JUMP_MIN_H, MAX_CHARGE_FRAMES, NET_MARGIN, PAD_F, PAD_S, TILE_H, TILE_W, WALL_PLAY } from './constants.js';
+import { holeAt, tileOf, tileRect } from './floor.js';
+import { emitSound } from './game.js';
+import { blinkSpot, blinkTo } from './hazards.js';
 import { state } from './state.js';
 import { reachOf, reachZOf } from './stats.js';
 import { clamp } from './util.js';
@@ -59,6 +62,9 @@ export function updateBotLogic(p, idx) {
     p.botWhiff = incoming && Math.random() < lack * 0.32;
     p.botUseActive = incoming && Math.random() < 0.3 + 0.25 * sk;
     p.botJump = incoming && Math.random() < 0.25 + 0.5 * sk;   // si la pelota le pasa alta, a veces salta
+    // Laboratorio: pelota fantasma (reacciona tarde y a veces le pega al aire) y hoyos (los más flojos a veces no miran el piso)
+    if (incoming && b.ghost) { p.botDelay += 20; p.botWhiff = p.botWhiff || Math.random() < 0.45; }
+    if (state.holes.length) p.botCareless = Math.random() < lack * 0.3;
     // Juego de pared: si la pelota va a botar cerca de su fondo, a veces la dejan pasar y la juegan de rebote
     p.botWallPlay = false;
     if (incoming) {
@@ -70,7 +76,7 @@ export function updateBotLogic(p, idx) {
   }
 
   const partner = state.players[idx % 2 === 0 ? idx + 1 : idx - 1];
-  const solo = !partner || partner.out || partner.down;   // con el compañero en el suelo, cubre toda la cancha
+  const solo = !partner || partner.out || partner.down || partner.fell;   // con el compañero en el suelo, cubre toda la cancha
   const isTopPlayer = (idx % 2 === 0);
   const backX = p.team === 0 ? 175 : 745;
   const netXPos = p.backPref ? backX : (p.team === 0 ? 315 : 605);
@@ -114,10 +120,30 @@ export function updateBotLogic(p, idx) {
   const bolt = state.bolts.find(bo => bo.slot === idx);
   if (bolt && Math.random() < 0.3 + 0.5 * sk) { targetY = p.y + (p.y < COURT.midY ? 80 : -80); }
 
+  // Jefe que se teletransporta: si la pelota le queda lejos, aparece donde va a poder pegarle
+  if (p.blinkMax && p.blinkCd === 0 && p.stun === 0 && state.phase === 'PLAY' && b.lastHitTeam !== p.team) {
+    const spot = blinkSpot(p);
+    if (spot && Math.hypot(spot.x - p.x, spot.y - p.y) > 140) {
+      blinkTo(p, spot.x, spot.y);
+      p.blinkCd = p.blinkMax;
+      p.botDelay = 0;
+      emitSound('blink');
+      targetX = p.x; targetY = p.y;
+    }
+  }
+
   if (p.x < targetX - 8) inp.right = true;
   if (p.x > targetX + 8) inp.left = true;
   if (p.y < targetY - 8) inp.down = true;
   if (p.y > targetY + 8) inp.up = true;
+  if (state.holes.length && !p.outside) avoidHoles(p, inp, p.botCareless);
+
+  // Terremoto en camino sobre su lado: los que lo ven venir saltan justo antes de que llegue
+  const qk = state.quake;
+  const dodging = !!qk && qk.team === p.team && qk.t <= 15 && (() => {
+    if (p.botQk !== qk.id) { p.botQk = qk.id; p.botQkDodge = Math.random() < 0.25 + 0.6 * sk; }
+    return p.botQkDodge;
+  })();
 
   const dir = p.team === 0 ? 1 : -1;
   const paddleX = p.x + dir * PAD_F;
@@ -138,7 +164,10 @@ export function updateBotLogic(p, idx) {
   // Salto: la pelota ya botó en su campo y se le va por arriba cerca del fondo o de la malla lateral, pero saltando la alcanza
   const zReach = reachZOf(p);
   const nearWall = (p.team === 0 ? b.x - COURT.x : COURT.x + COURT.w - b.x) < 160 || b.y < COURT.y + 70 || b.y > COURT.y + COURT.h - 70;
-  if (state.phase === 'PLAY' && p.botJump && nearWall && b.lastHitTeam !== p.team && ballOnMySide && b.bouncesInOpponentSide >= 1 &&
+  if (dodging) {
+    p.botJumpTarget = 4;
+    inp.jump = qk.t > 11 && p.jumpCharge < 4;   // carga 4 cuadros y suelta: está en el aire cuando llega
+  } else if (state.phase === 'PLAY' && p.botJump && nearWall && b.lastHitTeam !== p.team && ballOnMySide && b.bouncesInOpponentSide >= 1 &&
       p.jz === 0 && p.jumpCharge === 0 && distToPaddle < reach + 25 && b.z > zReach - 6 && b.z < zReach + JUMP_MAX_H - 4) {
     // carga lo justo para la altura que le falta
     const k = clamp((b.z - zReach + 10 - JUMP_MIN_H) / (JUMP_MAX_H - JUMP_MIN_H), 0, 1);
@@ -177,3 +206,31 @@ export function updateBotLogic(p, idx) {
   return inp;
 }
 
+
+// ---- Laboratorio: hoyos del piso ----
+// No camina hacia una baldosa abierta o que está avisando; si la que pisa empieza a avisar, sale por el borde más
+// cercano que dé a piso firme dentro de su mitad. Distraído (careless) no mira los avisos: solo esquiva los hoyos ya
+// abiertos, así que puede caer si la baldosa se abre bajo sus pies.
+function avoidHoles(p, inp, careless) {
+  const danger = (x, y) => !!holeAt(x, y, -3, !careless);
+  const here = tileOf(p.x, p.y);
+  if (!careless && here >= 0 && state.holes.some(h => h.i === here)) {
+    const r = tileRect(here);
+    const minX = p.team === 0 ? COURT.x + BODY_MARGIN : COURT.netX + NET_MARGIN, maxX = p.team === 0 ? COURT.netX - NET_MARGIN : COURT.x + COURT.w - BODY_MARGIN;
+    const exits = [
+      [p.x - r.x0, -1, 0, r.x0 - TILE_W / 2, p.y], [r.x1 - p.x, 1, 0, r.x1 + TILE_W / 2, p.y],
+      [p.y - r.y0, 0, -1, p.x, r.y0 - TILE_H / 2], [r.y1 - p.y, 0, 1, p.x, r.y1 + TILE_H / 2]
+    ].filter(e => e[3] > minX && e[3] < maxX && e[4] > COURT.y + BODY_MARGIN && e[4] < COURT.y + COURT.h - BODY_MARGIN && !danger(e[3], e[4]))
+      .sort((a, b) => a[0] - b[0]);
+    if (exits.length) {
+      const [, dx, dy] = exits[0];
+      inp.left = dx < 0; inp.right = dx > 0; inp.up = dy < 0; inp.down = dy > 0;
+    }
+    return;
+  }
+  const sx = (inp.right ? 1 : 0) - (inp.left ? 1 : 0), sy = (inp.down ? 1 : 0) - (inp.up ? 1 : 0);
+  const STEP = 18;
+  if (sx && danger(p.x + sx * STEP, p.y)) { inp.left = false; inp.right = false; }
+  if (sy && danger(p.x, p.y + sy * STEP)) { inp.up = false; inp.down = false; }
+  if ((inp.left || inp.right) && (inp.up || inp.down) && danger(p.x + sx * STEP, p.y + sy * STEP)) { inp.up = false; inp.down = false; }
+}
