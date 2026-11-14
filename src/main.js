@@ -1,6 +1,6 @@
 import './style.css';
 import './themes.css';
-import { getVolume, hasSongs, nextSong, playSound, setVolume, watchSong } from './audio/audio.js';
+import { followSongs, getVolume, hasSongs, nextSong, playSong, playSound, setVolume, songIndex, watchSong } from './audio/audio.js';
 import { watchTalk } from './audio/voice.js';
 import { hooks } from './core/events.js';
 import * as game from './core/game.js';
@@ -26,7 +26,7 @@ document.getElementById('menu-btn').addEventListener('click', openMenu);
 if (hasSongs) {
   const next = document.getElementById('music-next'), title = document.getElementById('music-title');
   next.hidden = false;
-  next.addEventListener('click', () => { nextSong(); next.blur(); });
+  next.addEventListener('click', () => { skipSong(); next.blur(); });
   watchSong(name => { title.textContent = name; title.hidden = !name; });
 }
 // Barras de volumen: al soltarlas pierden el foco, así las flechas y WASD vuelven a mover al jugador
@@ -35,6 +35,33 @@ for (const k of ['music', 'sfx']) {
   el.value = Math.round(getVolume(k) * 100);
   el.addEventListener('input', () => setVolume(k, el.value / 100));
   el.addEventListener('change', () => el.blur());
+}
+
+// ---- Música de la sala: todos escuchan la canción que elige el anfitrión. Solo, "Siguiente" la salta al tiro; en una
+// sala es un voto, y se salta con game.SKIP_VOTES_NEED votos (o con todos, si hay menos personas) ----
+const inRoom = () => !rt.isHost || Object.keys(rt.connections).length > 0;
+function skipSong() {
+  if (!inRoom()) { nextSong(); return; }
+  if (rt.isHost) game.voteSkipSong(rt.myUid);
+  else if (rt.hostConn && rt.hostConn.open) rt.hostConn.send({ type: 'skip' });
+}
+let musicSeq = -1, nextLabel = '';
+function syncMusic() {
+  const m = state.music;
+  if (!m) return;
+  if (rt.isHost) {
+    followSongs(false);
+    if (m.skip.length && m.skip.length >= game.skipVotesNeeded()) { m.skip = []; nextSong(); }
+    if (songIndex() !== m.idx) state.music = { idx: songIndex(), seq: m.seq + 1, skip: [] };
+  } else {
+    followSongs(true);
+    if (m.seq !== musicSeq) { musicSeq = m.seq; playSong(m.idx); }
+  }
+  if (!hasSongs) return;
+  const mine = state.players[rt.mySlot];
+  const voted = mine && m.skip.includes(mine.uid);
+  const label = inRoom() ? `Siguiente ${m.skip.length}/${game.skipVotesNeeded()}${voted ? ' ✓' : ''}` : 'Siguiente ▸';
+  if (label !== nextLabel) { nextLabel = label; document.getElementById('music-next').textContent = label; }
 }
 
 // Loop fijo a 60 FPS para la física; el dibujo va al ritmo de la pantalla
@@ -70,7 +97,7 @@ function gameLoop(now) {
     const undo = fx.replay ? null : applyInterp(accumulator / STEP);
     try { renderer.render(now); } finally { if (undo) undo(); }
   });
-  timed('ui', () => { syncHud(); updateScoreUI(); syncOverlay(); });
+  timed('ui', () => { syncHud(); updateScoreUI(); syncOverlay(); syncMusic(); });
   watchTalk(state, !rt.uiMenuOpen && state.screen === 'play');   // las frases del partido se escuchan
   endFrame(now);
   requestAnimationFrame(gameLoop);

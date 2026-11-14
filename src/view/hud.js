@@ -1,7 +1,7 @@
 import { computeLaunch, getClampedTarget } from '../core/ballistics.js';
-import { BALL_R, COURT, GRAVITY, JUMP_CHARGE_FRAMES, MAX_CHARGE_FRAMES, NET_H, PAD_F, PAD_S, SPRINT_COOLDOWN, SPRINT_DURATION, TILT_BALL_ACCEL, VIEW_H, VIEW_W, ZS } from '../core/constants.js';
+import { BALL_R, COURT, JUMP_CHARGE_FRAMES, MAX_CHARGE_FRAMES, NET_H, PAD_F, PAD_S, SPRINT_COOLDOWN, SPRINT_DURATION, TILT_BALL_ACCEL, VIEW_H, VIEW_W, ZS } from '../core/constants.js';
 import { contraTarget, isContraAim } from '../core/physics.js';
-import { gustForce, tiltEase, localInput, rt, state } from '../core/state.js';
+import { gravAt, gustForce, tiltEase, localInput, rt, state } from '../core/state.js';
 import { activeCdOf, activeDurOf, smashMinOf, upLvl } from '../core/stats.js';
 import { clamp } from '../core/util.js';
 import { mouseView } from '../input/input.js';
@@ -49,7 +49,7 @@ function drawContraPreview(me) {
   const v = computeLaunch(wallX, wy, 58, tx, ty, 4.6, 'GLOBO', me.team);
   let x = wallX, y = wy, z = 58, vx = v.vx, vy = v.vy, vz = v.vz;
   const pts = [w];
-  for (let i = 0; i < 300 && z > 0; i++) { x += vx; y += vy; z += vz; vz -= GRAVITY; if (i % 2 === 0) pts.push(P(x, y, Math.max(0, z) * ZS)); }
+  for (let i = 0; i < 300 && z > 0; i++) { x += vx; y += vy; z += vz; vz -= gravAt(i + 1); if (i % 2 === 0) pts.push(P(x, y, Math.max(0, z) * ZS)); }
   ctx.setLineDash([7, 6]);
   ctx.strokeStyle = 'rgba(160, 230, 255, 0.95)';
   ctx.lineWidth = 2.2;
@@ -69,7 +69,7 @@ export function predictLanding() {
   if (state.phase !== 'PLAY') return null;
   let x = b.x, y = b.y, z = b.z, vx = b.vx, vy = b.vy, vz = b.vz;
   for (let i = 0; i < 400; i++) {
-    x += vx; y += vy; z += vz; vz -= GRAVITY;
+    x += vx; y += vy; z += vz; vz -= gravAt(i + 1);
     if (z > 0) { vy += gustForce(i + 1); const e = tiltEase(i + 1) * TILT_BALL_ACCEL; vx += state.tilt.x * e; vy += state.tilt.y * e; }
     if (x < COURT.x + 10 || x > COURT.x + COURT.w - 10 || y < COURT.y + 10 || y > COURT.y + COURT.h - 10) return null;
     if (z <= 0) return i < 2 ? null : { x, y };
@@ -90,6 +90,10 @@ export function aimTarget(me) {
   if (isMyServe) {
     const box = state.serveTargetBox;
     aimValid = (tx >= box.minX && tx <= box.maxX && ty >= box.minY && ty <= box.maxY);
+  } else if (isLob || !isContraAim(me, localInput.aimX)) {
+    // Puntería libre: en rojo si el golpe va fuera de la cancha rival
+    const opp = me.team === 0 ? tx > COURT.netX && tx < COURT.x + COURT.w : tx < COURT.netX && tx > COURT.x;
+    aimValid = opp && ty > COURT.y && ty < COURT.y + COURT.h;
   }
   const col = !aimValid ? '239, 68, 68' : (isLob ? '96, 190, 255' : '228, 255, 58');
   return { tx, ty, col, ratio, isCharging, isLob, isMyServe };
@@ -108,7 +112,7 @@ export function drawAimArc(me) {
   let netFail = false;
   for (let i = 0; i < 300; i++) {
     const px = x;
-    x += vx; y += vy; z += vz; vz -= GRAVITY;
+    x += vx; y += vy; z += vz; vz -= gravAt(i + 1);
     if (z > 0) { vy += gustForce(i + 1); const e = tiltEase(i + 1) * TILT_BALL_ACCEL; vx += state.tilt.x * e; vy += state.tilt.y * e; }
     if ((px - COURT.netX) * (x - COURT.netX) < 0 && z < NET_H) netFail = true;
     if (z <= 0) { pts.push(P(x, y, BALL_R)); shadow.push(P(x, y, 0)); break; }

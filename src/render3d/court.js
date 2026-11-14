@@ -376,16 +376,18 @@ export class Court {
   buildRoof() {
     const H = Math.max(...Object.values(MAPS).map(M => M.roof || 0));
     const g = new Group();
-    const metal = new MeshStandardMaterial({ color: '#2a1c18', metalness: 0.6, roughness: 0.5 });
+    // (tenue: malla casi transparente y pocas vigas finas, para que se note sin tapar el juego)
+    const metal = new MeshStandardMaterial({ color: '#2a1c18', metalness: 0.6, roughness: 0.5, transparent: true, opacity: 0.55 });
+    const faint = this.wireMat.clone();
+    faint.opacity = 0.3;
     for (const key of ['F', 'N', 'L', 'R']) {
       const side = key === 'F' || key === 'N';
       const a0 = side ? X0 : Y0, a1 = side ? X1 : Y1;
-      g.add(wallPlane(key, a0, a1, WALL_H_LOW, H, this.wireMat, 8));
-      g.add(wallBox(key, a0, a1, H - 2.5, H, 3, metal));
+      g.add(wallPlane(key, a0, a1, WALL_H_LOW, H, faint, 8));
+      g.add(wallBox(key, a0, a1, H - 1.5, H, 2, metal));
     }
-    for (let x = X0 + 100; x < X1 - 1; x += 100) { const b = new Mesh(new BoxGeometry(2.4, 2.4, COURT.h), metal); b.position.set(x, H - 1.2, COURT.midY); g.add(b); }
-    for (const y of [Y0 + COURT.h / 3, Y0 + COURT.h * 2 / 3]) { const b = new Mesh(new BoxGeometry(COURT.w, 2.4, 2.4), metal); b.position.set(COURT.netX, H - 1.2, y); g.add(b); }
-    const top = new Mesh(new PlaneGeometry(COURT.w, COURT.h), new MeshBasicMaterial({ color: '#ffb080', alphaMap: wireTexture(32, 2), transparent: true, opacity: 0.16, depthWrite: false, side: DoubleSide }));
+    for (let x = X0 + 200; x < X1 - 1; x += 200) { const b = new Mesh(new BoxGeometry(1.3, 1.3, COURT.h), metal); b.position.set(x, H - 0.7, COURT.midY); g.add(b); }
+    const top = new Mesh(new PlaneGeometry(COURT.w, COURT.h), new MeshBasicMaterial({ color: '#ffb080', alphaMap: wireTexture(32, 2), transparent: true, opacity: 0.06, depthWrite: false, side: DoubleSide }));
     top.material.alphaMap.repeat.set(COURT.w / 16, COURT.h / 16);
     top.rotation.x = -Math.PI / 2;
     top.position.set(COURT.netX, H, COURT.midY);

@@ -3,7 +3,7 @@ import { ensureAudio } from '../audio/audio.js';
 import { hooks } from '../core/events.js';
 import { showBanner } from '../core/ballistics.js';
 import { PLAYABLE, TEAMMATE_SKILL } from '../core/data.js';
-import { fixBotLooks, prepareRoster, resetSeats, setLook, setReady, setVote, tryBuy } from '../core/game.js';
+import { voteSkipSong, fixBotLooks, prepareRoster, resetSeats, setLook, setReady, setVote, tryBuy } from '../core/game.js';
 import { recordFrame } from '../core/replay.js';
 import { bossOf, localInput, menuSel, remoteInputs, rt, slotOfUid, state, syncMySlot } from '../core/state.js';
 import { openMenu, setNetMsg, setStatus } from '../ui/menu.js';
@@ -191,6 +191,8 @@ export function createRoom() {
         setVote(s, data.map);
       } else if (data.type === 'ready') {
         setReady(s);
+      } else if (data.type === 'skip') {
+        voteSkipSong(uid);
       } else if (data.type === 'ping') {
         conn.send({ type: 'pong', t: data.t });
         if (state.roomCode) setStatus('Sala ' + state.roomCode + ' · ping ' + (data.rtt || '…') + ' ms');

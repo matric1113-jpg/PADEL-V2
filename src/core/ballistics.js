@@ -1,5 +1,5 @@
-import { COURT, GRAVITY, MIN_SPEED_FACTOR, NET_CLEARANCE, NET_H } from './constants.js';
-import { state } from './state.js';
+import { AIM_SLACK, COURT, MIN_SPEED_FACTOR, NET_CLEARANCE, NET_H } from './constants.js';
+import { gravAt, state } from './state.js';
 
 export function showBanner(text, duration = 90) {
   state.bannerText = text;
@@ -18,20 +18,19 @@ export function computeServeBox(server) {
 }
 
 export function getClampedTarget(team, rawAimX, rawAimY, chargeRatio, powerStat, isLob, isServe) {
-  const margin = 18, deep = 22;    // objetivo profundo, sin llegar a la zona donde ya cuenta como "directo al cristal"
-  const minX = team === 0 ? COURT.netX + 35 : COURT.x + deep;
-  const maxX = team === 0 ? COURT.x + COURT.w - deep : COURT.netX - 35;
-  const minY = COURT.y + margin;
-  const maxY = COURT.y + COURT.h - margin;
-
-  let tx = Math.max(minX, Math.min(maxX, rawAimX));
-  let ty = Math.max(minY, Math.min(maxY, rawAimY));
+  // Sin ayuda: el golpe va a donde se apunta, aunque sea fuera de la cancha, a la red, a un costado o hacia atrás
+  // (y entonces se falla). Solo se limita a unos metros alrededor de la cancha.
+  const cl = (v, a, b) => Math.max(a, Math.min(b, v));
+  let tx = cl(rawAimX, COURT.x - AIM_SLACK, COURT.x + COURT.w + AIM_SLACK);
+  const ty = cl(rawAimY, COURT.y - AIM_SLACK, COURT.y + COURT.h + AIM_SLACK);
+  const deep = 22;   // fondo "seguro": la carga no empuja la pelota más allá de esto (salvo que ya se apuntara más allá)
+  const ahead = team === 0 ? tx > COURT.netX : tx < COURT.netX;
 
   // En juego normal (no en saque), más carga y más fuerza empujan la bola más profunda
-  if (!isLob && !isServe) {
+  if (!isLob && !isServe && ahead) {
     const depthPull = (chargeRatio - 0.4) * (50 + powerStat * 45);
-    tx += (team === 0 ? depthPull : -depthPull);
-    tx = Math.max(minX, Math.min(maxX, tx));
+    if (team === 0) tx = Math.max(Math.min(tx + depthPull, Math.max(tx, COURT.x + COURT.w - deep)), COURT.netX + 1);
+    else tx = Math.min(Math.max(tx - depthPull, Math.min(tx, COURT.x + deep)), COURT.netX - 1);
   }
   return { tx, ty };
 }
@@ -40,26 +39,27 @@ export function getClampedTarget(team, rawAimX, rawAimY, chargeRatio, powerStat,
 // + ayuda de paso de red: si la parábola no supera la red, el jugador "levanta" la bola
 // (baja la velocidad hasta un 60%). Si aun así no alcanza, la bola se va a la red.
 export function computeLaunch(fromX, fromY, fromZ, targetX, targetY, speedX, shotLabel, team) {
-  const dirX = team === 0 ? 1 : -1;
-  const distX = Math.max(85, Math.abs(targetX - fromX));
-  let speed = speedX;
-  let T = distX / speed;
+  // La dirección sale del objetivo (puede ser hacia atrás). Si el objetivo está muy al costado, el vuelo se alarga.
+  const G = gravAt();
+  const dx = targetX - fromX;
+  const dirX = Math.abs(dx) < 1 ? (team === 0 ? 1 : -1) : Math.sign(dx);
+  const distX = Math.max(85, Math.abs(dx));
+  let T = Math.max(distX, Math.abs(targetY - fromY) * 0.6) / speedX;
 
   const dNet = (COURT.netX - fromX) * dirX;
   if (shotLabel !== 'GLOBO' && dNet > 0 && dNet < distX) {
     const f = dNet / distX;
     const need = NET_H + NET_CLEARANCE;
-    const zAtNet = fromZ * (1 - f) + 0.5 * GRAVITY * T * T * f * (1 - f);
+    const zAtNet = fromZ * (1 - f) + 0.5 * G * T * T * f * (1 - f);
     if (zAtNet < need) {
-      const tNeed = Math.sqrt(Math.max(0, 2 * (need - fromZ * (1 - f)) / (GRAVITY * f * (1 - f))));
+      const tNeed = Math.sqrt(Math.max(0, 2 * (need - fromZ * (1 - f)) / (G * f * (1 - f))));
       T = Math.min(tNeed, T / MIN_SPEED_FACTOR);
-      speed = distX / T;
     }
   }
 
-  let vz = (0.5 * GRAVITY * T * T - fromZ) / T;
+  let vz = (0.5 * G * T * T - fromZ) / T;
   if (shotLabel === 'GLOBO' && vz < 5.6) vz = 5.9;
-  return { vx: dirX * speed, vy: (targetY - fromY) / T, vz };
+  return { vx: dirX * distX / T, vy: (targetY - fromY) / T, vz };
 }
 
 export function launchBall(targetX, targetY, speedX, shotLabel, team, isServeShot, cut = 0) {

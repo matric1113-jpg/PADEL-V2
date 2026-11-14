@@ -103,6 +103,18 @@ export function paintBackdrop(id) {
     radial(-60, 740, 90, [[0, 'rgba(255, 170, 60, 0.95)'], [1, 'rgba(255, 80, 20, 0)']]);
     for (const [x0, x1] of [[-120, -500], [0, 380], [-60, 120]]) poly([[x0, 720], [x0 + 18, 720], [x1 + 30, 0], [x1, 0]], 'rgba(255, 110, 30, 0.85)');
     for (let k = 0; k < 10; k++) poly(ellipsePts(-60 + (rnd() - 0.5) * 900, 900 + rnd() * 900, 160 + rnd() * 160, 70 + rnd() * 50), 'rgba(40, 20, 18, 0.7)');
+  } else if (id === 'luna') {
+    // Base lunar: cielo negro con estrellas, la Tierra y cerros grises con cráteres
+    for (let k = 0; k < 320; k++) { const x = X0 + rnd() * (X1 - X0), z = 120 + rnd() * 2600, s = 2 + rnd() * 3.5; poly([[x, z], [x + s, z], [x + s, z + s * 2.2], [x, z + s * 2.2]], `rgba(235, 240, 255, ${0.3 + rnd() * 0.7})`); }
+    radial(1350, 1350, 160, [[0, 'rgba(120, 180, 255, 0.5)'], [1, 'rgba(120, 180, 255, 0)']]);
+    poly(ellipsePts(1350, 1350, 190, 190), '#2a6fd6');
+    for (const [x, z, rx, rz] of [[1300, 1420, 70, 50], [1420, 1290, 55, 70], [1280, 1260, 40, 30]]) poly(ellipsePts(x, z, rx, rz), '#3f9a4a');
+    for (let k = 0; k < 6; k++) poly(ellipsePts(1320 + rnd() * 80, 1300 + rnd() * 120, 60 + rnd() * 50, 12), 'rgba(255, 255, 255, 0.55)');
+    const pts = [[X0, 0]];
+    for (let x = X0; x <= X1; x += 140) pts.push([x, 140 + Math.sin(x * 0.004) * 60 + rnd() * 50]);
+    pts.push([X1, 0]);
+    poly(pts, '#5a5e68');
+    for (let k = 0; k < 18; k++) poly(ellipsePts(X0 + rnd() * (X1 - X0), 20 + rnd() * 110, 30 + rnd() * 50, 6 + rnd() * 6), 'rgba(40, 42, 50, 0.6)');
   } else if (id === 'abismo') {
     // El Abismo: estrellas, un remolino morado y peñascos que flotan en el vacío
     for (let k = 0; k < 260; k++) { const x = X0 + rnd() * (X1 - X0), z = 40 + rnd() * 2400, s = 2 + rnd() * 4; poly([[x, z], [x + s, z], [x + s, z + s * 2.2], [x, z + s * 2.2]], `rgba(225, 215, 255, ${0.35 + rnd() * 0.6})`); }

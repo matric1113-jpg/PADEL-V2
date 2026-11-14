@@ -341,7 +341,7 @@ function testLab() {
   Object.assign(state.ball, { x: 730, y: 300, z: 1, vz: -2 });
   state.holes = [{ i: tileOf(730, 300), w: 0 }];
   stepPhysics();
-  if (state.score[0] !== 1 || !/Al vacío/.test(state.bannerText)) fail('la pelota en el hoyo no dio el punto: ' + state.bannerText);
+  if (state.score[0] !== 0 || state.ball.vz <= 0 || state.ball.bouncesInOpponentSide !== 1) fail('la pelota cayó por el hoyo (debía botar): ' + state.bannerText);
   // 4. cama elástica: quien la pisa salta PAD_JUMP_H
   begin('circo');
   const pad = padsNow()[0], q = state.players[0];

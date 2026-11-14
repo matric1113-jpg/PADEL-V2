@@ -1,9 +1,9 @@
-import { BODY_MARGIN, COURT, GRAVITY, JUMP_CHARGE_FRAMES, JUMP_MAX_H, JUMP_MIN_H, MAX_CHARGE_FRAMES, NET_MARGIN, PAD_F, PAD_S, TILE_H, TILE_W, WALL_PLAY } from './constants.js';
+import { BODY_MARGIN, COURT, JUMP_CHARGE_FRAMES, JUMP_MAX_H, JUMP_MIN_H, MAX_CHARGE_FRAMES, NET_MARGIN, PAD_F, PAD_S, TILE_H, TILE_W, WALL_PLAY } from './constants.js';
 import { holeAt, tileOf, tileRect } from './floor.js';
 import { emitSound } from './game.js';
 import { blinkSpot, blinkTo } from './hazards.js';
-import { state } from './state.js';
-import { reachOf, reachZOf } from './stats.js';
+import { gravAt, state } from './state.js';
+import { jumpReachOf, reachOf, reachZOf } from './stats.js';
 import { clamp } from './util.js';
 import { insideCourt, waypoint } from './walls.js';
 
@@ -11,7 +11,7 @@ import { insideCourt, waypoint } from './walls.js';
 function catchPoint(b, zMax) {
   let x = b.x, y = b.y, z = b.z, vz = b.vz;
   for (let k = 0; k < 300; k++) {
-    x += b.vx; y += b.vy; z += vz; vz -= GRAVITY;
+    x += b.vx; y += b.vy; z += vz; vz -= gravAt(k);
     if ((vz < 0 && z <= zMax) || z <= 0) return { x, y };
   }
   return { x, y };
@@ -69,7 +69,7 @@ export function updateBotLogic(p, idx) {
     p.botWallPlay = false;
     if (incoming) {
       let x = b.x, y = b.y, z = b.z, vx = b.vx, vy = b.vy, vz = b.vz;
-      for (let k = 0; k < 300 && z > 0; k++) { x += vx; y += vy; z += vz; vz -= GRAVITY; }
+      for (let k = 0; k < 300 && z > 0; k++) { x += vx; y += vy; z += vz; vz -= gravAt(k); }
       const ownBack = p.team === 0 ? x - COURT.x : COURT.x + COURT.w - x;
       p.botWallPlay = ownBack < 150 && ownBack > 0 && (b.shotType === 'DRIVE' || b.shotType === 'SAQUE') && Math.random() < WALL_PLAY;
     }
@@ -193,7 +193,7 @@ export function updateBotLogic(p, idx) {
         inp.aimY = 260 + (Math.random() - 0.5) * 350 * (0.45 + 0.55 * sk);
       }
     }
-    if (p.charging && !p.botWhiff && !waitWall && distToPaddle < reach - 1 && b.z <= zReach + p.jz - 5) {
+    if (p.charging && !p.botWhiff && !waitWall && distToPaddle < reach - 1 && b.z <= zReach + jumpReachOf(p) - 5) {
       inp.charging = false;
       inp.releaseSeq = p.lastReleaseSeq + 1;
       inp.lastChargeRatio = Math.min(p.chargeFrames / MAX_CHARGE_FRAMES, 0.3 + 0.7 * sk);

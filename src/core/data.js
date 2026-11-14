@@ -252,9 +252,13 @@ export const MAPS = {
   crater: { name: 'Cráter volcánico', tag: 'Raro', desc: 'Con techo: nadie saca la pelota por 3 ni por 4, rebota y sigue. Los remates dejan brasas que queman los pies; los cristales calientes devuelven más rápido y queman al tocarlos.', bounceZ: 1, roll: 1, embers: true, hotGlass: true, roof: 200,
             swatch: 'linear-gradient(180deg, #2a0a06 0%, #8a1f0a 55%, #ff6a1a 100%)' }
 };
+// Base lunar: mapa raro de la beta 4. La gravedad cambia por ratos; las guías de tiro lo predicen
+MAPS.luna = { name: 'Base lunar', tag: 'Raro', desc: 'Cada cierto rato cambia la gravedad: en gravedad cero la pelota flota, bota altísimo y se salta más; en gravedad doble cae como piedra. Las guías de tiro lo predicen.', bounceZ: 1, roll: 1, grav: true,
+  swatch: 'linear-gradient(180deg, #02030a 0%, #1a2340 55%, #8a8f9a 100%)' };
+
 // Mapas del laboratorio (versión de prueba): no entran a la votación ni al azar del amistoso
 Object.assign(MAPS, {
-  abismo: { name: 'El Abismo', tag: 'Nuevo', lab: true, desc: 'El piso se cae por baldosas: avisan, se abren y quedan así hasta el fin del punto. Si pisas un hoyo quedas fuera ese punto (se saltan); si la pelota bota en un hoyo rival, el punto es tuyo.', bounceZ: 1, roll: 1, holes: true,
+  abismo: { name: 'El Abismo', tag: 'Nuevo', lab: true, desc: 'El piso se cae por baldosas: avisan, se abren y quedan así hasta el fin del punto. Si pisas un hoyo quedas fuera ese punto (se saltan). La pelota no cae: solo las personas.', bounceZ: 1, roll: 1, holes: true,
             swatch: 'linear-gradient(180deg, #07061a 0%, #3a1d5e 55%, #2a2d6e 100%)' },
   circo:  { name: 'El Circo', tag: 'Nuevo', lab: true, desc: 'Cuatro camas elásticas se pasean por la cancha: si las pisas sales volando 2,4 m y rematas desde arriba; si la pelota bota en una, sale disparada.', bounceZ: 1, roll: 1, pads: true,
             swatch: 'linear-gradient(180deg, #1a0b2e 0%, #b0306a 55%, #f2c14e 100%)' },
@@ -276,7 +280,8 @@ export const MUTATORS = {
   bolts: { name: 'Rayos', flags: { bolts: true } },
   gusts: { name: 'Viento', flags: { gusts: true } },
   tilt: { name: 'Inclinación', flags: { tilt: true } },
-  lava: { name: 'Brasas y cristal caliente', flags: { embers: true, hotGlass: true } }
+  lava: { name: 'Brasas y cristal caliente', flags: { embers: true, hotGlass: true } },
+  grav: { name: 'Gravedad loca', flags: { grav: true } },
 };
 export const MUTATOR_IDS = Object.keys(MUTATORS);
 // Torneo de 8 jefes. El nivel (skill) de los 6 primeros es el de siempre aunque cambió el orden (Zeus pasó del 3.º al 5.º).
@@ -395,8 +400,8 @@ export const DIFFICULTIES = [
 
 // ---- Frases y burlas (globos de texto) ----
 export const TALK = {
-  brag: ['¡Toma!', '¡Esa no la saca nadie!', '¡Puntazo!', 'Así se juega, compadre', '¡Para la repetición!', '¿Vieron eso?'],
-  taunt: ['¡Uy, casi!', 'Tranquilo, respira', 'La red te quiere, parece', '¿Necesitas lentes?', 'Otra vez será', 'Jajaja, ¿qué fue eso?'],
+  brag: ['¡Toma!', '¡Esa no la saca nadie!', '¡Puntazo!', 'Así se juega, compadre', '¡Para la repetición!', '¿Vieron eso?', '¡Chúpate esa!', '¡De manual!', 'Ni la vieron pasar', '¡Uff, qué nivel!', 'Sáquenla del video', '¡Qué rico!'],
+  taunt: ['¡Uy, casi!', 'Tranquilo, respira', 'La red te quiere, parece', '¿Necesitas lentes?', 'Otra vez será', 'Jajaja, ¿qué fue eso?', '¿Eso fue un saque?', 'Anda a calentar', 'Te faltó pan', 'Tienes la pala al revés', 'Pide la hora, mejor'],
   power: {
     clone: ['¡Kage Bunshin no Jutsu!', '¡Clones de sombra!'],
     gordo: ['¡Modo guatón!', '¡Abran cancha!'],
@@ -444,6 +449,46 @@ export const TALK = {
     replica: ['Y viene otra', 'Somos dos, por si acaso']
   }
 };
+
+
+// Más frases por personaje (beta 4): conocidas o simplemente tonteras. Se suman a las de arriba.
+const MORE_TALK = {
+  german: ['¡Viva el sindicato!', 'La guata es puro músculo', 'Suban el sueldo mínimo', 'Esa fue con cariño'],
+  maxi: ['¡Katarina, siii!', 'Diamante en LAS, compadre', 'El mullet manda', 'Kastina, Kast'],
+  joaquin: ['La paz del Señor', 'Hola, Germancito', 'Ora y juega', 'Bendiciones, hermano'],
+  alvaro: ['Diamante cuatro, mi rey', 'Los esmeraldas no pasan', 'Hoy fue día de pierna', 'Pura creatina'],
+  fernando: ['¡Respeten la ley!', 'Soy el Xerny', 'Orden y progreso', 'Multa por lento'],
+  matias: ['¡Illaoi número uno!', 'Mati Neira, presente', 'Tentáculo y a cobrar', 'Calculado'],
+  marco: ['¡Asere, qué volá!', 'Mi pana, eso es arte', 'Ni en La Habana', 'Olé, chaval'],
+  gladys: ['Mijito, abríguese', '¿Quiere once después?', 'Yo jugaba con raqueta de madera'],
+  nena: ['Cariño, eso no se hace', 'Con la visera no se juega', 'Ay, qué niño'],
+  patricio: ['Agendemos otro punto', 'Mándame un correo', 'Esto queda en acta'],
+  rodrigo: ['Sinergia, equipo', 'Pivoteamos', 'Feedback recibido'],
+  zeus: ['¡Por el Olimpo!', 'Rayito, rayito', 'Hacienda aprueba este punto', 'El ministro no perdona'],
+  brayan: ['Link en la bio', 'Hagan clip', 'Esto es viral'],
+  kevin: ['Activen la campanita', 'Like si te dolió', 'Directo al reel'],
+  coloso: ['¡COLOSO APLASTA!', 'Ñam, pelotita'],
+  chispa: ['¡Zum!', '¡Chispazo!'],
+  martinez: ['Diez flexiones', 'Otra vez desde el principio'],
+  capitana: ['Equipo, foco', '¡Vamos, club!'],
+  rubius: ['¡Pero qué me estás contando!', 'Esto es una locura, tío', '¡Me parto!', '¡Ostia, ostia!'],
+  itown: ['¡Muy buenas a todos!', 'Esto se ha descontrolado', 'Vamos con todo, chicos'],
+  jara: ['¡Cuarenta horas ya!', 'El pueblo unido', 'Compañeros, ¡punto!'],
+  otakin: ['¡Kawaii desu!', 'Waifu de oro', 'Modo anime activado', '¡Dattebayo!'],
+  bachelet: ['Los niños primero', 'Esto es por Chile', 'Calma, calma'],
+  xokas: ['¡Qué pasa, chavales!', 'Esto es de manco', 'Os lo dije, eh', 'Vaya paquete'],
+  pinera: ['Les traigo una buena noticia', 'Somos un oasis', 'Tiempos mejores, ¿ah?'],
+  neira: ['¡Illaoi número uno!', 'Mati Neira, presente', 'Tentáculo y a cobrar'],
+  huevito: ['¡Huevito, huevito!', 'Ese fue de rey, compadre', 'Con la corona puesta'],
+  bombo: ['¡Tranquilo el perro!', '¿Y cómo estuvo?', 'Bombo Fica, señores'],
+  corxea: ['Se viene, se viene', '¡Tito, ataca!', 'Nota alta, compadre'],
+  vardoc: ['GG, easy', 'Combo, combo', 'Esto es diamante'],
+  maradona: ['¡La mano de Dios!', 'Barrilete cósmico', '¡Golazo, golazo!'],
+  ilusionista: ['¡Tachán!', 'El conejo era yo'],
+  temblor: ['¡Réplica, ven!', 'Ocho punto ocho'],
+  replica: ['Yo otra vez', 'Y van dos']
+};
+for (const [k, v] of Object.entries(MORE_TALK)) TALK.byLook[k] = [...(TALK.byLook[k] || []), ...v];
 
 // Lo que dice cada personaje al pasar el cursor por su tarjeta en el menú (text: lo que se lee en pantalla;
 // say: cómo lo pronuncia la voz del navegador, si cambia. La voz de cada uno se elige en audio/voice.js)

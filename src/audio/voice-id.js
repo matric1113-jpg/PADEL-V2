@@ -22,7 +22,24 @@ export const VOICE_OF = {
   martinez: { voice: 'es-CL-LorenzoNeural', pitch: -6, rate: 12 },
   chispa: { voice: 'es-CL-LorenzoNeural', pitch: 12, rate: 30 },
   coloso: { voice: 'es-CL-LorenzoNeural', pitch: -20, rate: 3 },
-  zeus: { voice: 'es-ES-AlvaroNeural', pitch: -12, rate: 7 }
+  zeus: { voice: 'es-ES-AlvaroNeural', pitch: -12, rate: 7 },
+  // Jefes de la beta 3 y del laboratorio
+  rubius: { voice: 'es-ES-AlvaroNeural', pitch: 6, rate: 27 },
+  itown: { voice: 'es-ES-AlvaroNeural', pitch: 0, rate: 17 },
+  jara: { voice: 'es-CL-CatalinaNeural', pitch: 0, rate: 11 },
+  otakin: { voice: 'es-CL-LorenzoNeural', pitch: 10, rate: 27 },
+  bachelet: { voice: 'es-CL-CatalinaNeural', pitch: -6, rate: 7 },
+  xokas: { voice: 'es-ES-AlvaroNeural', pitch: -4, rate: 21 },
+  pinera: { voice: 'es-CL-LorenzoNeural', pitch: 2, rate: 31 },
+  neira: { voice: 'es-CL-LorenzoNeural', pitch: 4, rate: 23 },
+  huevito: { voice: 'es-CL-LorenzoNeural', pitch: 6, rate: 21 },
+  bombo: { voice: 'es-CL-LorenzoNeural', pitch: -12, rate: 5 },
+  corxea: { voice: 'es-CL-LorenzoNeural', pitch: -2, rate: 19 },
+  vardoc: { voice: 'es-CL-LorenzoNeural', pitch: -6, rate: 17 },
+  maradona: { voice: 'es-AR-TomasNeural', pitch: -2, rate: 15 },
+  ilusionista: { voice: 'es-MX-JorgeNeural', pitch: -4, rate: 13 },
+  temblor: { voice: 'es-CL-LorenzoNeural', pitch: -18, rate: 3 },
+  replica: { voice: 'es-CL-LorenzoNeural', pitch: 10, rate: 29 }
 };
 
 // Nombre corto y estable para una frase (FNV-1a de 32 bits en hexadecimal)

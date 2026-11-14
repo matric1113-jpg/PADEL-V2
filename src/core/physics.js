@@ -1,12 +1,12 @@
 import { computeLaunch, computeServeBox, getClampedTarget, launchBall, showBanner } from './ballistics.js';
 import { updateBotLogic } from './bots.js';
-import { RUN_PODIUM_FRAMES, LIGHT_BREAK_R, LIGHT_BREAK_Z, ROOF_BOUNCE, HOLE_EDGE, PAD_BALL_K, PAD_BALL_MIN_VZ, PAD_JUMP_H, BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, GUST_PLAYER_PUSH, JUMP_CHARGE_FRAMES, JUMP_CHARGE_SLOW, JUMP_G, JUMP_LAND_FRAMES, JUMP_LAND_SLOW, JUMP_LAND_STOP, JUMP_MAX_H, JUMP_MIN_H, JUMP_REJUMP_FRAMES, JUMP_SMASH_BONUS, MATE_HIT_RADIUS, MATE_KO_CHARGE, MATE_KO_FRAMES, MATE_STUN_FRAMES, MATE_STUN_MAX_FRAMES, MIN_SWING_CHARGE, SMASH_FULL_Z, SMASH_LOW_BOUNCE, SMASH_LOW_SPEED, TILT_BALL_ACCEL, TILT_PLAYER_PUSH, LIGHTS, MAX_CHARGE_FRAMES, NET_H, PODIUM_FRAMES, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
+import { BALL_MAX_HSPEED, ROOF_STUCK_FRAMES, WALL_MAX_RESTITUTION, RUN_PODIUM_FRAMES, LIGHT_BREAK_R, LIGHT_BREAK_Z, ROOF_BOUNCE, HOLE_EDGE, PAD_BALL_K, PAD_BALL_MIN_VZ, PAD_JUMP_H, BASE_ROLL, BODY_MARGIN, COURT, GLASS_MIN_VZ, GLASS_MIN_VZ_TRIGGER, GLASS_SMASH_MIN_VZ, GRAVITY, GUST_PLAYER_PUSH, JUMP_CHARGE_FRAMES, JUMP_CHARGE_SLOW, JUMP_G, JUMP_LAND_FRAMES, JUMP_LAND_SLOW, JUMP_LAND_STOP, JUMP_MAX_H, JUMP_MIN_H, JUMP_REJUMP_FRAMES, JUMP_SMASH_BONUS, MATE_HIT_RADIUS, MATE_KO_CHARGE, MATE_KO_FRAMES, MATE_STUN_FRAMES, MATE_STUN_MAX_FRAMES, MIN_SWING_CHARGE, SMASH_FULL_Z, SMASH_LOW_BOUNCE, SMASH_LOW_SPEED, TILT_BALL_ACCEL, TILT_PLAYER_PUSH, LIGHTS, MAX_CHARGE_FRAMES, NET_H, PODIUM_FRAMES, NET_MARGIN, OVER_WALL_RULE, PAD_F, PAD_S, SPEED_BOOST, SPRINT_COOLDOWN, SPRINT_DURATION, WALL_H_TALL, ZS, sideWallHeight } from './constants.js';
 import { holeAt, padAt } from './floor.js';
 import { awardPoint, checkVoteReady, emitSound, goToScreen, setupServe } from './game.js';
 import { activate, breakFloorAt, updateHazards } from './hazards.js';
 import { insideCourt, moveWithWalls, nearOwnDoor } from './walls.js';
-import { bossOf, gustForce, tiltEase, inputOf, localInput, mapOf, remoteInputs, rt, state } from './state.js';
-import { actOn, chargeRateOf, reachOf, reachZOf, smashMinOf, upLvl } from './stats.js';
+import { bossOf, gravAt, gravK, gustForce, tiltEase, inputOf, localInput, mapOf, remoteInputs, rt, state } from './state.js';
+import { actOn, chargeRateOf, jumpReachOf, reachOf, reachZOf, smashMinOf, upLvl } from './stats.js';
 import { clamp } from './util.js';
 
 // ¿Está apuntando a su propio cristal de fondo para hacer contrapared?
@@ -26,7 +26,7 @@ function launchContra(p) {
   const wy = clamp(p.aimY, COURT.y + 30, COURT.y + COURT.h - 30);
   b.vx = (wallX - b.x) / T;
   b.vy = (wy - b.y) / T;
-  b.vz = (58 - b.z + 0.5 * GRAVITY * T * T) / T;
+  b.vz = (58 - b.z + 0.5 * gravAt() * T * T) / T;
   b.lastHitTeam = p.team;
   b.bouncesInOpponentSide = 0;
   b.isServeShot = false;
@@ -62,7 +62,7 @@ function launchRescue(tx, ty, team, charge) {
   const distX = Math.max(85, Math.abs(tx - b.x));
   let speed = 4.4 + charge * 1.2;
   if (f > 0 && f < 1) {
-    const need = 2 * (wallZ - b.z * (1 - f)) / (GRAVITY * f * (1 - f));
+    const need = 2 * (wallZ - b.z * (1 - f)) / (gravAt() * f * (1 - f));
     // como mucho ~2 s de vuelo: pegado al vidrio no hay globo que alcance a pasar (choca con la pared y se pierde)
     if (need > 0) speed = Math.min(speed, Math.max(distX / Math.sqrt(need), distX / 125));
   }
@@ -158,10 +158,10 @@ export function stepPhysics() {
     // Salto en el aire (sigue aunque lo paralice un rayo). Al caer: un instante clavado (más largo si saltó más alto)
     // y después recupera la velocidad de a poco
     if (p.jz > 0 || p.jvz > 0) {
-      p.jvz -= JUMP_G;
+      p.jvz -= JUMP_G * gravK();
       p.jz += p.jvz;
       if (p.jz <= 0) {
-        p.jz = 0; p.jvz = 0;
+        p.jz = 0; p.jvz = 0; p.padAir = false;
         p.landStop = Math.round(JUMP_LAND_STOP * (0.5 + 0.5 * p.jumpK));
         p.landSlow = JUMP_LAND_FRAMES;
       }
@@ -307,6 +307,7 @@ export function stepPhysics() {
       if (M.pads && padAt(p.x, p.y)) {
         p.jumpK = 1;
         p.jvz = (JUMP_G + Math.sqrt(JUMP_G * JUMP_G + 8 * JUMP_G * PAD_JUMP_H)) / 2;
+        p.padAir = true;
         p.landStop = 0; p.jumpCharge = 0;
         emitSound('boing');
       }
@@ -361,7 +362,7 @@ export function stepPhysics() {
 
       let distToPaddle = Math.hypot(b.x - paddleX, b.y - paddleY);
       if (p.clone) distToPaddle = Math.min(distToPaddle, Math.hypot(b.x - (p.clone.x + dir * PAD_F), b.y - (p.clone.y + PAD_S)));
-      const inReach = distToPaddle <= reachOf(p) && b.z <= reachZOf(p) + p.jz;
+      const inReach = distToPaddle <= reachOf(p) && b.z <= reachZOf(p) + jumpReachOf(p);
 
       // Doble golpe: la pelota que pegó su equipo vuelve a su lado y alguien del equipo (él o su compañero) la toca de
       // nuevo con la pala. Si ya salió por 3 o por 4 no cuenta: ahí solo la rescata el rival.
@@ -405,7 +406,7 @@ export function stepPhysics() {
         } else if (b.z > smashMinOf(p) && p.swingCharge >= (rl ? 0.4 : 0.5) && Math.abs(p.x - COURT.netX) < 220) {
           // Pegarle arriba se premia: bajo SMASH_FULL_Z sale algo más lento y bota menos (cuesta más sacarla por 3 o por 4)
           const k = clamp((b.z - smashMinOf(p)) / Math.max(1, SMASH_FULL_Z - smashMinOf(p)), 0, 1);
-          const air = 1 + JUMP_SMASH_BONUS * Math.min(1, p.jz / JUMP_MAX_H);
+          const air = 1 + JUMP_SMASH_BONUS * Math.min(1, jumpReachOf(p) / JUMP_MAX_H);
           const smashSpeed = (7.8 + p.swingCharge * 3.8) * powerMultiplier * (1 + 0.1 * rl) * (SMASH_LOW_SPEED + (1 - SMASH_LOW_SPEED) * k) * air;
           launchBall(tx, ty, smashSpeed, '¡REMATE!', p.team, false, 0);
           b.smashK = k;
@@ -437,17 +438,22 @@ export function stepPhysics() {
   b.x += b.vx;
   b.y += b.vy;
   b.z += b.vz;
-  b.vz -= GRAVITY;
+  b.vz -= gravAt();
   if (b.z > 0) {
     if (state.gust.t > 0) b.vy += gustForce();
     if (state.tilt.t > 0) { const e = tiltEase() * TILT_BALL_ACCEL; b.vx += state.tilt.x * e; b.vy += state.tilt.y * e; }
   }
 
   // Techo (cráter): la pelota rebota hacia abajo y sigue en juego; con techo nadie la saca por 3 ni por 4
-  if (M.roof && b.z * ZS > M.roof && b.vz > 0) {
-    b.z = M.roof / ZS;
-    b.vz = -b.vz * ROOF_BOUNCE;
-    emitSound('glass');
+  if (M.roof) {
+    const rz = M.roof / ZS;
+    if (b.z > rz) {
+      b.z = rz;
+      if (b.vz > 0) { b.vz = -Math.max(1.2, b.vz * ROOF_BOUNCE); emitSound('glass'); }
+    }
+    // Seguro: si por algo queda pegada arriba (por ejemplo, en una esquina), se la empuja hacia abajo
+    if (b.z > rz - 15) { if ((rt.roofT = (rt.roofT || 0) + 1) > ROOF_STUCK_FRAMES) b.vz = Math.min(b.vz, -3); }
+    else rt.roofT = 0;
   }
 
   // Focos: un globo altísimo puede romper uno
@@ -497,12 +503,12 @@ export function stepPhysics() {
     b.vx *= roll;
     b.vy *= roll;
     if (M.embers && b.shotType === '¡REMATE!') state.embers.push({ x: b.x, y: b.y, t: 240 });
-    // Laboratorio: la pelota cae en un hoyo del piso (no bota) o en una cama elástica (sale disparada)
-    const inHole = state.holes.length > 0 && !!holeAt(b.x, b.y);
-    const onPad = !inHole && M.pads && !!padAt(b.x, b.y);
+    // Cama elástica: la pelota sale disparada (en los hoyos del piso no cae: solo caen las personas)
+    const onPad = M.pads && !!padAt(b.x, b.y);
     if (onPad) b.vz = Math.max(b.vz * PAD_BALL_K, PAD_BALL_MIN_VZ);
-    if (inHole) { b.z = -40; b.vz = 0; b.vx = 0; b.vy = 0; }
-    else emitSound(onPad ? 'boing' : 'bounce');
+    // Con techo, el bote no sube más que el techo (así no queda rebotando entre el suelo y el techo)
+    if (M.roof) b.vz = Math.min(b.vz, Math.sqrt(2 * gravAt() * (M.roof / ZS) * 0.92));
+    emitSound(onPad ? 'boing' : 'bounce');
 
     // CASO 1: la pelota bota en el lado del mismo equipo que golpeó
     if (currentSide === b.lastHitTeam) {
@@ -525,10 +531,6 @@ export function stepPhysics() {
       }
     }
 
-    if (inHole) {
-      awardPoint(b.lastHitTeam, 'Al vacío: la pelota cayó por un hoyo');
-      return;
-    }
     b.bouncesInOpponentSide++;
     if (b.breaker) { b.breaker = false; breakFloorAt(b.x, b.y); }
 
@@ -598,13 +600,18 @@ export function stepPhysics() {
 
     let wallRestitution = b.shotType === '¡REMATE!' ? 0.92 : 0.74;
     if (M.hotGlass && (hitLeft || hitRight)) wallRestitution *= 1.3;   // cristales ardientes
+    wallRestitution = Math.min(wallRestitution, WALL_MAX_RESTITUTION);   // antes un remate en el cristal caliente salía a ×1,2 y en una esquina se aceleraba sin fin
     if (hitLeft) { b.x = COURT.x + 11; b.vx = Math.abs(b.vx) * wallRestitution; }
     if (hitRight) { b.x = COURT.x + COURT.w - 11; b.vx = -Math.abs(b.vx) * wallRestitution; }
     if (hitTop) { b.y = COURT.y + 11; b.vy = Math.abs(b.vy) * wallRestitution; }
     if (hitBottom) { b.y = COURT.y + COURT.h - 11; b.vy = -Math.abs(b.vy) * wallRestitution; }
 
     if (hitLeft || hitRight) b.wallBounced = true;
-    if (b.shotType === '¡REMATE!' && (hitLeft || hitRight)) {
+    const hs = Math.hypot(b.vx, b.vy);
+    if (hs > BALL_MAX_HSPEED) { b.vx *= BALL_MAX_HSPEED / hs; b.vy *= BALL_MAX_HSPEED / hs; }
+    const nearRoof = M.roof && b.z * ZS > M.roof - 50;   // pegada al techo no se la vuelve a empujar hacia arriba
+    if (nearRoof) { /* nada */ }
+    else if (b.shotType === '¡REMATE!' && (hitLeft || hitRight)) {
       b.vz = Math.max(b.vz, GLASS_SMASH_MIN_VZ);
     } else if (b.vz < GLASS_MIN_VZ_TRIGGER) {
       b.vz = GLASS_MIN_VZ;

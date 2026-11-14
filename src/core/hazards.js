@@ -1,9 +1,9 @@
-import { BASE_ROLL, BLINK_LEAD_FRAMES, BODY_MARGIN, COURT, GRAVITY, GUST_FRAMES, GUST_GAP_MIN, GUST_GAP_RANGE, GUST_STRENGTH_MIN, GUST_STRENGTH_RANGE, HOLE_FAST_WARN_FRAMES, HOLE_GAP_MAX, HOLE_GAP_MIN, HOLE_GAP_STEP, HOLE_MAX_PER_SIDE, HOLE_WARN_FRAMES, NET_MARGIN, PAD_F, PAD_S, QUAKE_STUN_FRAMES, QUAKE_WARN_FRAMES, TILE_COLS, TILE_ROWS, TILT_FRAMES, TILT_GAP_MIN, TILT_GAP_RANGE } from './constants.js';
+import { GRAV_FRAMES, GRAV_GAP_MIN, GRAV_GAP_RANGE, GRAV_HIGH, GRAV_LOW, BASE_ROLL, BLINK_LEAD_FRAMES, BODY_MARGIN, COURT, GRAVITY, GUST_FRAMES, GUST_GAP_MIN, GUST_GAP_RANGE, GUST_STRENGTH_MIN, GUST_STRENGTH_RANGE, HOLE_FAST_WARN_FRAMES, HOLE_GAP_MAX, HOLE_GAP_MIN, HOLE_GAP_STEP, HOLE_MAX_PER_SIDE, HOLE_WARN_FRAMES, NET_MARGIN, PAD_F, PAD_S, QUAKE_STUN_FRAMES, QUAKE_WARN_FRAMES, TILE_COLS, TILE_ROWS, TILT_FRAMES, TILT_GAP_MIN, TILT_GAP_RANGE } from './constants.js';
 import { ACTIVES, ACTIVE_IDS, TALK } from './data.js';
 import { showBanner } from './ballistics.js';
 import { holeAt, tileOf, tileSide } from './floor.js';
 import { emitSound, say, talkLine } from './game.js';
-import { bossOf, mapOf, state } from './state.js';
+import { bossOf, gravAt, mapOf, state } from './state.js';
 import { activeCdOf, activeDurOf, reachZOf } from './stats.js';
 import { clamp, pick } from './util.js';
 
@@ -55,7 +55,7 @@ export function blinkSpot(p) {
   const [minX, maxX, minY, maxY] = halfBounds(p.team);
   let x = b.x, y = b.y, z = b.z, vx = b.vx, vy = b.vy, vz = b.vz, bounces = b.bouncesInOpponentSide;
   for (let k = 1; k <= 240; k++) {
-    x += vx; y += vy; z += vz; vz -= GRAVITY;
+    x += vx; y += vy; z += vz; vz -= gravAt(k);
     if (z <= 0) {
       if (++bounces >= 2) return null;
       z = 0; vz = Math.abs(vz) * 0.74 * M.bounceZ;
@@ -116,6 +116,17 @@ export function updateHazards() {
     else if (--state.hz.gust <= 0) {
       state.gust = { w: (Math.random() < 0.5 ? -1 : 1) * (GUST_STRENGTH_MIN + Math.random() * GUST_STRENGTH_RANGE), t: GUST_FRAMES };
       state.hz.gust = GUST_GAP_MIN + Math.random() * GUST_GAP_RANGE;
+    }
+  }
+  // Base lunar: la gravedad cambia por ratos (más seguido gravedad cero que doble)
+  if (M.grav) {
+    if (state.grav.t > 0) state.grav.t--;
+    else if (--state.hz.grav <= 0) {
+      const low = Math.random() < 0.6;
+      state.grav = { w: low ? GRAV_LOW : GRAV_HIGH, t: GRAV_FRAMES };
+      state.hz.grav = GRAV_GAP_MIN + Math.random() * GRAV_GAP_RANGE;
+      showBanner(low ? '¡Gravedad cero!\nLa pelota flota, bota altísimo y se salta más' : '¡Gravedad doble!\nTodo cae como piedra', 110);
+      emitSound(low ? 'gravlow' : 'gravhigh');
     }
   }
   if (M.tilt) {

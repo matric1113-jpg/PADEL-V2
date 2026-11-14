@@ -24,6 +24,25 @@ export function setVolume(k, v) {
     if (on !== musicPlaying) { musicPlaying = on; if (on) { ensureAudio(); startMusic(); } else stopMusic(); }
   }
 }
+// Salida de las voces: más fuerte que los efectos (×VOICE_BOOST) con un compresor para que no sature
+export const VOICE_BOOST = 2.2;
+let voiceBus = null;
+export function voiceOut() {
+  if (!audioCtx) return null;
+  if (!voiceBus) {
+    const comp = audioCtx.createDynamicsCompressor();
+    comp.threshold.value = -16; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.2;
+    comp.connect(audioCtx.destination);
+    voiceBus = audioCtx.createGain();
+    voiceBus.connect(comp);
+  }
+  voiceBus.gain.value = vol.sfx * VOICE_BOOST;
+  return { ctx: audioCtx, node: voiceBus };
+}
+// Mientras habla un personaje, la música baja un poco para que se le entienda
+let voiceDuck = false;
+export function setVoiceDuck(on) { voiceDuck = on; if (songEl) songEl.volume = songVolume(); if (musicBus) musicBus.gain.value = MUSIC_GAIN * vol.music * (on ? 0.5 : 1); }
+
 // Salida de los efectos (pasa por la barra de volumen de efectos)
 function sfxOut() {
   if (!sfxBus) { sfxBus = audioCtx.createGain(); sfxBus.gain.value = vol.sfx; sfxBus.connect(audioCtx.destination); }
@@ -114,6 +133,12 @@ export function playSound(type) {
     noiseHit(now, 0.045, 1900, 1.3, 0.55);
     toneHit(now, 'sine', 340, 120, 0.07, 0.3);
     noiseHit(now + 0.02, 0.05, 6000, 2, 0.35, 'highpass');
+  } else if (type === 'gravlow') {
+    toneHit(now, 'sine', 300, 1200, 0.7, 0.12);
+    toneHit(now + 0.1, 'sine', 450, 1600, 0.6, 0.06);
+  } else if (type === 'gravhigh') {
+    toneHit(now, 'sawtooth', 220, 50, 0.5, 0.14);
+    noiseHit(now, 0.4, 200, 0.6, 0.4, 'lowpass');
   } else if (type === 'crack') {
     // Laboratorio: una baldosa del piso se desprende
     noiseHit(now, 0.22, 420, 0.6, 0.5, 'lowpass');
@@ -250,6 +275,16 @@ const SONGS = Object.entries(SONG_URLS).sort((a, b) => a[0].localeCompare(b[0], 
 export const hasSongs = SONGS.length > 0;
 const SONG_GAIN = 0.55;
 let songEl = null, songIdx = -1, songErrors = 0;
+let songsFollow = false;   // invitado de una sala: no elige canciones, suena la que manda el anfitrión
+let pendingSong = -1;
+export const songIndex = () => songIdx;
+export function followSongs(on) { songsFollow = on; }
+// Pone la canción i (la del anfitrión). Si la música aún no arrancó (falta un clic), queda para cuando arranque
+export function playSong(i) {
+  if (!hasSongs || i < 0 || i >= SONGS.length) return;
+  if (!songEl) { pendingSong = i; return; }
+  if (i !== songIdx) loadSong(i);
+}
 let onSongChange = () => {};
 export const watchSong = fn => { onSongChange = fn; fn(songName()); };
 export const songName = () => (songIdx >= 0 && SONGS[songIdx] ? SONGS[songIdx].name : '');
@@ -276,18 +311,19 @@ function loadSong(i) {
   songEl.play().catch(() => { /* el navegador pide un clic o tecla antes de sonar: se reintenta con el próximo */ });
 }
 export function nextSong() {
-  if (!hasSongs || !songEl) return;
+  if (!hasSongs || !songEl || songsFollow) return;
   loadSong(pickNextSong());
 }
 function startSongs() {
   if (!songEl) {
     songEl = new Audio();
     songEl.preload = 'auto';
-    songEl.addEventListener('ended', () => { songErrors = 0; nextSong(); });
+    songEl.addEventListener('ended', () => { songErrors = 0; if (songsFollow) songEl.play().catch(() => {}); else nextSong(); });   // el invitado la repite hasta que el anfitrión cambie
     songEl.addEventListener('error', () => { if (++songErrors < SONGS.length) nextSong(); });   // un archivo dañado se salta
   }
   songEl.volume = songVolume();
-  if (songIdx < 0) {
+  if (songIdx < 0 && pendingSong >= 0) loadSong(pendingSong);
+  else if (songIdx < 0) {
     // en el menú inicial suena la primera (la de número más bajo en assets/music); las demás, en orden al azar
     songQueue = shuffled(SONGS.map((_, i) => i).filter(i => i !== 0));
     loadSong(0);
@@ -303,7 +339,7 @@ const INTRO_GAIN = 1;
 const INTRO_DUCK = 0.25;      // la música suena a este volumen (×) mientras habla el audio de bienvenida
 let introEl = null;
 let introState = 'idle';      // idle: aún no suena | playing | done
-const songVolume = () => SONG_GAIN * vol.music * (introState === 'playing' ? INTRO_DUCK : 1);
+const songVolume = () => SONG_GAIN * vol.music * (introState === 'playing' ? INTRO_DUCK : 1) * (voiceDuck ? 0.5 : 1);
 function startIntro() {
   if (!INTRO_URLS.length || introState !== 'idle' || vol.sfx <= 0) return;
   if (!introEl) {

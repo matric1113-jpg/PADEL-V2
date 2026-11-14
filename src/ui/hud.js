@@ -13,6 +13,7 @@ function setText(id, v) {
 function hazardLabel() {
   if (state.screen !== 'play') return '';
   if (state.quake) return '¡Terremoto! Salta';
+  if (state.grav && state.grav.t > 0) return state.grav.w < 1 ? 'Gravedad cero' : 'Gravedad doble';
   if (state.gust.t > 0) return 'Ráfaga de viento';
   if (state.tilt.t > 0) return 'La cancha se inclina';
   if (state.ice) return 'Cancha de hielo';

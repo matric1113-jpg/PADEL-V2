@@ -2,7 +2,7 @@ import { ensureAudio, nextSong, playJingle } from '../audio/audio.js';
 import { sayHello } from '../audio/voice.js';
 import { AMERICANO_GAMES_TO_WIN } from '../core/constants.js';
 import { ACTIVES, ACTIVE_COST, ACTIVE_IDS, ALL_ACTIVE_IDS, ALL_MAP_IDS, BOSSES, CHARACTERS, DIFFICULTIES, FRIENDLY_SHOP_MONEY, FRIENDLY_START_MONEY, HELLO, LAB_RIVALS, LOOKS, MAPS, MAP_IDS, EXTRA_CHARACTERS, PLAYABLE, playSpeed, MUTATORS, MUTATOR_IDS, RUN_REWARD, UPGRADES, validLab } from '../core/data.js';
-import { AMERICANO_PAIRS, advanceRun, prepareRoster, setLook, setMap, setReady, setVote, startBossMatch, startMatch, startRun, swapSeats, tryBuy } from '../core/game.js';
+import { AMERICANO_PAIRS, advanceRun, isShopReady, shopReadyCount, prepareRoster, setLook, setMap, setReady, setVote, startBossMatch, startMatch, startRun, swapSeats, tryBuy } from '../core/game.js';
 import { bossOf, localInput, menuSel, rt, state } from '../core/state.js';
 import { upLvl } from '../core/stats.js';
 import { createRoom, joinRoom, leaveNetwork } from '../net/network.js';
@@ -274,7 +274,7 @@ function viewLobby() {
 
 function walletsHtml() {
   return state.players.map((p, k) => (p.out || (state.mode === 'run' && p.team !== 0)) ? '' :
-    `<div>${esc(p.name)}${k === rt.mySlot ? ' (tú)' : ''}: ${p.isBot ? (state.mode === 'run' ? '<span class="lbl">bot vanilla</span>' : '<span class="money sm">$' + fmt(p.money) + '</span>') : '<span class="money">$' + fmt(p.money) + '</span>'}${p.active ? ` <span class="actchip">${esc(ACTIVES[p.active].name)}</span>` : ''}${state.screen === 'shop2' && !p.isBot ? (p.ready ? ' <span class="okchip">Listo</span>' : '') : ''}</div>`).join('');
+    `<div>${esc(p.name)}${k === rt.mySlot ? ' (tú)' : ''}: ${p.isBot ? (state.mode === 'run' ? '<span class="lbl">bot vanilla</span>' : '<span class="money sm">$' + fmt(p.money) + '</span>') : '<span class="money">$' + fmt(p.money) + '</span>'}${p.active ? ` <span class="actchip">${esc(ACTIVES[p.active].name)}</span>` : ''}${state.screen === 'shop2' && !p.isBot ? (isShopReady(p) ? ' <span class="okchip">Listo</span>' : '') : ''}</div>`).join('');
 }
 
 function shopItemsHtml() {
@@ -340,7 +340,7 @@ function viewShop2() {
       <i style="background:${sw}"></i><b>${esc(label)}</b>${M ? `<span class="tag">${M.tag}</span>` : ''}<span>${esc(desc)}</span>${votes[id] ? `<em>${votes[id]} voto${votes[id] > 1 ? 's' : ''}</em>` : ''}</button>`;
   }).join('');
   const humans = state.players.filter(p => !p.isBot && !p.out);
-  const readyCount = humans.filter(p => p.ready).length;
+  const { ready: readyCount, need } = shopReadyCount();
   return `<div class="ov-panel">
     <div class="ov-title">${first ? 'Antes de empezar: tienda y mapa' : 'Tienda y votación de mapa'}</div>
     <div class="ov-sub">${first ? `Cada uno parte con $${fmt(FRIENDLY_START_MONEY)}.` : `+$${fmt(FRIENDLY_SHOP_MONEY)} para cada uno.`} La tienda vuelve a abrir después del juego 2 y luego cada 3 juegos. Votan solo los jugadores humanos.</div>
@@ -349,7 +349,7 @@ function viewShop2() {
     <div class="maps">${cards}</div>
     ${shopItemsHtml()}
     <div class="row sticky"><button class="primary big" data-act="ready">${me && me.ready ? 'Listo (toca para cancelar)' : 'Listo'}</button>
-      <span class="lbl">${readyCount} de ${humans.length} listos. Se empieza cuando todos estén listos.</span>
+      <span class="lbl">${readyCount} de ${need} listos para empezar${humans.length > need ? ` (de ${humans.length})` : ''}. Quien ya no tiene plata para comprar nada cuenta como listo.</span>
       <button data-act="menu">Volver al menú</button></div>
   </div>`;
 }
@@ -448,7 +448,7 @@ export function syncOverlay() {
     else if (s === 'podium' && state.result) playJingle(state.result.americano ? myAmericanoPlace() === 1 : state.result.winner === myTeam);
     trackProgress(s, myTeam);
     // Al cerrar una tienda (la del torneo o la de antes y durante el partido) cambia la canción, cortando la anterior
-    if ((lastScreenSeen === 'shop' || lastScreenSeen === 'shop2') && s !== 'shop' && s !== 'shop2') nextSong();
+    if (rt.isHost && (lastScreenSeen === 'shop' || lastScreenSeen === 'shop2') && s !== 'shop' && s !== 'shop2') nextSong();
     persistRun();
   }
   lastScreenSeen = state.screen;

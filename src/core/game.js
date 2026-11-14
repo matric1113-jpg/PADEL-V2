@@ -30,6 +30,7 @@ export function setupServe(nextServerSlot) {
   state.holes = [];                       // el piso se rearma entre punto y punto
   state.quake = null;
   state.hz.hole = HOLE_FIRST_FRAMES;
+  state.players.forEach(p => { p.padAir = false; });
 
   const solo1 = state.players[3].out;
   const pos = [
@@ -80,10 +81,11 @@ export function say(slot, text) {
 }
 export function talkLine(p, pool) {
   const own = TALK.byLook[p.lookId];
-  return own && Math.random() < 0.45 ? pick(own) : pick(pool);
+  return own && Math.random() < 0.7 ? pick(own) : pick(pool);
 }
+// Después de casi todos los puntos alguien del equipo que ganó dice algo (antes 35-40 % de las veces)
 function maybeTalkAfterPoint(winner, isFault) {
-  if (Math.random() > (isFault ? 0.35 : 0.4)) return;
+  if (Math.random() > (isFault ? 0.75 : 0.85)) return;
   const cands = state.players.map((p, i) => i).filter(i => !state.players[i].out && state.players[i].team === winner);
   if (!cands.length) return;
   const slot = pick(cands);
@@ -116,6 +118,9 @@ export function awardPoint(winningTeam, reason, isFault = false) {
     state.games[winningTeam]++;
     state.score = [0, 0];
     state.celebrate = { seq: state.celebrate.seq + 1, team: winningTeam };
+    // Al ganar un juego siempre celebra alguien en voz alta
+    const cel = state.players.map((p, i) => i).filter(i => !state.players[i].out && state.players[i].team === winningTeam);
+    if (cel.length) { const k = pick(cel); say(k, talkLine(state.players[k], TALK.brag)); }
     state.pauseTimer += 80;
     const g = state.games;
     if (state.mode === 'run') {
@@ -319,7 +324,8 @@ export function setMap(id, keepShift = false) {
   state.bolts = [];
   state.tilt = { x: 0, y: 0, t: 0 };
   state.gust = { w: 0, t: 0 };
-  state.hz = { bolt: 600 + Math.random() * 300, tilt: 420, gust: 360, hole: HOLE_FIRST_FRAMES };
+  state.grav = { w: 1, t: 0 };
+  state.hz = { bolt: 600 + Math.random() * 300, tilt: 420, gust: 360, hole: HOLE_FIRST_FRAMES, grav: 300 };
   state.holes = [];
   state.quake = null;
   state.padT = 0;
@@ -468,6 +474,7 @@ export function beginSet() {
 // ---- Tienda del 2v2 y votación de mapa ----
 function openShop2(first) {
   const add = first ? FRIENDLY_START_MONEY : FRIENDLY_SHOP_MONEY;
+  rt.shopT = 0;
   state.players.forEach(p => {
     if (p.out) return;
     p.money += add;
@@ -508,10 +515,33 @@ export function setReady(slot) {
   p.ready = !p.ready;
 }
 
-export function checkVoteReady() {
-  const humans = state.players.filter(p => !p.isBot && !p.out);
-  if (humans.length && humans.every(p => p.ready)) resolveVoteAndPlay();
+// Tienda: se empieza cuando hay SHOP_READY_NEED listos (o todos, si son menos). Quien ya no puede comprar nada útil
+// (le falta plata para la mejora o activa más barata que le queda) cuenta como listo, pasados unos segundos de tienda.
+export const SHOP_READY_NEED = 3;
+const SHOP_AUTO_READY_FRAMES = 180;
+function cheapestBuy(p) {
+  const costs = UPGRADES.filter(u => !u.cosmetic && upLvl(p, u.id) < u.max).map(u => u.cost);
+  costs.push(ACTIVE_COST);
+  return Math.min(...costs);
 }
+export const isShopReady = p => p.ready || ((rt.shopT || 0) >= SHOP_AUTO_READY_FRAMES && p.money < cheapestBuy(p));
+export function shopReadyCount() {
+  const humans = state.players.filter(p => !p.isBot && !p.out);
+  return { ready: humans.filter(isShopReady).length, need: Math.min(SHOP_READY_NEED, humans.length) };
+}
+export function checkVoteReady() {
+  rt.shopT = (rt.shopT || 0) + 1;
+  const { ready, need } = shopReadyCount();
+  if (need > 0 && ready >= need) resolveVoteAndPlay();
+}
+
+// Música de la sala: votos para saltar la canción (los cuenta el anfitrión; con SKIP_VOTES_NEED se salta)
+export const SKIP_VOTES_NEED = 2;
+export function voteSkipSong(uid) {
+  const m = state.music;
+  if (!m.skip.includes(uid)) m.skip.push(uid);
+}
+export const skipVotesNeeded = () => Math.min(SKIP_VOTES_NEED, Math.max(1, state.players.filter(p => !p.isBot && !p.out).length));
 
 export function resolveVoteAndPlay() {
   const counts = {};

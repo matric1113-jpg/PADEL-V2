@@ -1,4 +1,4 @@
-import { GUST_FRAMES, GUST_RAMP, SPRINT_COOLDOWN, SPRINT_DURATION, TILT_FRAMES, TILT_RAMP } from './constants.js';
+import { GRAVITY, GRAV_FRAMES, GRAV_RAMP, GUST_FRAMES, GUST_RAMP, SPRINT_COOLDOWN, SPRINT_DURATION, TILT_FRAMES, TILT_RAMP } from './constants.js';
 import { BOSSES, LAB_DEFAULT, LAB_RIVALS, MAPS, MUTATORS } from './data.js';
 import { emptyUpgrades } from './stats.js';
 
@@ -67,6 +67,15 @@ export function tiltEase(ahead = 0) {
   return Math.min(1, t / TILT_RAMP, (TILT_FRAMES - t) / TILT_RAMP + 0.0001);
 }
 
+// Base lunar: cuánto de la gravedad normal hay dentro de `ahead` cuadros (1 = normal). La usan la física y las guías.
+export function gravK(ahead = 0) {
+  const g = state.grav;
+  const t = g ? g.t - ahead : 0;
+  if (t <= 0 || ahead < 0) return 1;
+  return 1 + (g.w - 1) * Math.min(1, t / GRAV_RAMP, (GRAV_FRAMES - t) / GRAV_RAMP + 0.0001);
+}
+export const gravAt = (ahead = 0) => GRAVITY * gravK(ahead);
+
 export const localInput = {
   up: false, down: false, left: false, right: false,
   sprint: false,      // Shift: sprint o activa
@@ -102,6 +111,7 @@ export function createPlayer(uid, x, y, team, name, isBot, speedPref = 0.5, look
     speedStat: speedPref,          // 0.15 a 0.85
     powerStat: 1 - speedPref,      // Inversamente proporcional a la velocidad
     outside: false,                // salió de la cancha por la puerta
+    padAir: false,                 // va en el aire lanzado por una cama elástica
     jz: 0, jvz: 0, jumpCharge: 0, jumpK: 0, landStop: 0, landSlow: 0,   // salto: altura, velocidad vertical, carga, fuerza del último salto, clavado y recuperación al caer
     sprintActiveTimer: 0,
     sprintCooldown: 0,
@@ -145,10 +155,12 @@ export const state = {
   bolts: [],                       // rayos con aviso
   tilt: { x: 0, y: 0, t: 0 },
   gust: { w: 0, t: 0 },
-  hz: { bolt: 600, tilt: 420, gust: 360, hole: 150 },
+  hz: { bolt: 600, tilt: 420, gust: 360, hole: 150, grav: 300 },
+  grav: { w: 1, t: 0 },            // Base lunar: gravedad (w: múltiplo de la normal) y cuadros que le quedan
   holes: [],                       // baldosas que avisan o ya cayeron: { i: baldosa, w: cuadros de aviso que le quedan (0 = hoyo abierto) }
   quake: null,                     // terremoto en camino: { team: lado sacudido, t: cuadros que faltan, id }
   shift: null,                     // mapa cambiante: { n: puntos jugados, due: toca cambiar de cancha en el próximo saque }
+  music: { idx: -1, seq: 0, skip: [] },   // canción de la sala (la elige el anfitrión) y quiénes votaron saltarla (uid)
   padT: 0,                         // reloj de las camas elásticas (su posición sale de él)
   blink: { seq: 0, x0: 0, y0: 0, x1: 0, y1: 0 },   // último teletransporte (para el efecto)
   rally: { cp: [false, false] },   // ¿algún equipo salvó con contrapared en este punto?

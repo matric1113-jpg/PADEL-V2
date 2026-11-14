@@ -6,7 +6,7 @@
 // Catalina de Chile, Manuel de Cuba) son las más humanas, las "Google" de Chrome vienen después, y las locales
 // de Windows (Raúl, Sabina) son las más robóticas. Se elige la mejor que haya. A las voces naturales casi no se les
 // cambia el tono: subirlo o bajarlo mucho es lo que las hace sonar a robot.
-import { getVolume } from './audio.js';
+import { getVolume, setVoiceDuck, voiceOut } from './audio.js';
 import { HELLO } from '../core/data.js';
 import { phraseId } from './voice-id.js';
 
@@ -17,7 +17,7 @@ let playing = null;
 
 const FEMALE_LOOKS = new Set(['gladys', 'nena', 'capitana', 'jara', 'bachelet']);
 // Acento preferido por personaje (el resto, chileno)
-const LANG_PREF = { marco: ['es-CU', 'es-DO', 'es-PR', 'es-VE', 'es-ES'], zeus: ['es-ES'] };
+const LANG_PREF = { marco: ['es-CU', 'es-DO', 'es-PR', 'es-VE', 'es-ES'], zeus: ['es-ES'], rubius: ['es-ES'], itown: ['es-ES'], xokas: ['es-ES'], maradona: ['es-AR'], ilusionista: ['es-MX'] };
 // Variación leve de tono y velocidad para que dos personajes con la misma voz no suenen idénticos
 const TUNE = {
   german: { pitch: 0.9, rate: 0.95 }, maxi: { pitch: 1.08, rate: 1.12 }, joaquin: { pitch: 1.03, rate: 1.04 },
@@ -61,8 +61,13 @@ export function speak(text, lookId, interrupt = true) {
   const url = recordedUrl(lookId, text);
   if (url) {
     const a = new Audio(url);
-    a.volume = vol;
-    a.play().catch(() => { /* el navegador aún no deja sonar (falta un clic) */ });
+    // Más fuerte que los efectos: pasa por la salida de voces (con ganancia y compresor); sin Web Audio, a todo volumen
+    const out = voiceOut();
+    if (out) { try { out.ctx.createMediaElementSource(a).connect(out.node); a.volume = 1; } catch (e) { a.volume = Math.min(1, vol * 1.6); } }
+    else a.volume = Math.min(1, vol * 1.6);
+    setVoiceDuck(true);
+    a.addEventListener('ended', () => { if (playing === a) setVoiceDuck(false); });
+    a.play().catch(() => { setVoiceDuck(false); /* el navegador aún no deja sonar (falta un clic) */ });
     playing = a;
     return;
   }
@@ -76,7 +81,7 @@ export function speak(text, lookId, interrupt = true) {
   // Las voces naturales aguantan poco cambio de tono antes de sonar artificiales
   u.pitch = natural ? 1 + ((t.pitch || 1) - 1) * 0.6 : (t.pitch || 1);
   u.rate = (t.rate || 1) * 1.15;   // un poco más rápido, como las voces grabadas
-  u.volume = vol;
+  u.volume = Math.min(1, vol * 1.6);
   speechSynthesis.speak(u);
 }
 

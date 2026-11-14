@@ -1,6 +1,6 @@
 import { ACTIVE_COOLDOWN, ACTIVE_DURATION, ENTITY_K, SMASH_MIN_Z } from './constants.js';
 import { ACTIVES } from './data.js';
-import { entK } from './state.js';
+import { entK, state } from './state.js';
 
 export const upLvl = (p, id) => (p && p.up && p.up[id]) || 0;
 export const actOn = (p, kind) => !!p && p.activeT > 0 && p.activeKind === kind;
@@ -20,6 +20,10 @@ export function reachZOf(p) {
   if (actOn(p, 'palaxl')) z += 30;
   return z * (0.5 + 0.5 * entK());
 }
+// Cuánto le suma el salto al alcance en altura: solo contra pelotas que ya botaron en su campo (las que se van por 3
+// o por 4, para devolverlas) o si lo lanzó una cama elástica. Saltar para volear o rematar una pelota en el aire no
+// ayuda: así el salto no vuelve fácil el remate normal.
+export const jumpReachOf = p => (p && (p.padAir || state.ball.bouncesInOpponentSide >= 1) ? p.jz : 0);
 export const chargeRateOf = p => 1 + 0.25 * upLvl(p, 'grip');
 // (declaración de función y no flecha: state.js la llama al cargarse, y este módulo importa a su vez state.js)
 export function emptyUpgrades() { return { pala: 0, zapas: 0, fuerza: 0, grip: 0, sprint: 0, remate: 0, estiron: 0, cortado: 0, sombrero: 0 }; }

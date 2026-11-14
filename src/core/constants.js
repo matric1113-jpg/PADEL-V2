@@ -104,7 +104,18 @@ export const JUMP_SMASH_BONUS = 0.04;        // remate en el aire: hasta un 4 % 
 export const MATE_HIT_RADIUS = 18 * 1.2 * ENTITY_K;   // (×1,2: antes 18)
 export const LIGHT_BREAK_R = 84;             // distancia horizontal de la pelota al foco para romperlo (antes 42)
 export const LIGHT_BREAK_Z = 72;             // y diferencia de altura (antes 36)
-export const ROOF_BOUNCE = 0.6;              // mapas con techo (cráter): velocidad vertical que conserva la pelota al pegar en el techo
+export const ROOF_BOUNCE = 0.6;
+export const ROOF_STUCK_FRAMES = 30;         // si la pelota pasa más de esto pegada al techo, se la empuja hacia abajo
+export const WALL_MAX_RESTITUTION = 1;       // ningún cristal devuelve la pelota más rápido de lo que llegó (el caliente del cráter llegaba a ×1,2)
+export const BALL_MAX_HSPEED = 16;           // tope de velocidad horizontal de la pelota
+export const AIM_SLACK = 140;                // se puede apuntar hasta 3,5 m fuera de la cancha (y fallar el tiro)
+// Mapa Base lunar: la gravedad cambia por ratos (gravedad cero o doble)
+export const GRAV_FRAMES = 330;              // duración de un cambio de gravedad (5,5 s)
+export const GRAV_RAMP = 45;                 // cuadros que tarda en entrar y en salir
+export const GRAV_GAP_MIN = 360;             // pausa entre cambios
+export const GRAV_GAP_RANGE = 300;
+export const GRAV_LOW = 0.35;                // gravedad cero (casi): la pelota flota y bota altísimo
+export const GRAV_HIGH = 1.75;               // gravedad doble: cae como piedra
 export const SHIFT_POINTS = 2;               // mapa cambiante: cada cuántos puntos cambia la cancha
 export const RUN_PODIUM_FRAMES = 420;        // cinemática al ganar o perder el torneo (7 s)
 
